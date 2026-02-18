@@ -1,6 +1,6 @@
 
 =======================================================
-  BoardIQ — Starting Web Application
+  BoardIQ - Starting Web Application
 =======================================================
   URL:      http://localhost:5001
 
