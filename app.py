@@ -1,5 +1,5 @@
 """
-BoardIQ - Web Application
+BoardIQ — Web Application
 ===========================
 Flask web server that ties together:
   - NYC public data pipeline (DOF, HPD, DOB)
@@ -35,9 +35,262 @@ from benchmarking_engine import benchmark_building, NETWORK_BENCHMARKS
 app = Flask(__name__)
 app.secret_key = "boardiq-dev-key-change-in-production"
 
-# -- In-memory database (swap for PostgreSQL in production) ---
-from buildings_db import BUILDINGS_DB
-# -- Auth ---
+# ── In-memory database (swap for PostgreSQL in production) ───────────────────
+BUILDINGS_DB = {
+    "bbl_1022150001": {
+        "id": "bbl_1022150001",
+        "address": "120 West 72nd Street",
+        "borough": "Manhattan",
+        "neighborhood": "Upper West Side",
+        "units": 120,
+        "floors": 14,
+        "year_built": 1928,
+        "is_prewar": True,
+        "building_class": "D4",
+        "managing_agent": "Argo Real Estate",
+        "board_president": "Margaret Chen",
+        "subscription_tier": "standard",
+        "subscription_since": "2025-09-01",
+        "tax_assessment": {
+            "assessed_value": 1240000,
+            "market_value": 28400000,
+            "fiscal_year": "FY2026",
+            "annual_tax_est": 148800,
+            "trend_pct_2yr": 14.2,
+            "certiorari_recommended": True,
+        },
+        "violations": {
+            "hpd_open": 2,
+            "hpd_closed_12mo": 8,
+            "avg_days_to_close": 22,
+            "class_c_open": True,
+            "dob_open": 0,
+        },
+        "last_data_refresh": "2026-01-15",
+        "compliance_deadlines": [
+            {
+                "law": "Local Law 11 — FISP Facade Inspection",
+                "due_date": "Oct 2026",
+                "months_away": 9,
+                "urgency": "HIGH",
+                "consequence": "DOB violations + fines from $1,000/month",
+                "cost_low": 14000,
+                "cost_high": 22000,
+                "network_comps": 23,
+            },
+            {
+                "law": "Local Law 97 — Carbon Emissions",
+                "due_date": "Dec 2026",
+                "months_away": 11,
+                "urgency": "HIGH",
+                "consequence": "Est. $31,000/yr penalty at current emissions",
+                "cost_low": 18000,
+                "cost_high": 35000,
+                "network_comps": 31,
+            },
+            {
+                "law": "Local Law 87 — Energy Audit",
+                "due_date": "Dec 2026",
+                "months_away": 11,
+                "urgency": "MEDIUM",
+                "consequence": "$3,000 year one, $5,000/yr thereafter",
+                "cost_low": 8000,
+                "cost_high": 16000,
+                "network_comps": 41,
+            },
+            {
+                "law": "Elevator Annual Inspection",
+                "due_date": "Mar 2026",
+                "months_away": 3,
+                "urgency": "MEDIUM",
+                "consequence": "Mandatory shutdown until re-inspected",
+                "cost_low": 800,
+                "cost_high": 1400,
+                "network_comps": 89,
+            },
+        ],
+        "vendor_data": [
+            {"vendor": "Schindler Elevator Corp", "category": "ELEVATOR_MAINTENANCE",
+             "annual": 67200, "per_unit": 560, "last_bid_year": 2016, "months_left": 14},
+            {"vendor": "AmTrust Insurance Group", "category": "INSURANCE",
+             "annual": 94000, "per_unit": 783, "last_bid_year": 2022, "months_left": 8},
+            {"vendor": "Clean Star Services", "category": "CLEANING",
+             "annual": 54000, "per_unit": 450, "last_bid_year": 2023, "months_left": 8},
+            {"vendor": "Empire Boiler Service", "category": "BOILER_MAINTENANCE",
+             "annual": 12600, "per_unit": 105, "last_bid_year": 2023, "months_left": 20},
+            {"vendor": "Apex Exterminating", "category": "EXTERMINATING",
+             "annual": 6000, "per_unit": 50, "last_bid_year": 2024, "months_left": 6},
+            {"vendor": "Metro Water Treatment", "category": "WATER_TREATMENT",
+             "annual": 7200, "per_unit": 60, "last_bid_year": 2019, "months_left": 5},
+            {"vendor": "NYC Waste Solutions", "category": "WASTE_REMOVAL",
+             "annual": 7200, "per_unit": 60, "last_bid_year": 2024, "months_left": 9},
+        ],
+    },
+    "bbl_1012660001": {
+        "id": "bbl_1012660001",
+        "address": "740 Park Avenue",
+        "borough": "Manhattan",
+        "neighborhood": "Upper East Side",
+        "units": 84,
+        "floors": 18,
+        "year_built": 1930,
+        "is_prewar": True,
+        "building_class": "D4",
+        "managing_agent": "Douglas Elliman PM",
+        "board_president": "Robert Steinberg",
+        "subscription_tier": "premium",
+        "subscription_since": "2025-07-01",
+        "tax_assessment": {
+            "assessed_value": 1840000,
+            "market_value": 42000000,
+            "fiscal_year": "FY2026",
+            "annual_tax_est": 220800,
+            "trend_pct_2yr": 8.1,
+            "certiorari_recommended": False,
+        },
+        "violations": {
+            "hpd_open": 0,
+            "hpd_closed_12mo": 3,
+            "avg_days_to_close": 14,
+            "class_c_open": False,
+            "dob_open": 1,
+        },
+        "last_data_refresh": "2026-01-15",
+        "compliance_deadlines": [
+            {
+                "law": "Local Law 11 — FISP Facade Inspection",
+                "due_date": "Jun 2027",
+                "months_away": 17,
+                "urgency": "MEDIUM",
+                "consequence": "DOB violations + fines from $1,000/month",
+                "cost_low": 18000,
+                "cost_high": 28000,
+                "network_comps": 23,
+            },
+        ],
+        "vendor_data": [
+            {"vendor": "Otis Elevator Company", "category": "ELEVATOR_MAINTENANCE",
+             "annual": 36000, "per_unit": 429, "last_bid_year": 2020, "months_left": 6},
+            {"vendor": "Chubb Insurance", "category": "INSURANCE",
+             "annual": 52000, "per_unit": 619, "last_bid_year": 2024, "months_left": 10},
+            {"vendor": "Gold Star Cleaning", "category": "CLEANING",
+             "annual": 40000, "per_unit": 476, "last_bid_year": 2022, "months_left": 4},
+            {"vendor": "Five Star Boiler", "category": "BOILER_MAINTENANCE",
+             "annual": 9200, "per_unit": 110, "last_bid_year": 2022, "months_left": 16},
+        ],
+    },
+    "bbl_1009270001": {
+        "id": "bbl_1009270001",
+        "address": "130 East 18th Street",
+        "borough": "Manhattan",
+        "neighborhood": "Gramercy Park",
+        "units": 287,
+        "floors": 16,
+        "year_built": 1962,
+        "is_prewar": False,
+        "building_class": "D4",
+        "managing_agent": "Century Management",
+        "board_president": "",
+        "subscription_tier": "standard",
+        "subscription_since": "2026-02-01",
+        "tax_assessment": {
+            "assessed_value": 3870000,
+            "market_value": 88500000,
+            "fiscal_year": "FY2026",
+            "annual_tax_est": 464400,
+            "trend_pct_2yr": 11.8,
+            "certiorari_recommended": True,
+        },
+        "violations": {
+            "hpd_open": 4,
+            "hpd_closed_12mo": 14,
+            "avg_days_to_close": 28,
+            "class_c_open": False,
+            "dob_open": 1,
+        },
+        "last_data_refresh": "2026-02-17",
+        "compliance_deadlines": [
+            {
+                "law": "Local Law 11 — FISP Facade Inspection",
+                "due_date": "Dec 2026",
+                "months_away": 10,
+                "urgency": "HIGH",
+                "consequence": "DOB violations + fines from $1,000/month if missed",
+                "cost_low": 22000,
+                "cost_high": 38000,
+                "network_comps": 23,
+            },
+            {
+                "law": "Local Law 97 — Carbon Emissions",
+                "due_date": "May 2026",
+                "months_away": 3,
+                "urgency": "HIGH",
+                "consequence": "Est. $58,000/yr penalty at current emissions rate",
+                "cost_low": 35000,
+                "cost_high": 65000,
+                "network_comps": 31,
+            },
+            {
+                "law": "Local Law 87 — Energy Audit",
+                "due_date": "Dec 2026",
+                "months_away": 10,
+                "urgency": "HIGH",
+                "consequence": "$3,000 year one, $5,000/yr thereafter until filed",
+                "cost_low": 14000,
+                "cost_high": 24000,
+                "network_comps": 41,
+            },
+            {
+                "law": "Elevator Annual Inspection — 2 cabs",
+                "due_date": "Apr 2026",
+                "months_away": 2,
+                "urgency": "HIGH",
+                "consequence": "Mandatory cab shutdown until re-inspected by DOB",
+                "cost_low": 1600,
+                "cost_high": 2800,
+                "network_comps": 89,
+            },
+            {
+                "law": "Local Law 152 — Gas Piping Inspection",
+                "due_date": "Dec 2026",
+                "months_away": 10,
+                "urgency": "MEDIUM",
+                "consequence": "DOB violations if inspection not filed on time",
+                "cost_low": 3500,
+                "cost_high": 7000,
+                "network_comps": 67,
+            },
+        ],
+        "vendor_data": [
+            {"vendor": "New York-Alliant Insurance Services", "category": "INSURANCE",
+             "annual": 144768, "per_unit": 504, "last_bid_year": 2022, "months_left": 10},
+            {"vendor": "Con Edison", "category": "UTILITIES_ELECTRIC",
+             "annual": 663729, "per_unit": 2313, "last_bid_year": None, "months_left": None},
+            {"vendor": "National Cooperative Bank", "category": "MORTGAGE_FINANCING",
+             "annual": 440019, "per_unit": 1533, "last_bid_year": None, "months_left": None},
+            {"vendor": "NYC Water Board", "category": "UTILITIES_WATER",
+             "annual": 184107, "per_unit": 642, "last_bid_year": None, "months_left": None},
+            {"vendor": "Dial-A-Bug Pest Control", "category": "EXTERMINATING",
+             "annual": 29749, "per_unit": 104, "last_bid_year": 2021, "months_left": 3},
+            {"vendor": "Simon Industries, LLC", "category": "HVAC_MAINTENANCE",
+             "annual": 44156, "per_unit": 154, "last_bid_year": 2020, "months_left": 6},
+            {"vendor": "Adriatic Plumbing & Heating", "category": "PLUMBING_REPAIRS",
+             "annual": 104953, "per_unit": 366, "last_bid_year": 2021, "months_left": 8},
+            {"vendor": "PS Marcato Elevator Company", "category": "ELEVATOR_MAINTENANCE",
+             "annual": 23369, "per_unit": 81, "last_bid_year": 2019, "months_left": 5},
+            {"vendor": "Metric Consulting and Inspection", "category": "PROFESSIONAL_SERVICES",
+             "annual": 45000, "per_unit": 157, "last_bid_year": 2020, "months_left": 0},
+            {"vendor": "Elevated Outdoors / Ariston Flowers", "category": "LANDSCAPING",
+             "annual": 47883, "per_unit": 167, "last_bid_year": 2022, "months_left": 7},
+            {"vendor": "Innovacore Environmental", "category": "ENVIRONMENTAL",
+             "annual": 57305, "per_unit": 200, "last_bid_year": 2023, "months_left": 14},
+            {"vendor": "Century Management", "category": "MANAGEMENT_FEE",
+             "annual": 198000, "per_unit": 690, "last_bid_year": 2018, "months_left": 0},
+        ],
+    },
+}
+
+# ── Auth (simple demo auth — swap for real auth in production) ───────────────
 DEMO_USERS = {
     "board@120w72.com":      {"password": "demo1234", "buildings": ["bbl_1022150001"], "name": "Margaret Chen"},
     "board@740park.com":     {"password": "demo1234", "buildings": ["bbl_1012660001"], "name": "Robert Steinberg"},
@@ -63,6 +316,7 @@ def get_current_building():
     return BUILDINGS_DB.get(bbl)
 
 def compute_benchmarks(building):
+    """Compute live benchmark scores for a building's vendor data."""
     vendor_flat = {}
     for v in building.get("vendor_data", []):
         key = f"{v['vendor']}::{v['category']}"
@@ -77,7 +331,9 @@ def compute_benchmarks(building):
     return benchmark_building(vendor_flat, units=building["units"], last_bid_years=last_bids)
 
 
-# -- ROUTES --
+# ═══════════════════════════════════════════════════════════════════════════════
+#  ROUTES
+# ═══════════════════════════════════════════════════════════════════════════════
 
 @app.route("/")
 def index():
@@ -98,6 +354,7 @@ def login():
             session["active_building"] = user["buildings"][0]
             return redirect(url_for("dashboard"))
         error = "Invalid credentials."
+
     return render_template_string(LOGIN_HTML, error=error)
 
 @app.route("/logout")
@@ -141,18 +398,24 @@ def api_building(bbl):
 @app.route("/api/upload-invoices", methods=["POST"])
 @login_required
 def upload_invoices():
+    """Accept CSV invoice upload and return benchmarking results."""
     building = get_current_building()
     if not building:
         return jsonify({"error": "No active building"}), 400
+
     if "file" not in request.files:
         return jsonify({"error": "No file provided"}), 400
+
     f = request.files["file"]
     content = f.read().decode("utf-8-sig")
+
+    # Write to temp file
     import tempfile
     with tempfile.NamedTemporaryFile(mode='w', suffix='.csv',
                                      delete=False, newline='') as tmp:
         tmp.write(content)
         tmp_path = tmp.name
+
     try:
         processor = InvoiceProcessor()
         summary = processor.process_file(tmp_path, building["id"], building["units"])
@@ -166,6 +429,7 @@ def upload_invoices():
 @app.route("/api/sample-csv")
 @login_required
 def get_sample_csv():
+    """Download a sample invoice CSV pre-filled for the active building."""
     building = get_current_building()
     rows = [["Invoice Date", "Vendor", "Description", "Amount", "Invoice Number"]]
     for v in building.get("vendor_data", []):
@@ -178,10 +442,12 @@ def get_sample_csv():
                 str(monthly),
                 f"INV-{month:02d}-{v['category'][:6]}"
             ])
+
     output = io.StringIO()
     writer = csv.writer(output)
     writer.writerows(rows)
     output.seek(0)
+
     from flask import Response
     return Response(
         output.getvalue(),
@@ -191,12 +457,14 @@ def get_sample_csv():
     )
 
 
-# -- HTML TEMPLATES --
+# ═══════════════════════════════════════════════════════════════════════════════
+#  HTML TEMPLATES
+# ═══════════════════════════════════════════════════════════════════════════════
 
 LOGIN_HTML = """<!DOCTYPE html>
 <html>
 <head>
-<title>BoardIQ - Sign In</title>
+<title>BoardIQ — Sign In</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -224,14 +492,14 @@ button:hover { background: #1a1714; }
     <label>Email Address</label>
     <input type="email" name="email" placeholder="board@yourbuilding.com" required>
     <label>Password</label>
-    <input type="password" name="password" placeholder="..." required>
-    <button type="submit">Sign In</button>
+    <input type="password" name="password" placeholder="••••••••" required>
+    <button type="submit">Sign In →</button>
   </form>
   <div class="demo-hint">
     <strong>Demo accounts:</strong><br>
-    board@120w72.com / demo1234<br>
-    board@740park.com / demo1234<br>
-    admin@boardiq.com / admin
+    board@120w72.com · demo1234 (120 W 72nd St)<br>
+    board@740park.com · demo1234 (740 Park Ave)<br>
+    admin@boardiq.com · admin (all buildings)
   </div>
 </div>
 </body>
@@ -243,7 +511,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BoardIQ - {{ building.address }}</title>
+<title>BoardIQ — {{ building.address }}</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=IBM+Plex+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -256,7 +524,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;min-height:100vh}
-.sidebar{position:fixed;left:0;top:0;bottom:0;width:220px;background:var(--ink);display:flex;flex-direction:column;z-index:100}
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:220px;background:var(--ink);display:flex;flex-direction:column;z-index:100;overflow-y:auto}
 .logo{padding:26px 22px 22px;border-bottom:1px solid rgba(255,255,255,.08)}
 .logo-mark{font-family:'Playfair Display',serif;font-size:22px;color:#fff}
 .logo-mark span{color:var(--gold)}
@@ -385,6 +653,12 @@ table.vt tr.click:hover td{background:var(--surface2)}
 .nbar-fill{position:absolute;left:0;top:0;bottom:0;border-radius:4px;background:linear-gradient(90deg,var(--green),var(--yellow),var(--red))}
 .nbar-pin{position:absolute;top:-5px;width:18px;height:18px;border-radius:50%;background:var(--surface);border:3px solid var(--red);transform:translateX(-50%)}
 .nbar-caption{font-size:11px;color:var(--dim);margin-top:7px;text-align:center;line-height:1.4}
+.crows{display:flex;flex-direction:column;gap:5px}
+.crow{display:flex;align-items:center;gap:9px;font-size:12px}
+.cbldg{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted);flex:1}
+.ctrack{width:80px;height:4px;background:var(--border);border-radius:2px;overflow:hidden;flex-shrink:0}
+.cfill{height:100%;border-radius:2px}
+.cval{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--ink);width:58px;text-align:right}
 .action-box{background:linear-gradient(135deg,#fdf6ec 0%,var(--surface) 100%);border:1px solid var(--yellow-border);border-radius:6px;padding:16px;margin-top:18px}
 .action-title{font-family:'Playfair Display',serif;font-size:17px;color:var(--gold);margin-bottom:5px}
 .action-desc{font-size:12px;color:var(--dim);line-height:1.6;margin-bottom:12px}
@@ -402,28 +676,28 @@ table.vt tr.click:hover td{background:var(--surface2)}
   </div>
   <div class="nav">
     <div class="nav-label">Intelligence</div>
-    <div class="nav-item active">Dashboard</div>
-    <div class="nav-item">Savings
+    <div class="nav-item active">◈ &nbsp;Dashboard</div>
+    <div class="nav-item">◎ &nbsp;Savings
       {% if benchmarks.above_market_count > 0 %}
       <span class="nav-badge">{{ benchmarks.above_market_count }}</span>{% endif %}
     </div>
-    <div class="nav-item">BidBoard</div>
+    <div class="nav-item">⊞ &nbsp;BidBoard</div>
     <div class="nav-label">Compliance</div>
-    <div class="nav-item">Compliance Calendar
+    <div class="nav-item">⚑ &nbsp;Compliance Calendar
       <span class="nav-badge">{{ building.compliance_deadlines|selectattr('urgency','eq','HIGH')|list|length }}</span>
     </div>
-    <div class="nav-item">Contracts</div>
+    <div class="nav-item">▤ &nbsp;Contracts</div>
     <div class="nav-label">Building</div>
-    <div class="nav-item">Tax and Assessment</div>
-    <div class="nav-item">Violations</div>
-    <div class="nav-item">Data Upload</div>
+    <div class="nav-item">◷ &nbsp;Tax &amp; Assessment</div>
+    <div class="nav-item">☰ &nbsp;Violations</div>
+    <div class="nav-item">↓ &nbsp;Data Upload</div>
   </div>
   {% if all_buildings|length > 1 %}
   <div class="switch-links">
     {% for b in all_buildings %}
     <a href="/switch-building/{{ b.id }}"
        class="switch-link {% if b.id == active_bbl %}active-link{% endif %}">
-      {% if b.id == active_bbl %}* {% endif %}{{ b.address[:28] }}
+      {% if b.id == active_bbl %}▶ {% endif %}{{ b.address[:28] }}
     </a>
     {% endfor %}
   </div>
@@ -431,7 +705,7 @@ table.vt tr.click:hover td{background:var(--surface2)}
   <div class="bldg-block">
     <div class="bldg-tag">Active Building</div>
     <div class="bldg-name">{{ building.address }}</div>
-    <div class="bldg-meta">{{ building.units }} units - {{ building.neighborhood }}</div>
+    <div class="bldg-meta">{{ building.units }} units · {{ building.neighborhood }}</div>
   </div>
   <div class="user-block">
     <div class="user-name">{{ user_name }}</div>
@@ -443,11 +717,12 @@ table.vt tr.click:hover td{background:var(--surface2)}
   <div class="page-header">
     <div>
       <div class="page-title">Building Intelligence</div>
-      <div class="page-sub">{{ building.address }} - {{ building.managing_agent }} - Data from 187 comparable NYC buildings</div>
+      <div class="page-sub">{{ building.address }} &nbsp;·&nbsp; {{ building.managing_agent }} &nbsp;·&nbsp; Data from 187 comparable NYC buildings</div>
     </div>
     <div class="header-badge">Refreshed {{ building.last_data_refresh }}</div>
   </div>
 
+  {# ── SUMMARY STRIP ── #}
   {% set total_savings = benchmarks.total_savings_opportunity %}
   {% set above_count = benchmarks.above_market_count %}
   {% set urgent_deadlines = building.compliance_deadlines|selectattr('urgency','eq','HIGH')|list %}
@@ -477,18 +752,19 @@ table.vt tr.click:hover td{background:var(--surface2)}
     <div class="strip-item blue">
       <div class="strip-label">Est. Compliance Cost</div>
       <div class="strip-value blue">
-        {% if comp_cost_low > 0 %}${{ "{:,.0f}".format(comp_cost_low/1000)|int }}K-${{ "{:,.0f}".format(comp_cost_high/1000)|int }}K{% else %}None due{% endif %}
+        {% if comp_cost_low > 0 %}${{ "{:,.0f}".format(comp_cost_low/1000)|int }}K–${{ "{:,.0f}".format(comp_cost_high/1000)|int }}K{% else %}None due{% endif %}
       </div>
-      <div class="strip-sub">plan and budget now</div>
+      <div class="strip-sub">plan &amp; budget now</div>
     </div>
   </div>
 
   <div class="grid">
 
+    {# ── VENDOR TABLE ── #}
     <div class="card">
       <div class="ch">
         <div><div class="ct">Vendor Intelligence</div><div class="csub">Benchmarked against 187 comparable NYC buildings</div></div>
-        <a href="#" class="ca">View All</a>
+        <a href="#" class="ca">View All →</a>
       </div>
       <table class="vt">
         <thead>
@@ -507,7 +783,7 @@ table.vt tr.click:hover td{background:var(--surface2)}
           <tr class="click" onclick="openPanel('vendor', '{{ loop.index0 }}')">
             <td>
               <div class="vname">{{ bm.vendor_name }}</div>
-              <div class="vcat">{{ bm.category_label[:30] }}{% if bm.last_bid_year %} - Last bid {{ bm.last_bid_year }}{% endif %}</div>
+              <div class="vcat">{{ bm.category_label[:30] }}{% if bm.last_bid_year %} · Last bid {{ bm.last_bid_year }}{% endif %}</div>
             </td>
             <td class="mono r">${{ "{:,.0f}".format(bm.annual_spend) }}</td>
             <td class="mono r">${{ "{:,.0f}".format(bm.per_unit) }}</td>
@@ -519,9 +795,9 @@ table.vt tr.click:hover td{background:var(--surface2)}
                 <span class="pos-pct" style="color:var(--{{ status }})">{{ pct }}th</span>
               </div>
               <div style="margin-top:4px">
-                {% if status == 'red' %}<span class="pill pill-red">Above Market</span>
-                {% elif status == 'yellow' %}<span class="pill pill-yellow">Slightly Above</span>
-                {% else %}<span class="pill pill-green">{% if pct < 40 %}Below{% else %}At{% endif %} Market</span>{% endif %}
+                {% if status == 'red' %}<span class="pill pill-red">↑ Above Market</span>
+                {% elif status == 'yellow' %}<span class="pill pill-yellow">↑ Slightly Above</span>
+                {% else %}<span class="pill pill-green">✓ {% if pct < 40 %}Below{% else %}At{% endif %} Market</span>{% endif %}
               </div>
             </td>
           </tr>
@@ -531,6 +807,7 @@ table.vt tr.click:hover td{background:var(--surface2)}
       </table>
     </div>
 
+    {# ── SAVINGS ── #}
     <div class="card">
       <div class="savings-hdr">
         <div class="savings-lbl">Total Identified Savings</div>
@@ -543,10 +820,10 @@ table.vt tr.click:hover td{background:var(--surface2)}
       </div>
       {% for opp in benchmarks.top_opportunities %}
       <div class="opp" onclick="openPanel('vendor', '{{ loop.index0 }}')">
-        <div class="opp-rank">Priority {{ "%02d"|format(loop.index) }} - {{ opp.category_label[:25] }}</div>
+        <div class="opp-rank">Priority {{ "%02d"|format(loop.index) }} · {{ opp.category_label[:25] }}</div>
         <div class="opp-name">
           {% if opp.years_since_bid %}No competitive bid in {{ opp.years_since_bid }} years
-          {% else %}{{ opp.percentile }}th percentile - above network median{% endif %}
+          {% else %}{{ opp.percentile }}th percentile — above network median{% endif %}
         </div>
         <div class="opp-desc">
           You pay ${{ opp.per_unit }}/unit vs. network median ${{ opp.network_median }}/unit.
@@ -554,15 +831,16 @@ table.vt tr.click:hover td{background:var(--surface2)}
         </div>
         <div class="opp-row">
           <span class="opp-amt" style="color:var(--{{ opp.status.color }})">${{ "{:,.0f}".format(opp.savings_opportunity_annual) }}/yr</span>
-          <span class="opp-cta">Initiate Rebid via BidBoard</span>
+          <span class="opp-cta">Initiate Rebid via BidBoard →</span>
         </div>
       </div>
       {% else %}
       <div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">
-        All contracts at or below market. No action needed.
+        ✓ All contracts at or below market. No action needed.
       </div>
       {% endfor %}
 
+      {# Upload zone #}
       <div class="upload-zone" onclick="document.getElementById('csvInput').click()">
         <div class="upload-label">Upload Invoice Data</div>
         <div class="upload-sub">CSV or Excel from Yardi / AvidXchange / manual export</div>
@@ -570,34 +848,35 @@ table.vt tr.click:hover td{background:var(--surface2)}
       </div>
       <div class="upload-result" id="uploadResult"></div>
       <div style="padding:0 20px 14px;text-align:center">
-        <a href="/api/sample-csv" style="font-size:11px;color:var(--muted)">Download sample CSV format</a>
+        <a href="/api/sample-csv" style="font-size:11px;color:var(--muted)">↓ Download sample CSV format</a>
       </div>
     </div>
 
+    {# ── COMPLIANCE ── #}
     <div class="card full">
       <div class="ch">
-        <div><div class="ct">Compliance Calendar and Cost Intelligence</div>
+        <div><div class="ct">Compliance Calendar &amp; Cost Intelligence</div>
         <div class="csub">Deadlines with projected costs from comparable building data</div></div>
-        <a href="#" class="ca">Full Calendar</a>
+        <a href="#" class="ca">Full Calendar →</a>
       </div>
       {% for d in building.compliance_deadlines %}
       <div class="comp-item" onclick="openPanel('compliance', '{{ loop.index0 }}')">
         <div>
           <div class="comp-urg" style="color:var(--{% if d.urgency == 'HIGH' %}red{% else %}yellow{% endif %})">
             <div class="comp-dot" style="background:var(--{% if d.urgency == 'HIGH' %}red{% else %}yellow{% endif %})"></div>
-            Due in {{ d.months_away }} months - {% if d.urgency == 'HIGH' %}Act now{% else %}Budget now{% endif %}
+            Due in {{ d.months_away }} months · {% if d.urgency == 'HIGH' %}Act now{% else %}Budget now{% endif %}
           </div>
           <div class="comp-law">{{ d.law }}</div>
           <div class="comp-desc">Network benchmark based on {{ d.network_comps }} comparable NYC buildings.</div>
-          <div class="comp-consequence">{{ d.consequence }}</div>
+          <div class="comp-consequence">⚠ {{ d.consequence }}</div>
           <div class="comp-actions">
-            <button class="btn-bid" onclick="event.stopPropagation()">Start BidBoard</button>
+            <button class="btn-bid" onclick="event.stopPropagation()">Start BidBoard →</button>
             <button class="btn-out" onclick="event.stopPropagation()">View Requirements</button>
           </div>
         </div>
         <div class="comp-cost-box">
           <div class="comp-cost-lbl">Network Cost Range</div>
-          <div class="comp-cost-range">${{ "{:,.0f}".format(d.cost_low) }}-${{ "{:,.0f}".format(d.cost_high) }}</div>
+          <div class="comp-cost-range">${{ "{:,.0f}".format(d.cost_low) }}–${{ "{:,.0f}".format(d.cost_high) }}</div>
           <div class="comp-cost-src">Based on {{ d.network_comps }} comparable filings</div>
           <div class="comp-due">Due {{ d.due_date }}</div>
         </div>
@@ -605,19 +884,20 @@ table.vt tr.click:hover td{background:var(--surface2)}
       {% endfor %}
     </div>
 
+    {# ── BUILDING RECORD ── #}
     <div class="card full">
-      <div class="ch"><div><div class="ct">Building Record</div><div class="csub">Public data from NYC agencies - refreshed quarterly</div></div></div>
+      <div class="ch"><div><div class="ct">Building Record</div><div class="csub">Public data from NYC agencies · refreshed quarterly</div></div></div>
       <div class="two-mini">
         <div class="mini">
-          <div class="mini-title">Tax and Assessment - DOF</div>
+          <div class="mini-title">Tax &amp; Assessment · DOF</div>
           <div class="tax-val">${{ "{:,.0f}".format(building.tax_assessment.assessed_value) }}</div>
-          <div class="tax-sub">Assessed Value - {{ building.tax_assessment.fiscal_year }}</div>
+          <div class="tax-sub">Assessed Value · {{ building.tax_assessment.fiscal_year }}</div>
           {% if building.tax_assessment.certiorari_recommended %}
-          <div class="tax-alert">Assessment up {{ building.tax_assessment.trend_pct_2yr }}% in 2 years. Tax certiorari review recommended - comparable buildings achieve reductions averaging $28,000/yr.</div>
+          <div class="tax-alert">⚠ Assessment up {{ building.tax_assessment.trend_pct_2yr }}% in 2 years. Tax certiorari review recommended — comparable buildings achieve reductions averaging $28,000/yr.</div>
           {% endif %}
         </div>
         <div class="mini">
-          <div class="mini-title">Violations Summary - HPD / DOB</div>
+          <div class="mini-title">Violations Summary · HPD / DOB</div>
           <div class="viol-nums">
             <div class="vn">
               <div class="vn-val {% if building.violations.hpd_open > 0 %}red{% else %}green{% endif %}">{{ building.violations.hpd_open }}</div>
@@ -633,7 +913,7 @@ table.vt tr.click:hover td{background:var(--surface2)}
             </div>
           </div>
           {% if building.violations.class_c_open %}
-          <div class="viol-flag">Open HPD Class C violation - Immediately Hazardous. Requires urgent attention.</div>
+          <div class="viol-flag">⚠ Open HPD Class C violation — Immediately Hazardous. Requires urgent attention.</div>
           {% endif %}
         </div>
       </div>
@@ -642,14 +922,16 @@ table.vt tr.click:hover td{background:var(--surface2)}
   </div>
 </main>
 
+{# ── DETAIL OVERLAY ── #}
 <div class="overlay" id="overlay" onclick="if(event.target===this)closePanel()">
   <div class="panel" id="panel">
-    <button class="close-btn" onclick="closePanel()">X</button>
+    <button class="close-btn" onclick="closePanel()">✕</button>
     <div id="panelContent"></div>
   </div>
 </div>
 
 <script>
+// Build JS data objects from Jinja
 const vendorBenchmarks = {{ benchmarks.vendor_benchmarks | tojson }};
 const complianceItems  = {{ building.compliance_deadlines | tojson }};
 const buildingUnits    = {{ building.units }};
@@ -677,21 +959,21 @@ function openPanel(type, idx) {
           <div class="nbar-fill" style="width:100%"></div>
           <div class="nbar-pin" style="left:${Math.min(95,bm.percentile||50)}%;border-color:var(--${statusColor})"></div>
         </div>
-        <div class="nbar-caption">You are at the <strong>${bm.percentile}th percentile</strong> - paying more than ${bm.percentile}% of comparable buildings</div>
+        <div class="nbar-caption">You are at the <strong>${bm.percentile}th percentile</strong> — paying more than ${bm.percentile}% of comparable buildings</div>
       </div>
       <div class="panel-section">Key Factors Affecting Price</div>
       <div style="font-size:12px;color:var(--dim);line-height:1.8;background:var(--surface2);padding:12px;border-radius:5px;border:1px solid var(--border)">
-        ${(bm.factors||[]).map(f => '- ' + f).join('<br>')}
+        ${(bm.factors||[]).map(f => '• ' + f).join('<br>')}
       </div>
       ${savings > 0 ? `
       <div class="action-box">
         <div class="action-title">Take Action</div>
         <div class="action-desc">Initiate a competitive bid through BidBoard. Your managing agent will be notified and compensated for executing the process.</div>
-        <button class="btn-full">Start BidBoard Rebid Process</button>
+        <button class="btn-full">Start BidBoard Rebid Process →</button>
         <button class="btn-full-out">Send Analysis to Managing Agent</button>
       </div>` : `
       <div style="background:var(--green-light);border:1px solid var(--green-border);border-radius:6px;padding:14px;margin-top:16px;font-size:13px;color:var(--green)">
-        This contract is at or below market. No action required at this time.
+        ✓ This contract is at or below market. No action required at this time.
       </div>`}`;
   } else {
     const d = complianceItems[idx];
@@ -699,7 +981,7 @@ function openPanel(type, idx) {
     const urgColor = d.urgency === 'HIGH' ? 'red' : 'yellow';
     content.innerHTML = `
       <div class="panel-title">${d.law}</div>
-      <div class="panel-sub">Due ${d.due_date} - ${d.months_away} months away</div>
+      <div class="panel-sub">Due ${d.due_date} · ${d.months_away} months away</div>
       <div class="stat-grid">
         <div class="stat-box"><div class="stat-lbl">Due Date</div><div class="stat-val">${d.due_date}</div></div>
         <div class="stat-box"><div class="stat-lbl">Time Remaining</div><div class="stat-val ${urgColor}">${d.months_away} months</div></div>
@@ -708,10 +990,7 @@ function openPanel(type, idx) {
       </div>
       <div class="panel-section">Consequence of Non-Compliance</div>
       <div style="background:var(--red-light);border:1px solid var(--red-border);border-radius:5px;padding:12px;font-size:12.5px;color:var(--red);font-weight:500">${d.consequence}</div>
-      ${d.context ? `
-      <div class="panel-section">What the Board Needs to Know</div>
-      <div style="font-size:12.5px;color:var(--dim);line-height:1.8;background:var(--surface2);padding:14px;border-radius:5px;border:1px solid var(--border)">${d.context}</div>` : ''}
-      <div class="panel-section">Cost Data - ${d.network_comps} Comparable Buildings</div>
+      <div class="panel-section">Cost Data — ${d.network_comps} Comparable Buildings</div>
       <div class="nbar-wrap">
         <div class="nbar-labels"><span>$${d.cost_low.toLocaleString()}</span><span>Typical Range</span><span>$${d.cost_high.toLocaleString()}</span></div>
         <div class="nbar-track"><div class="nbar-fill" style="width:100%"></div></div>
@@ -720,7 +999,7 @@ function openPanel(type, idx) {
       <div class="action-box">
         <div class="action-title">Start BidBoard</div>
         <div class="action-desc">A pre-filled scope of work will be generated based on your building profile. Qualified vendors from the network will be invited to submit competitive bids.</div>
-        <button class="btn-full">Start BidBoard - ${d.law.split('-')[0].trim()}</button>
+        <button class="btn-full">Start BidBoard — ${d.law.split('—')[0].trim()} →</button>
         <button class="btn-full-out">Notify Managing Agent</button>
       </div>`;
   }
@@ -738,19 +1017,19 @@ async function uploadInvoices(input) {
   formData.append('file', file);
   const resultEl = document.getElementById('uploadResult');
   resultEl.style.display = 'block';
-  resultEl.textContent = 'Processing invoices...';
+  resultEl.textContent = '⏳ Processing invoices...';
   try {
     const resp = await fetch('/api/upload-invoices', {method:'POST', body:formData});
     const data = await resp.json();
     if (data.success) {
-      resultEl.textContent = `Processed ${data.records} invoice records - ${data.classification_rate}% classified - Dashboard updated`;
+      resultEl.textContent = `✓ Processed ${data.records} invoice records · ${data.classification_rate}% classified · Dashboard updated`;
     } else {
       resultEl.style.background = 'var(--red-light)';
       resultEl.style.color = 'var(--red)';
       resultEl.textContent = `Error: ${data.error}`;
     }
   } catch(e) {
-    resultEl.textContent = 'Upload failed - check console.';
+    resultEl.textContent = 'Upload failed — check console.';
   }
 }
 </script>
@@ -759,10 +1038,14 @@ async function uploadInvoices(input) {
 
 
 if __name__ == "__main__":
-    print("=" * 55)
-    print("  BoardIQ - Starting Web Application")
-    print("=" * 55)
+    print("\n" + "="*55)
+    print("  BoardIQ — Starting Web Application")
+    print("="*55)
     print("  URL:      http://localhost:5001")
-    print("  admin@boardiq.com / admin")
-    print("=" * 55)
+    print()
+    print("  Demo logins:")
+    print("  board@120w72.com   / demo1234")
+    print("  board@740park.com  / demo1234")
+    print("  admin@boardiq.com  / admin")
+    print("="*55 + "\n")
     app.run(debug=True, port=5001, host="0.0.0.0")
