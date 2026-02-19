@@ -552,7 +552,9 @@ body{background:var(--bg);color:var(--text);font-family:'Plus Jakarta Sans',sans
 .user-name{font-size:12px;color:rgba(255,255,255,.5)}
 .logout-link{font-size:11px;color:rgba(255,255,255,.3);text-decoration:none}
 .logout-link:hover{color:rgba(255,255,255,.6)}
-{% if all_buildings|length > 1 %}.switch-links{padding:10px 18px;border-top:1px solid rgba(255,255,255,.06);overflow-y:auto;max-height:300px}
+{% if all_buildings|length > 1 %}.switch-links{padding:6px 18px 10px;border-top:1px solid rgba(255,255,255,.06);overflow-y:auto;flex:1;min-height:0}
+.bldg-search{width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:4px;color:#fff;font-size:11px;padding:5px 8px;margin-bottom:6px;outline:none;box-sizing:border-box}
+.bldg-search::placeholder{color:rgba(255,255,255,.3)}
 .switch-link{display:block;font-size:11px;color:rgba(255,255,255,.4);text-decoration:none;padding:3px 0}
 .switch-link:hover{color:rgba(255,255,255,.7)}
 .switch-link.active-link{color:var(--gold)}{% endif %}
@@ -703,12 +705,16 @@ table.vt tr.click:hover td{background:var(--surface2)}
   </div>
   {% if all_buildings|length > 1 %}
   <div class="switch-links">
+    <input class="bldg-search" id="bldgSearch" type="text" placeholder="Search buildings…" oninput="filterBuildings(this.value)">
+    <div id="bldgList">
     {% for b in all_buildings %}
     <a href="/switch-building/{{ b.id }}"
-       class="switch-link {% if b.id == active_bbl %}active-link{% endif %}">
+       class="switch-link {% if b.id == active_bbl %}active-link{% endif %}"
+       data-addr="{{ b.address|lower }}">
       {% if b.id == active_bbl %}▶ {% endif %}{{ b.address[:28] }}
     </a>
     {% endfor %}
+    </div>
   </div>
   {% endif %}
   <div class="bldg-block">
@@ -899,10 +905,16 @@ table.vt tr.click:hover td{background:var(--surface2)}
       <div class="two-mini">
         <div class="mini">
           <div class="mini-title">Tax &amp; Assessment · DOF</div>
+          {% if building.tax_assessment.assessed_value > 0 %}
           <div class="tax-val">${{ "{:,.0f}".format(building.tax_assessment.assessed_value) }}</div>
           <div class="tax-sub">Assessed Value · {{ building.tax_assessment.fiscal_year }}</div>
+          <div class="tax-sub" style="margin-top:6px">Market Value: <strong>${{ "{:,.0f}".format(building.tax_assessment.market_value) }}</strong></div>
+          <div class="tax-sub">Est. Annual Tax: <strong>${{ "{:,.0f}".format(building.tax_assessment.annual_tax_est) }}</strong></div>
           {% if building.tax_assessment.certiorari_recommended %}
           <div class="tax-alert">⚠ Assessment up {{ building.tax_assessment.trend_pct_2yr }}% in 2 years. Tax certiorari review recommended — comparable buildings achieve reductions averaging $28,000/yr.</div>
+          {% endif %}
+          {% else %}
+          <div class="tax-sub" style="margin-top:12px;color:rgba(0,0,0,.35)">DOF data loading — enrichment in progress</div>
           {% endif %}
         </div>
         <div class="mini">
@@ -910,19 +922,25 @@ table.vt tr.click:hover td{background:var(--surface2)}
           <div class="viol-nums">
             <div class="vn">
               <div class="vn-val {% if building.violations.hpd_open > 0 %}red{% else %}green{% endif %}">{{ building.violations.hpd_open }}</div>
-              <div class="vn-lbl">Open Violations</div>
+              <div class="vn-lbl">Open HPD</div>
             </div>
             <div class="vn">
               <div class="vn-val green">{{ building.violations.hpd_closed_12mo }}</div>
-              <div class="vn-lbl">Closed Last 12 Mo</div>
+              <div class="vn-lbl">Closed 12 Mo</div>
+            </div>
+            <div class="vn">
+              <div class="vn-val {% if building.violations.dob_open > 0 %}yellow{% else %}green{% endif %}">{{ building.violations.dob_open }}</div>
+              <div class="vn-lbl">Open DOB</div>
             </div>
             <div class="vn">
               <div class="vn-val">{{ building.violations.avg_days_to_close }}</div>
-              <div class="vn-lbl">Avg Days to Close</div>
+              <div class="vn-lbl">Avg Days Close</div>
             </div>
           </div>
           {% if building.violations.class_c_open %}
           <div class="viol-flag">⚠ Open HPD Class C violation — Immediately Hazardous. Requires urgent attention.</div>
+          {% elif building.violations.hpd_open == 0 and building.violations.dob_open == 0 %}
+          <div style="margin-top:10px;font-size:12px;color:var(--green)">✓ No open violations on record</div>
           {% endif %}
         </div>
       </div>
@@ -1043,6 +1061,13 @@ async function uploadInvoices(input) {
   } catch(e) {
     resultEl.textContent = 'Upload failed — check console.';
   }
+}
+
+function filterBuildings(q) {
+  const term = q.toLowerCase();
+  document.querySelectorAll('#bldgList .switch-link').forEach(a => {
+    a.style.display = a.dataset.addr.includes(term) ? 'block' : 'none';
+  });
 }
 </script>
 </body>
