@@ -24,7 +24,7 @@ from datetime import datetime, date
 
 # ── Monday.com config ─────────────────────────────────────────────────────────
 # Paste your Monday.com API token here (get from monday.com > Profile > Admin > API)
-MONDAY_API_TOKEN = eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjI3NTY5MzkxLCJhYWkiOjExLCJ1aWQiOjg2NzY3MCwiaWFkIjoiMjAxOS0xMS0yN1QxMzoxMDo1NC4wMDBaIiwicGVyIjoibWU6d3JpdGUiLCJhY3RpZCI6MzQ4MTQ4LCJyZ24iOiJ1c2UxIn0.R6M9pBBvyWuJJa0MvtF9CEMfbhEOStV7ZHvIr0gJ5Hk
+MONDAY_API_TOKEN = "eyJhbGciOiJIUzI1NiJ9.eyJ0aWQiOjI3NTY5MzkxLCJhYWkiOjExLCJ1aWQiOjg2NzY3MCwiaWFkIjoiMjAxOS0xMS0yN1QxMzoxMDo1NC4wMDBaIiwicGVyIjoibWU6d3JpdGUiLCJhY3RpZCI6MzQ4MTQ4LCJyZ24iOiJ1c2UxIn0.R6M9pBBvyWuJJa0MvtF9CEMfbhEOStV7ZHvIr0gJ5Hk"
 MONDAY_BOARD_ID  = 3473581362
 
 # ── NYC Open Data endpoints ───────────────────────────────────────────────────
