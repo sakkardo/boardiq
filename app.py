@@ -36,8 +36,7 @@ app = Flask(__name__)
 app.secret_key = "boardiq-dev-key-change-in-production"
 
 # ── In-memory database (swap for PostgreSQL in production) ───────────────────
-# Legacy 3-building inline DB kept for reference only — overridden by import below
-_LEGACY_BUILDINGS_DB = {
+BUILDINGS_DB = {
     "bbl_1022150001": {
         "id": "bbl_1022150001",
         "address": "120 West 72nd Street",
@@ -220,7 +219,6 @@ _LEGACY_BUILDINGS_DB = {
                 "cost_low": 22000,
                 "cost_high": 38000,
                 "network_comps": 23,
-                "context": "NYC requires all buildings over 6 stories to have a licensed engineer inspect the exterior facade every 5 years. The engineer files a report with the DOB classifying the facade as Safe, Safe with Repair & Maintenance Program (SWARMP), or Unsafe. If Unsafe, repairs must begin immediately. For a 16-story building like Gramercy Plaza, this typically involves hiring a facade engineering firm, erecting sidewalk sheds or scaffolding if repairs are needed, and filing all documentation with the DOB. The board should hire a qualified facade engineer 12+ months before the deadline to allow time for inspection, report preparation, and any required repairs. Cost range reflects inspection plus minor repair work — major repairs would be additional.",
             },
             {
                 "law": "Local Law 97 — Carbon Emissions",
@@ -231,18 +229,16 @@ _LEGACY_BUILDINGS_DB = {
                 "cost_low": 35000,
                 "cost_high": 65000,
                 "network_comps": 31,
-                "context": "Local Law 97 is NYC's landmark climate legislation that caps carbon emissions for large buildings. Buildings over 25,000 sq ft must meet strict emissions limits or pay fines of $268 per metric ton of CO2 over the cap — every single year until compliant. Gramercy Plaza at 187,000 sq ft is well above the threshold. The annual compliance report for the prior calendar year must be filed with the DOB by May 1st. Given Con Edison bills of $55,000/month, this building almost certainly has significant carbon exposure. The board should immediately commission an LL97 benchmarking study to determine the penalty exposure and what retrofits — better insulation, heat pump upgrades, LED lighting, or purchasing renewable energy credits — would reduce or eliminate the fine. Acting now costs far less than paying annual penalties indefinitely.",
             },
             {
-                "law": "Local Law 87 — Energy Audit & Retro-commissioning",
-                "due_date": "Verify with DOB — may be overdue",
-                "months_away": 0,
+                "law": "Local Law 87 — Energy Audit",
+                "due_date": "Dec 2026",
+                "months_away": 10,
                 "urgency": "HIGH",
                 "consequence": "$3,000 year one, $5,000/yr thereafter until filed",
                 "cost_low": 14000,
                 "cost_high": 24000,
                 "network_comps": 41,
-                "context": "Local Law 87 requires buildings over 50,000 sq ft to conduct a professional energy audit and retro-commissioning study every 10 years, based on the last digit of the building's tax block number. Block 882 ends in 2, meaning compliance was due in years ending in 2 — most recently 2022. If Gramercy Plaza has not filed an LL87 report, the building may already be in violation and accruing fines. The board should immediately check DOB BIS records to confirm filing status. An LL87 audit involves hiring a certified energy auditor to analyze all building systems — HVAC, lighting, hot water, insulation — and identify efficiency improvements. Retro-commissioning ensures existing systems are operating as designed. The audit report is filed with the city. Many buildings find the audit pays for itself through energy savings identified.",
             },
             {
                 "law": "Elevator Annual Inspection — 2 cabs",
@@ -253,18 +249,16 @@ _LEGACY_BUILDINGS_DB = {
                 "cost_low": 1600,
                 "cost_high": 2800,
                 "network_comps": 89,
-                "context": "NYC requires annual safety inspections of all elevator cabs by a licensed DOB inspector. Gramercy Plaza has 2 passenger elevator cabs. The inspection covers all mechanical and safety components — brakes, cables, door operations, emergency systems, and more. The elevator contractor (currently PS Marcato) typically coordinates the inspection and must have the equipment in proper working order beforehand. If an elevator fails inspection or the inspection lapses, the DOB can order the cab shut down immediately — leaving a 16-story building with one or zero working elevators, which creates serious hardship for residents and liability for the board. The board should confirm inspection dates with PS Marcato at least 60 days in advance and ensure all outstanding service items are resolved beforehand.",
             },
             {
                 "law": "Local Law 152 — Gas Piping Inspection",
-                "due_date": "Verify with DOB — 2025 may be due",
-                "months_away": 0,
-                "urgency": "HIGH",
-                "consequence": "DOB violations and fines if inspection not filed on time",
+                "due_date": "Dec 2026",
+                "months_away": 10,
+                "urgency": "MEDIUM",
+                "consequence": "DOB violations if inspection not filed on time",
                 "cost_low": 3500,
                 "cost_high": 7000,
                 "network_comps": 67,
-                "context": "Local Law 152 requires buildings to have all exposed gas piping inspected by a licensed master plumber every 4 years. Inspections are scheduled by community district — Manhattan Community District 5 (which includes Gramercy Park) falls in the group due in years ending in 0 or 5, meaning the next inspection is due December 31, 2025. If not yet completed, the building is at risk of a DOB violation. The inspection covers all exposed gas piping in common areas, mechanical rooms, and individual apartments. The licensed plumber files a Gas Piping System Periodic Inspection Report (GPS1) with the DOB. Boards should hire a licensed master plumber well in advance — inspectors get booked quickly near deadlines. If defects are found, they must be corrected and re-inspected before the filing deadline.",
             },
         ],
         "vendor_data": [
@@ -296,15 +290,12 @@ _LEGACY_BUILDINGS_DB = {
     },
 }
 
-# ── Real buildings database (125 buildings from Monday.com + NYC Open Data) ──
-from buildings_db import BUILDINGS_DB
-
 # ── Auth (simple demo auth — swap for real auth in production) ───────────────
 DEMO_USERS = {
-    "board@gramercyplaza.com": {"password": "demo1234", "buildings": ["bldg_004"], "name": "Gramercy Plaza Board"},
-    "board@157e72.com":        {"password": "demo1234", "buildings": ["bldg_016"], "name": "Robert Steinberg"},
-    "board@33greenwich.com":   {"password": "demo1234", "buildings": ["bldg_020"], "name": "Margaret Chen"},
-    "admin@boardiq.com":       {"password": "admin", "buildings": list(BUILDINGS_DB.keys()), "name": "BoardIQ Admin", "is_admin": True},
+    "board@120w72.com":      {"password": "demo1234", "buildings": ["bbl_1022150001"], "name": "Margaret Chen"},
+    "board@740park.com":     {"password": "demo1234", "buildings": ["bbl_1012660001"], "name": "Robert Steinberg"},
+    "board@gramercyplaza.com": {"password": "demo1234", "buildings": ["bbl_1009270001"], "name": "Gramercy Plaza Board"},
+    "admin@boardiq.com":     {"password": "admin", "buildings": list(BUILDINGS_DB.keys()), "name": "BoardIQ Admin", "is_admin": True},
 }
 
 def login_required(f):
@@ -337,7 +328,15 @@ def compute_benchmarks(building):
         }
     last_bids = {v["category"]: v["last_bid_year"]
                  for v in building.get("vendor_data", []) if v.get("last_bid_year")}
-    return benchmark_building(vendor_flat, units=building["units"], last_bid_years=last_bids)
+    return benchmark_building(
+        vendor_flat,
+        units=building["units"],
+        last_bid_years=last_bids,
+        neighborhood=building.get("neighborhood", "Upper West Side"),
+        borough=building.get("borough", "Manhattan"),
+        is_prewar=building.get("is_prewar", True),
+        building_type=building.get("building_type", "coop").lower(),
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -538,7 +537,7 @@ body{background:var(--bg);color:var(--text);font-family:'Plus Jakarta Sans',sans
 .logo-mark{font-family:'Playfair Display',serif;font-size:22px;color:#fff}
 .logo-mark span{color:var(--gold)}
 .logo-sub{font-size:10px;color:rgba(255,255,255,.3);letter-spacing:2px;text-transform:uppercase;margin-top:3px}
-.nav{padding:14px 0;flex:1;overflow-y:auto;min-height:0}
+.nav{padding:14px 0;flex:1}
 .nav-label{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.25);padding:10px 22px 5px}
 .nav-item{display:flex;align-items:center;gap:8px;padding:8px 22px;font-size:12.5px;color:rgba(255,255,255,.5);cursor:pointer;border-left:2px solid transparent}
 .nav-item.active{color:#fff;background:rgba(255,255,255,.06);border-left-color:var(--gold)}
@@ -552,9 +551,7 @@ body{background:var(--bg);color:var(--text);font-family:'Plus Jakarta Sans',sans
 .user-name{font-size:12px;color:rgba(255,255,255,.5)}
 .logout-link{font-size:11px;color:rgba(255,255,255,.3);text-decoration:none}
 .logout-link:hover{color:rgba(255,255,255,.6)}
-{% if all_buildings|length > 1 %}.switch-links{padding:6px 18px 10px;border-top:1px solid rgba(255,255,255,.06);overflow-y:auto;flex:1;min-height:0}
-.bldg-search{width:100%;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:4px;color:#fff;font-size:11px;padding:5px 8px;margin-bottom:6px;outline:none;box-sizing:border-box}
-.bldg-search::placeholder{color:rgba(255,255,255,.3)}
+{% if all_buildings|length > 1 %}.switch-links{padding:10px 18px;border-top:1px solid rgba(255,255,255,.06)}
 .switch-link{display:block;font-size:11px;color:rgba(255,255,255,.4);text-decoration:none;padding:3px 0}
 .switch-link:hover{color:rgba(255,255,255,.7)}
 .switch-link.active-link{color:var(--gold)}{% endif %}
@@ -705,16 +702,12 @@ table.vt tr.click:hover td{background:var(--surface2)}
   </div>
   {% if all_buildings|length > 1 %}
   <div class="switch-links">
-    <input class="bldg-search" id="bldgSearch" type="text" placeholder="Search buildings…" oninput="filterBuildings(this.value)">
-    <div id="bldgList">
     {% for b in all_buildings %}
     <a href="/switch-building/{{ b.id }}"
-       class="switch-link {% if b.id == active_bbl %}active-link{% endif %}"
-       data-addr="{{ b.address|lower }}">
+       class="switch-link {% if b.id == active_bbl %}active-link{% endif %}">
       {% if b.id == active_bbl %}▶ {% endif %}{{ b.address[:28] }}
     </a>
     {% endfor %}
-    </div>
   </div>
   {% endif %}
   <div class="bldg-block">
@@ -750,7 +743,7 @@ table.vt tr.click:hover td{background:var(--surface2)}
       <div class="strip-value {% if total_savings > 0 %}red{% else %}green{% endif %}">
         {% if total_savings > 0 %}${{ "{:,.0f}".format(total_savings) }}{% else %}None{% endif %}
       </div>
-      <div class="strip-sub">vs. network median</div>
+      <div class="strip-sub">vs. peer median</div>
     </div>
     <div class="strip-item {% if above_count > 0 %}yellow{% else %}green{% endif %}">
       <div class="strip-label">Contracts Above Market</div>
@@ -778,7 +771,7 @@ table.vt tr.click:hover td{background:var(--surface2)}
     {# ── VENDOR TABLE ── #}
     <div class="card">
       <div class="ch">
-        <div><div class="ct">Vendor Intelligence</div><div class="csub">Benchmarked against 187 comparable NYC buildings</div></div>
+        <div><div class="ct">Vendor Intelligence</div><div class="csub">Peer group: {{ benchmarks.peer_group.description }}</div></div>
         <a href="#" class="ca">View All →</a>
       </div>
       <table class="vt">
@@ -838,10 +831,10 @@ table.vt tr.click:hover td{background:var(--surface2)}
         <div class="opp-rank">Priority {{ "%02d"|format(loop.index) }} · {{ opp.category_label[:25] }}</div>
         <div class="opp-name">
           {% if opp.years_since_bid %}No competitive bid in {{ opp.years_since_bid }} years
-          {% else %}{{ opp.percentile }}th percentile — above network median{% endif %}
+          {% else %}{{ opp.percentile }}th percentile — above peer median{% endif %}
         </div>
         <div class="opp-desc">
-          You pay ${{ opp.per_unit }}/unit vs. network median ${{ opp.network_median }}/unit.
+          You pay ${{ opp.per_unit }}/unit vs. peer median ${{ opp.peer_median }}/unit.
           {% if opp.years_since_bid and opp.years_since_bid > 3 %}Market has shifted significantly since last bid.{% endif %}
         </div>
         <div class="opp-row">
@@ -905,16 +898,10 @@ table.vt tr.click:hover td{background:var(--surface2)}
       <div class="two-mini">
         <div class="mini">
           <div class="mini-title">Tax &amp; Assessment · DOF</div>
-          {% if building.tax_assessment.assessed_value > 0 %}
           <div class="tax-val">${{ "{:,.0f}".format(building.tax_assessment.assessed_value) }}</div>
           <div class="tax-sub">Assessed Value · {{ building.tax_assessment.fiscal_year }}</div>
-          <div class="tax-sub" style="margin-top:6px">Market Value: <strong>${{ "{:,.0f}".format(building.tax_assessment.market_value) }}</strong></div>
-          <div class="tax-sub">Est. Annual Tax: <strong>${{ "{:,.0f}".format(building.tax_assessment.annual_tax_est) }}</strong></div>
           {% if building.tax_assessment.certiorari_recommended %}
           <div class="tax-alert">⚠ Assessment up {{ building.tax_assessment.trend_pct_2yr }}% in 2 years. Tax certiorari review recommended — comparable buildings achieve reductions averaging $28,000/yr.</div>
-          {% endif %}
-          {% else %}
-          <div class="tax-sub" style="margin-top:12px;color:rgba(0,0,0,.35)">DOF data loading — enrichment in progress</div>
           {% endif %}
         </div>
         <div class="mini">
@@ -922,25 +909,19 @@ table.vt tr.click:hover td{background:var(--surface2)}
           <div class="viol-nums">
             <div class="vn">
               <div class="vn-val {% if building.violations.hpd_open > 0 %}red{% else %}green{% endif %}">{{ building.violations.hpd_open }}</div>
-              <div class="vn-lbl">Open HPD</div>
+              <div class="vn-lbl">Open Violations</div>
             </div>
             <div class="vn">
               <div class="vn-val green">{{ building.violations.hpd_closed_12mo }}</div>
-              <div class="vn-lbl">Closed 12 Mo</div>
-            </div>
-            <div class="vn">
-              <div class="vn-val {% if building.violations.dob_open > 0 %}yellow{% else %}green{% endif %}">{{ building.violations.dob_open }}</div>
-              <div class="vn-lbl">Open DOB</div>
+              <div class="vn-lbl">Closed Last 12 Mo</div>
             </div>
             <div class="vn">
               <div class="vn-val">{{ building.violations.avg_days_to_close }}</div>
-              <div class="vn-lbl">Avg Days Close</div>
+              <div class="vn-lbl">Avg Days to Close</div>
             </div>
           </div>
           {% if building.violations.class_c_open %}
           <div class="viol-flag">⚠ Open HPD Class C violation — Immediately Hazardous. Requires urgent attention.</div>
-          {% elif building.violations.hpd_open == 0 and building.violations.dob_open == 0 %}
-          <div style="margin-top:10px;font-size:12px;color:var(--green)">✓ No open violations on record</div>
           {% endif %}
         </div>
       </div>
@@ -962,6 +943,7 @@ table.vt tr.click:hover td{background:var(--surface2)}
 const vendorBenchmarks = {{ benchmarks.vendor_benchmarks | tojson }};
 const complianceItems  = {{ building.compliance_deadlines | tojson }};
 const buildingUnits    = {{ building.units }};
+const peerGroup        = {{ benchmarks.peer_group | tojson }};
 
 function openPanel(type, idx) {
   const content = document.getElementById('panelContent');
@@ -970,23 +952,29 @@ function openPanel(type, idx) {
     if (!bm || !bm.per_unit) return;
     const statusColor = bm.status.color;
     const savings = bm.savings_opportunity_annual || 0;
+    const peerMedian = bm.peer_median || bm.network_median;
+    const peerP25 = bm.peer_p25 || bm.network_p25;
+    const peerP90 = bm.peer_p90 || bm.network_p90;
     content.innerHTML = `
       <div class="panel-title">${bm.vendor_name || 'Unknown Vendor'}</div>
       <div class="panel-sub">${bm.category_label}</div>
+      <div style="font-size:11px;color:var(--dim);background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:7px 10px;margin-bottom:14px">
+        📊 Peer group: ${peerGroup.description}
+      </div>
       <div class="stat-grid">
         <div class="stat-box"><div class="stat-lbl">Annual Spend</div><div class="stat-val">$${(bm.annual_spend||0).toLocaleString()}</div></div>
         <div class="stat-box"><div class="stat-lbl">Per Unit/Year</div><div class="stat-val ${statusColor}">$${Math.round(bm.per_unit||0)}</div></div>
-        <div class="stat-box"><div class="stat-lbl">Network Median</div><div class="stat-val">$${bm.network_median}/unit</div></div>
+        <div class="stat-box"><div class="stat-lbl">Peer Median</div><div class="stat-val">$${peerMedian}/unit</div></div>
         <div class="stat-box"><div class="stat-lbl">Savings Opportunity</div><div class="stat-val ${statusColor}">$${(savings).toLocaleString()}/yr</div></div>
       </div>
-      <div class="panel-section">Your Network Position</div>
+      <div class="panel-section">Your Peer Group Position</div>
       <div class="nbar-wrap">
-        <div class="nbar-labels"><span>$${bm.network_p25}/unit</span><span>Median: $${bm.network_p50||bm.network_median}</span><span>$${bm.network_p90}/unit</span></div>
+        <div class="nbar-labels"><span>$${peerP25}/unit</span><span>Median: $${peerMedian}</span><span>$${peerP90}/unit</span></div>
         <div class="nbar-track">
           <div class="nbar-fill" style="width:100%"></div>
           <div class="nbar-pin" style="left:${Math.min(95,bm.percentile||50)}%;border-color:var(--${statusColor})"></div>
         </div>
-        <div class="nbar-caption">You are at the <strong>${bm.percentile}th percentile</strong> — paying more than ${bm.percentile}% of comparable buildings</div>
+        <div class="nbar-caption">You are at the <strong>${bm.percentile}th percentile</strong> among ${peerGroup.peer_building_count} peer buildings</div>
       </div>
       <div class="panel-section">Key Factors Affecting Price</div>
       <div style="font-size:12px;color:var(--dim);line-height:1.8;background:var(--surface2);padding:12px;border-radius:5px;border:1px solid var(--border)">
@@ -1000,7 +988,7 @@ function openPanel(type, idx) {
         <button class="btn-full-out">Send Analysis to Managing Agent</button>
       </div>` : `
       <div style="background:var(--green-light);border:1px solid var(--green-border);border-radius:6px;padding:14px;margin-top:16px;font-size:13px;color:var(--green)">
-        ✓ This contract is at or below market. No action required at this time.
+        ✓ This contract is at or below market for your peer group. No action required at this time.
       </div>`}`;
   } else {
     const d = complianceItems[idx];
@@ -1017,9 +1005,6 @@ function openPanel(type, idx) {
       </div>
       <div class="panel-section">Consequence of Non-Compliance</div>
       <div style="background:var(--red-light);border:1px solid var(--red-border);border-radius:5px;padding:12px;font-size:12.5px;color:var(--red);font-weight:500">${d.consequence}</div>
-      ${d.context ? `
-      <div class="panel-section">What the Board Needs to Know</div>
-      <div style="font-size:12.5px;color:var(--dim);line-height:1.8;background:var(--surface2);padding:14px;border-radius:5px;border:1px solid var(--border)">${d.context}</div>` : ''}
       <div class="panel-section">Cost Data — ${d.network_comps} Comparable Buildings</div>
       <div class="nbar-wrap">
         <div class="nbar-labels"><span>$${d.cost_low.toLocaleString()}</span><span>Typical Range</span><span>$${d.cost_high.toLocaleString()}</span></div>
@@ -1061,13 +1046,6 @@ async function uploadInvoices(input) {
   } catch(e) {
     resultEl.textContent = 'Upload failed — check console.';
   }
-}
-
-function filterBuildings(q) {
-  const term = q.toLowerCase();
-  document.querySelectorAll('#bldgList .switch-link').forEach(a => {
-    a.style.display = a.dataset.addr.includes(term) ? 'block' : 'none';
-  });
 }
 </script>
 </body>
