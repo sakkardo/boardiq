@@ -407,7 +407,7 @@ VENDOR_PROFILES = {
 
 # Map: management company name → list of building BBLs
 MANAGEMENT_CO_BUILDINGS = {
-    "Century Management": [b["bbl"] for b in BUILDINGS_DB.values() if b.get("management_company") == "Century Management" or b.get("managing_agent")],
+    "Century Management": [b.get("bbl") or b.get("id") for b in BUILDINGS_DB.values() if b.get("management_company") == "Century Management" or b.get("managing_agent")],
 }
 # Fallback — count all Century buildings
 _century_bbls = [bbl for bbl, b in BUILDINGS_DB.items() if "century" in str(b.get("management_company","")).lower() or "century" in str(b.get("managing_agent","")).lower()]
