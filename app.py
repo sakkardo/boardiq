@@ -739,11 +739,11 @@ def upload_invoices():
 
     import tempfile, subprocess, re
 
-    # Save uploaded file in binary mode
+    # Save uploaded file, close it, then parse
     suffix = ".pdf" if f.filename.lower().endswith(".pdf") else ".csv"
     with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
-        f.save(tmp)
         tmp_path = tmp.name
+    f.save(tmp_path)  # save after closing the temp file handle
 
     try:
         if suffix == ".pdf":
@@ -860,62 +860,90 @@ def _classify_category(vendor_name, description):
 def _parse_pdf_invoices(pdf_path):
     """Extract structured invoice data from a PDF using pypdf."""
     import re
-    try:
-        from pypdf import PdfReader
-        reader = PdfReader(pdf_path, strict=False)
-    except ImportError:
-        try:
-            from PyPDF2 import PdfReader
-            reader = PdfReader(pdf_path, strict=False)
-        except ImportError:
-            raise Exception("PDF parsing library not available. Please install pypdf.")
-    except Exception as e:
-        raise Exception(f"Could not open PDF: {e}")
+    import warnings
 
     pages = []
-    for i, page in enumerate(reader.pages):
+    try:
+        from pypdf import PdfReader
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            try:
+                reader = PdfReader(pdf_path, strict=False)
+            except Exception:
+                # Try reading raw bytes as fallback
+                reader = None
+
+        if reader:
+            for page in reader.pages:
+                try:
+                    text = page.extract_text() or ""
+                    pages.append(text)
+                except Exception:
+                    pages.append("")
+    except ImportError:
+        pass
+
+    # If pypdf failed or not installed, try raw text extraction
+    if not pages:
         try:
-            text = page.extract_text() or ""
-            pages.append(text)
-        except Exception:
-            pages.append("")
+            with open(pdf_path, 'rb') as f:
+                raw = f.read().decode('latin-1', errors='replace')
+            # Extract readable text chunks between stream markers
+            import re as _re
+            chunks = _re.findall(r'BT(.*?)ET', raw, _re.DOTALL)
+            page_text = ' '.join(chunks)
+            # Split into fake pages by form feed or large gaps
+            pages = [page_text[i:i+3000] for i in range(0, min(len(page_text), 60000), 3000)]
+        except Exception as e:
+            raise Exception(f"Could not parse PDF: {e}")
 
     invoices = []
-    seen_invoices = set()  # deduplicate by invoice number
+    seen_invoices = set()  # deduplicate only exact invoice numbers
 
     for page_idx, page_text in enumerate(pages):
         page_text = page_text.strip()
-        if not page_text or len(page_text) < 30:
+        if not page_text or len(page_text) < 20:
             continue
 
         lines = [l.strip() for l in page_text.split('\n') if l.strip()]
         if not lines:
             continue
 
-        # --- Extract vendor name (first substantial non-address line) ---
+        # Skip pure continuation pages (no vendor name, no dollar amount)
+        has_dollar = bool(re.search(r'\$[\d,]+', page_text))
+        if not has_dollar:
+            continue
+
+        # --- Extract vendor name (first substantial non-address, non-header line) ---
         vendor_name = ""
-        for line in lines[:5]:
-            if len(line) > 3 and not re.match(r'^\d', line) and 'century' not in line.lower():
+        skip_words = {'invoice', 'bill to', 'ship to', 'page', 'date', 'terms', 'payment', 'century', 'check request', 'sent from'}
+        for line in lines[:6]:
+            low = line.lower()
+            if len(line) > 3 and not re.match(r'^\d', line) and not any(w in low for w in skip_words):
                 vendor_name = line[:80]
                 break
+        if not vendor_name:
+            continue  # can't identify vendor, skip
 
         # --- Extract invoice number ---
         inv_num = ""
         for pattern in [
-            r'Invoice\s*#?\s*:?\s*([A-Z0-9\-]+)',
-            r'INV[OICE#\-]+\s*:?\s*([A-Z0-9\-]+)',
-            r'INVOICE\s*NUMBER\s*:?\s*([A-Z0-9\-]+)',
+            r'Invoice\s*#\s*:?\s*([A-Z0-9\-]+)',
+            r'Invoice\s+No\.?\s*:?\s*([A-Z0-9\-]+)',
+            r'INV[\-#]?\s*([A-Z0-9\-]{4,})',
+            r'INVOICE\s*(?:NUMBER|#|NO)?\s*:?\s*([A-Z0-9\-]+)',
         ]:
             m = re.search(pattern, page_text, re.IGNORECASE)
             if m and len(m.group(1)) > 2:
                 inv_num = m.group(1).strip()
                 break
 
-        # Skip if we've seen this invoice number already
-        if inv_num and inv_num in seen_invoices:
+        # Deduplicate only if we have a real invoice number (not page-generated)
+        dedup_key = f"{vendor_name[:20]}_{inv_num}" if inv_num else ""
+        if dedup_key and dedup_key in seen_invoices:
             continue
-        if inv_num:
-            seen_invoices.add(inv_num)
+        if dedup_key:
+            seen_invoices.add(dedup_key)
 
         # --- Extract date ---
         inv_date = ""
@@ -953,7 +981,8 @@ def _parse_pdf_invoices(pdf_path):
                 total_amount = max(parsed)
                 total_str = f"${total_amount:,.2f}"
 
-        if total_amount < 0.01:
+        # Skip pages with no extractable amount
+        if not total_str:
             continue
 
         # --- Extract building address ---
@@ -2356,7 +2385,16 @@ function dRenderResults() {
         <select class="d-sel" onchange="dUpdBldg(${idx},this.value)">${bOpts}</select>
         ${inv.raw_building ? `<div class="d-raw">${inv.raw_building.substring(0,40)}</div>` : ''}
       </td>
-      <td><select class="d-sel" onchange="dUpdCat(${idx},this.value)">${cOpts}</select></td>
+      <td>
+        <select class="d-sel" id="dcat${idx}" onchange="dUpdCat(${idx},this.value)">
+          ${cOpts}
+          <option value="__custom__">＋ Custom category...</option>
+        </select>
+        <input type="text" class="d-sel" id="dcustom${idx}" placeholder="Type category name..."
+          style="display:none;margin-top:3px"
+          onchange="dSetCustomCat(${idx},this.value)"
+          onblur="dSetCustomCat(${idx},this.value)">
+      </td>
       <td><button class="d-skip" id="dsk${idx}" onclick="dToggleSkip(${idx})">Skip</button></td>`;
     tbody.appendChild(tr);
   });
@@ -2364,7 +2402,21 @@ function dRenderResults() {
 }
 
 function dUpdBldg(i, v) { dInvoices[i].matched_bbl = v; const b = D_BUILDINGS.find(x => x.bbl === v); dInvoices[i].matched_address = b ? b.address : ''; dUpdateSum(); }
-function dUpdCat(i, v) { dInvoices[i].category = v; }
+function dUpdCat(i, v) {
+  const customInput = document.getElementById('dcustom' + i);
+  if (v === '__custom__') {
+    customInput.style.display = 'block';
+    customInput.focus();
+  } else {
+    customInput.style.display = 'none';
+    dInvoices[i].category = v;
+  }
+}
+function dSetCustomCat(i, v) {
+  if (v && v.trim()) {
+    dInvoices[i].category = v.trim().toUpperCase().replace(/\s+/g, '_');
+  }
+}
 function dToggleSkip(i) {
   dInvoices[i].skip = !dInvoices[i].skip;
   document.getElementById('dsk' + i).classList.toggle('on', dInvoices[i].skip);
