@@ -22,6 +22,7 @@ import sys
 import json
 import csv
 import io
+import re
 from datetime import datetime
 from functools import wraps
 
@@ -836,14 +837,6 @@ def _parse_pdf_invoices(pdf_path):
             raise Exception("PDF parsing library not available. Please install pypdf.")
     except Exception as e:
         raise Exception(f"Could not open PDF: {e}")
-
-    pages = []
-    for i, page in enumerate(reader.pages):
-        try:
-            text = page.extract_text() or ""
-            pages.append(text)
-        except Exception:
-            pages.append("")  # skip unreadable pages
     invoices = []
     seen_invoices = set()  # deduplicate by invoice number
 
