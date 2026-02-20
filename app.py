@@ -2637,7 +2637,7 @@ function openPanel(type, idx) {
     const lawDetails = {
       'Local Law 11': {
         icon: '🏗',
-        what: 'A licensed facade engineer must physically inspect every inch of your building\'s exterior walls, balconies, and appurtenances. The engineer files a FISP report with the DOB classifying the facade as <strong>Safe</strong>, <strong>SWARMP</strong> (Safe With Repair & Maintenance Program), or <strong>Unsafe</strong>.',
+        what: 'A licensed facade engineer must physically inspect every inch of your building\\'s exterior walls, balconies, and appurtenances. The engineer files a FISP report with the DOB classifying the facade as <strong>Safe</strong>, <strong>SWARMP</strong> (Safe With Repair & Maintenance Program), or <strong>Unsafe</strong>.',
         who: 'A licensed NYC Professional Engineer (PE) or Registered Architect (RA) with FISP experience. They must be hired directly by the building, not through the contractor.',
         timeline: [
           'Hire engineer 12+ months before deadline',
@@ -2651,7 +2651,7 @@ function openPanel(type, idx) {
       },
       'Local Law 97': {
         icon: '🌿',
-        what: 'NYC\'s landmark climate law caps annual carbon emissions for buildings over 25,000 sq ft. Buildings that exceed their cap pay <strong>$268 per metric ton of CO₂</strong> over the limit every year. An annual benchmarking report must be filed with DOB by May 1st covering the prior calendar year.',
+        what: 'NYC\\'s landmark climate law caps annual carbon emissions for buildings over 25,000 sq ft. Buildings that exceed their cap pay <strong>$268 per metric ton of CO₂</strong> over the limit every year. An annual benchmarking report must be filed with DOB by May 1st covering the prior calendar year.',
         who: 'A licensed LL97 consultant or energy engineer to assess your current emissions against your cap, identify retrofit options, and prepare the required DOB filing.',
         timeline: [
           'Commission LL97 benchmarking study to quantify penalty exposure',
@@ -2689,7 +2689,7 @@ function openPanel(type, idx) {
           'Defects requiring emergency repair must be addressed immediately'
         ],
         filing: 'Licensed master plumber files GPS1 form through DOB NOW. Building retains copy for records.',
-        tip: 'Inspectors book up quickly near the Dec 31 deadline. Schedule in September or October. If defects are found, you\'ll need time for repairs before the filing window closes.'
+        tip: 'Inspectors book up quickly near the Dec 31 deadline. Schedule in September or October. If defects are found, you\\'ll need time for repairs before the filing window closes.'
       },
       'Local Law 87': {
         icon: '⚡',
