@@ -1031,7 +1031,7 @@ table.vt tr.click:hover td{background:var(--surface2)}
       <div class="two-mini">
         <div class="mini">
           <div class="mini-title">Tax &amp; Assessment Â· DOF</div>
-          {% if building.get('tax_assessment') %}<div class="tax-val">${{ "{:,.0f}".format(building.tax_assessment.assessed_value) }}</div>
+          {% if building.get('tax_assessment') %}{% if building.get('tax_assessment') %}<div class="tax-val">${{ "{:,.0f}".format(building.tax_assessment.assessed_value) }}</di
           <div class="tax-sub">Assessed Value Â· {{ building.tax_assessment.fiscal_year }}</div>
           {% if building.tax_assessment.certiorari_recommended %}
           <div class="tax-alert">â  Assessment up {{ building.tax_assessment.trend_pct_2yr }}% in 2 years. Tax certiorari review recommended â comparable buildings achieve reductions averaging $28,000/yr.</div>
