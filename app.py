@@ -35,6 +35,23 @@ from benchmarking_engine import benchmark_building, NETWORK_BENCHMARKS
 app = Flask(__name__)
 app.secret_key = "boardiq-dev-key-change-in-production"
 
+# ── Load Century Management buildings from enriched database ─────────────────
+def _load_century_buildings():
+    try:
+        import importlib.util
+        _dir = os.path.dirname(os.path.abspath(__file__))
+        _path = os.path.join(_dir, "century_buildings.py")
+        spec = importlib.util.spec_from_file_location("century_buildings", _path)
+        m = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(m)
+        print(f"[BoardIQ] Loaded {len(m.BUILDINGS_DB)} Century buildings")
+        return m.BUILDINGS_DB
+    except Exception as e:
+        print(f"[BoardIQ] Warning: Could not load century_buildings.py: {e}")
+        return {}
+
+CENTURY_BUILDINGS = _load_century_buildings()
+
 # ── In-memory database (swap for PostgreSQL in production) ───────────────────
 BUILDINGS_DB = {
     "bbl_1022150001": {
@@ -290,12 +307,16 @@ BUILDINGS_DB = {
     },
 }
 
+# ── Merge Century buildings into main DB ─────────────────────────────────────
+BUILDINGS_DB.update(CENTURY_BUILDINGS)
+
 # ── Auth (simple demo auth — swap for real auth in production) ───────────────
 DEMO_USERS = {
     "board@120w72.com":      {"password": "demo1234", "buildings": ["bbl_1022150001"], "name": "Margaret Chen", "role": "board"},
     "board@740park.com":     {"password": "demo1234", "buildings": ["bbl_1012660001"], "name": "Robert Steinberg", "role": "board"},
     "board@gramercyplaza.com": {"password": "demo1234", "buildings": ["bbl_1009270001"], "name": "Gramercy Plaza Board", "role": "board"},
     "admin@boardiq.com":     {"password": "admin", "buildings": list(BUILDINGS_DB.keys()), "name": "BoardIQ Admin", "is_admin": True, "role": "admin"},
+    "century@boardiq.com":   {"password": "century", "buildings": list(CENTURY_BUILDINGS.keys()), "name": "Century Management", "role": "admin"},
     "vendor@schindler.com":  {"password": "demo1234", "name": "Schindler Elevator Corp", "role": "vendor", "vendor_id": "v001", "buildings": []},
     "vendor@cleanstar.com":  {"password": "demo1234", "name": "Clean Star Services", "role": "vendor", "vendor_id": "v002", "buildings": []},
     "vendor@apexext.com":    {"password": "demo1234", "name": "Apex Exterminating", "role": "vendor", "vendor_id": "v003", "buildings": []},
