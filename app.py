@@ -1715,7 +1715,17 @@ body{font-family:'Inter',sans-serif;background:var(--surface);color:var(--text);
 .badge.matched{background:var(--green-light);color:var(--green);border:1px solid var(--green-border)}
 .badge.unmatched{background:var(--red-light);color:var(--red);border:1px solid var(--red-border)}
 .badge.low{background:#fffbf0;color:var(--yellow);border:1px solid var(--yellow-border)}
-.bldg-select{width:100%;padding:4px 7px;border:1px solid var(--border2);border-radius:4px;font-family:inherit;font-size:11px;background:white}
+.bldg-select-wrap{position:relative;width:100%}
+.bldg-input{width:100%;padding:5px 8px;border:1px solid var(--border2);border-radius:4px;font-family:inherit;font-size:11px;background:white;outline:none;cursor:pointer}
+.bldg-input:focus{border-color:var(--gold);box-shadow:0 0 0 2px rgba(245,158,11,.15)}
+.bldg-input.matched-val{color:var(--ink);font-weight:500}
+.bldg-input.empty-val{color:var(--muted);font-style:italic}
+.bldg-dd{display:none;position:absolute;top:100%;left:0;right:0;max-height:200px;overflow-y:auto;background:white;border:1px solid var(--border2);border-top:none;border-radius:0 0 4px 4px;z-index:60;box-shadow:0 4px 12px rgba(0,0,0,.1)}
+.bldg-dd.open{display:block}
+.bldg-dd-item{padding:5px 8px;font-size:11px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bldg-dd-item:hover{background:var(--surface2)}
+.bldg-dd-item.active{background:#fffbf0;color:var(--ink);font-weight:600}
+.bldg-dd-none{padding:6px 8px;font-size:11px;color:var(--muted);font-style:italic}
 .cat-select{width:100%;padding:4px 7px;border:1px solid var(--border2);border-radius:4px;font-family:inherit;font-size:11px;background:white}
 .raw-addr{font-size:9.5px;color:var(--muted);margin-top:3px;font-style:italic}
 .skip-btn{background:none;border:1px solid var(--border2);border-radius:4px;padding:3px 9px;font-size:11px;color:var(--muted);cursor:pointer;white-space:nowrap}
@@ -1844,8 +1854,9 @@ function renderResults() {
     const pct = Math.round((inv.match_confidence||0)*100);
     const bc = inv.matched_bbl ? (pct>65?'matched':'low') : 'unmatched';
     const bl = inv.matched_bbl ? (pct>65?`✓ ${pct}%`:`⚠ ${pct}%`) : '✗ No match';
-    const bldgOpts = '<option value="">— Not assigned —</option>' +
-      BUILDINGS.map(b=>`<option value="${b.bbl}"${b.bbl===inv.matched_bbl?' selected':''}>${b.address.substring(0,38)}</option>`).join('');
+    const matchedAddr = inv.matched_bbl ? (BUILDINGS.find(b=>b.bbl===inv.matched_bbl)||{}).address||'' : '';
+    const inputCls = inv.matched_bbl ? 'matched-val' : 'empty-val';
+    const inputVal = inv.matched_bbl ? matchedAddr.substring(0,38) : '— Not assigned —';
     const catOpts = CATEGORIES.map(([k,v])=>`<option value="${k}"${k===inv.category?' selected':''}>${v}</option>`).join('');
     const tr = document.createElement('tr');
     tr.id = 'r'+idx;
@@ -1855,8 +1866,13 @@ function renderResults() {
       <td style="font-size:11px;color:var(--muted);white-space:nowrap">${inv.date||'—'}</td>
       <td><div class="amount-val">${inv.total||'—'}</div></td>
       <td>
-        <span class="badge ${bc}">${bl}</span><br>
-        <select class="bldg-select" style="margin-top:4px" onchange="updBldg(${idx},this.value)">${bldgOpts}</select>
+        <span class="badge ${bc}">${bl}</span>
+        <div class="bldg-select-wrap" style="margin-top:4px">
+          <input type="text" class="bldg-input ${inputCls}" id="bi${idx}" value="${inputVal}"
+                 onfocus="openBldgDD(${idx})" oninput="filterBldgDD(${idx},this.value)"
+                 data-bbl="${inv.matched_bbl||''}">
+          <div class="bldg-dd" id="bd${idx}"></div>
+        </div>
         ${inv.raw_building?`<div class="raw-addr">PDF: ${inv.raw_building.substring(0,45)}</div>`:''}
       </td>
       <td><select class="cat-select" onchange="updCat(${idx},this.value)">${catOpts}</select></td>
@@ -1868,6 +1884,61 @@ function renderResults() {
 }
 
 function updBldg(i, v) { invoices[i].matched_bbl=v; const b=BUILDINGS.find(x=>x.bbl===v); invoices[i].matched_address=b?b.address:''; updateSum(); }
+
+function openBldgDD(idx) {
+  // Close all other dropdowns first
+  document.querySelectorAll('.bldg-dd.open').forEach(d => d.classList.remove('open'));
+  const inp = document.getElementById('bi'+idx);
+  inp.select();
+  renderBldgDD(idx, '');
+  document.getElementById('bd'+idx).classList.add('open');
+}
+
+function renderBldgDD(idx, query) {
+  const dd = document.getElementById('bd'+idx);
+  const q = query.toLowerCase().trim();
+  const filtered = q ? BUILDINGS.filter(b => b.address.toLowerCase().includes(q)) : BUILDINGS;
+  if (filtered.length === 0) {
+    dd.innerHTML = '<div class="bldg-dd-none">No buildings match</div>';
+    return;
+  }
+  const curBbl = invoices[idx].matched_bbl || '';
+  // Unassign option
+  let html = `<div class="bldg-dd-item" onclick="selectBldg(${idx},'')">\u2014 Not assigned \u2014</div>`;
+  html += filtered.map(b =>
+    `<div class="bldg-dd-item${b.bbl===curBbl?' active':''}" onclick="selectBldg(${idx},'${b.bbl}')">${b.address.substring(0,42)}</div>`
+  ).join('');
+  dd.innerHTML = html;
+}
+
+function filterBldgDD(idx, val) {
+  renderBldgDD(idx, val);
+  const dd = document.getElementById('bd'+idx);
+  if (!dd.classList.contains('open')) dd.classList.add('open');
+}
+
+function selectBldg(idx, bbl) {
+  const inp = document.getElementById('bi'+idx);
+  const dd = document.getElementById('bd'+idx);
+  dd.classList.remove('open');
+  if (bbl) {
+    const b = BUILDINGS.find(x => x.bbl === bbl);
+    inp.value = b ? b.address.substring(0,38) : '';
+    inp.className = 'bldg-input matched-val';
+  } else {
+    inp.value = '\u2014 Not assigned \u2014';
+    inp.className = 'bldg-input empty-val';
+  }
+  inp.dataset.bbl = bbl;
+  updBldg(idx, bbl);
+}
+
+// Close dropdowns when clicking outside
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.bldg-select-wrap')) {
+    document.querySelectorAll('.bldg-dd.open').forEach(d => d.classList.remove('open'));
+  }
+});
 function updCat(i, v) { invoices[i].category=v; }
 function toggleSkip(i) {
   invoices[i].skip=!invoices[i].skip;
@@ -2040,9 +2111,16 @@ body{background:var(--bg);color:var(--text);font-family:'Plus Jakarta Sans',sans
 .logout-link{font-size:11px;color:rgba(255,255,255,.3);text-decoration:none}
 .logout-link:hover{color:rgba(255,255,255,.6)}
 {% if all_buildings|length > 1 %}.switch-links{padding:10px 18px;border-top:1px solid rgba(255,255,255,.06)}
-.switch-link{display:block;font-size:11px;color:rgba(255,255,255,.4);text-decoration:none;padding:3px 0}
+.bldg-search{width:100%;padding:6px 10px;border:1px solid rgba(255,255,255,.12);border-radius:5px;background:rgba(255,255,255,.05);color:rgba(255,255,255,.8);font-family:inherit;font-size:11px;margin-bottom:8px;outline:none}
+.bldg-search::placeholder{color:rgba(255,255,255,.25)}
+.bldg-search:focus{border-color:var(--gold);background:rgba(255,255,255,.08)}
+.bldg-scroll{max-height:280px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.15) transparent}
+.bldg-scroll::-webkit-scrollbar{width:4px}
+.bldg-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:2px}
+.switch-link{display:block;font-size:11px;color:rgba(255,255,255,.4);text-decoration:none;padding:4px 0}
 .switch-link:hover{color:rgba(255,255,255,.7)}
-.switch-link.active-link{color:var(--gold)}{% endif %}
+.switch-link.active-link{color:var(--gold)}
+.switch-link.hidden{display:none}{% endif %}
 .main{margin-left:220px;padding:30px 34px 48px;margin-top:44px}
 .page-header{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid var(--border)}
 .page-title{font-family:'Playfair Display',serif;font-size:28px;color:var(--ink);letter-spacing:-.5px}
@@ -2206,6 +2284,15 @@ table.vt tr.click:hover td{background:var(--surface2)}
 .d-badge.u{background:var(--red-light);color:var(--red);border:1px solid var(--red-border)}
 .d-badge.l{background:#fffbf0;color:var(--yellow);border:1px solid var(--yellow-border)}
 .d-sel{width:100%;padding:3px 6px;border:1px solid var(--border2);border-radius:3px;font-family:inherit;font-size:11px;background:white;margin-top:3px}
+.d-bldg-wrap{position:relative;width:100%;margin-top:3px}
+.d-bldg-inp{width:100%;padding:4px 6px;border:1px solid var(--border2);border-radius:3px;font-family:inherit;font-size:11px;background:white;outline:none}
+.d-bldg-inp:focus{border-color:var(--gold)}
+.d-bldg-inp.has-val{font-weight:500}.d-bldg-inp.no-val{color:var(--muted);font-style:italic}
+.d-bldg-dd{display:none;position:absolute;top:100%;left:0;right:0;max-height:180px;overflow-y:auto;background:white;border:1px solid var(--border2);border-top:none;border-radius:0 0 3px 3px;z-index:80;box-shadow:0 4px 12px rgba(0,0,0,.1)}
+.d-bldg-dd.open{display:block}
+.d-bldg-dd-item{padding:4px 6px;font-size:11px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.d-bldg-dd-item:hover{background:var(--surface2)}
+.d-bldg-dd-item.act{background:#fffbf0;font-weight:600}
 .d-skip{background:none;border:1px solid var(--border2);border-radius:3px;padding:2px 7px;font-size:10px;color:var(--muted);cursor:pointer}
 .d-skip.on{background:var(--red-light);color:var(--red);border-color:var(--red-border)}
 .d-raw{font-size:9px;color:var(--muted);font-style:italic;margin-top:2px}
@@ -2255,12 +2342,16 @@ table.vt tr.click:hover td{background:var(--surface2)}
   </div>
   {% if all_buildings|length > 1 %}
   <div class="switch-links">
+    <input type="text" class="bldg-search" id="bldgSearch" placeholder="Search buildings..." oninput="filterBuildings(this.value)">
+    <div class="bldg-scroll" id="bldgScroll">
     {% for b in all_buildings %}
     <a href="/switch-building/{{ b.id }}"
-       class="switch-link {% if b.id == active_bbl %}active-link{% endif %}">
+       class="switch-link {% if b.id == active_bbl %}active-link{% endif %}"
+       data-addr="{{ b.address|lower }}">
       {% if b.id == active_bbl %}▶ {% endif %}{{ b.address[:28] }}
     </a>
     {% endfor %}
+    </div>
   </div>
   {% endif %}
   <div class="bldg-block">
@@ -2853,8 +2944,9 @@ function dRenderResults() {
     const pct = Math.round((inv.match_confidence || 0) * 100);
     const bc = inv.matched_bbl ? (pct > 65 ? 'm' : 'l') : 'u';
     const bl = inv.matched_bbl ? (pct > 65 ? `✓ ${pct}%` : `⚠ ${pct}%`) : '✗';
-    const bOpts = '<option value="">— Not assigned —</option>' +
-      D_BUILDINGS.map(b => `<option value="${b.bbl}"${b.bbl === inv.matched_bbl ? ' selected' : ''}>${b.address.substring(0,36)}</option>`).join('');
+    const dMatchAddr = inv.matched_bbl ? (D_BUILDINGS.find(b=>b.bbl===inv.matched_bbl)||{}).address||'' : '';
+    const dInpCls = inv.matched_bbl ? 'has-val' : 'no-val';
+    const dInpVal = inv.matched_bbl ? dMatchAddr.substring(0,36) : '\u2014 Not assigned \u2014';
     const cOpts = D_CATEGORIES.map(([k,v]) => `<option value="${k}"${k === inv.category ? ' selected' : ''}>${v}</option>`).join('');
     const tr = document.createElement('tr');
     tr.id = 'dr' + idx;
@@ -2866,7 +2958,12 @@ function dRenderResults() {
       <td><div class="d-amt">${inv.total || '—'}</div></td>
       <td>
         <span class="d-badge ${bc}">${bl}</span>
-        <select class="d-sel" onchange="dUpdBldg(${idx},this.value)">${bOpts}</select>
+        <div class="d-bldg-wrap">
+          <input type="text" class="d-bldg-inp ${dInpCls}" id="dbi${idx}" value="${dInpVal}"
+                 onfocus="dOpenBldgDD(${idx})" oninput="dFilterBldgDD(${idx},this.value)"
+                 data-bbl="${inv.matched_bbl||''}">
+          <div class="d-bldg-dd" id="dbd${idx}"></div>
+        </div>
         ${inv.raw_building ? `<div class="d-raw">${inv.raw_building.substring(0,40)}</div>` : ''}
       </td>
       <td>
@@ -2886,6 +2983,47 @@ function dRenderResults() {
 }
 
 function dUpdBldg(i, v) { dInvoices[i].matched_bbl = v; const b = D_BUILDINGS.find(x => x.bbl === v); dInvoices[i].matched_address = b ? b.address : ''; dUpdateSum(); }
+
+function dOpenBldgDD(idx) {
+  document.querySelectorAll('.d-bldg-dd.open').forEach(d => d.classList.remove('open'));
+  document.getElementById('dbi'+idx).select();
+  dRenderBldgDD(idx, '');
+  document.getElementById('dbd'+idx).classList.add('open');
+}
+function dRenderBldgDD(idx, query) {
+  const dd = document.getElementById('dbd'+idx);
+  const q = query.toLowerCase().trim();
+  const filtered = q ? D_BUILDINGS.filter(b => b.address.toLowerCase().includes(q)) : D_BUILDINGS;
+  if (!filtered.length) { dd.innerHTML = '<div style="padding:5px 6px;font-size:11px;color:var(--muted)">No match</div>'; return; }
+  const cur = dInvoices[idx].matched_bbl || '';
+  let h = `<div class="d-bldg-dd-item" onclick="dSelectBldg(${idx},'')">\u2014 Not assigned \u2014</div>`;
+  h += filtered.map(b => `<div class="d-bldg-dd-item${b.bbl===cur?' act':''}" onclick="dSelectBldg(${idx},'${b.bbl}')">${b.address.substring(0,40)}</div>`).join('');
+  dd.innerHTML = h;
+}
+function dFilterBldgDD(idx, val) {
+  dRenderBldgDD(idx, val);
+  const dd = document.getElementById('dbd'+idx);
+  if (!dd.classList.contains('open')) dd.classList.add('open');
+}
+function dSelectBldg(idx, bbl) {
+  const inp = document.getElementById('dbi'+idx);
+  document.getElementById('dbd'+idx).classList.remove('open');
+  if (bbl) {
+    const b = D_BUILDINGS.find(x => x.bbl === bbl);
+    inp.value = b ? b.address.substring(0,36) : '';
+    inp.className = 'd-bldg-inp has-val';
+  } else {
+    inp.value = '\u2014 Not assigned \u2014';
+    inp.className = 'd-bldg-inp no-val';
+  }
+  inp.dataset.bbl = bbl;
+  dUpdBldg(idx, bbl);
+}
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.d-bldg-wrap')) {
+    document.querySelectorAll('.d-bldg-dd.open').forEach(d => d.classList.remove('open'));
+  }
+});
 function dUpdCat(i, v) {
   const customInput = document.getElementById('dcustom' + i);
   if (v === '__custom__') {
@@ -2943,6 +3081,13 @@ function dReset() {
   document.getElementById('dSuccess').style.display = 'none';
   document.getElementById('drawerFooter').style.display = 'none';
   document.getElementById('dFileInput').value = '';
+}
+
+function filterBuildings(q) {
+  q = q.toLowerCase().trim();
+  document.querySelectorAll('#bldgScroll .switch-link').forEach(el => {
+    el.classList.toggle('hidden', q && !el.dataset.addr.includes(q));
+  });
 }
 </script>
 </body>
