@@ -779,14 +779,29 @@ def _normalize_address(addr):
         return ""
     addr = addr.upper().strip()
     addr = re.sub(r'\s+', ' ', addr)
-    addr = re.sub(r',.*$', '', addr)  # remove city/state
+    addr = re.sub(r',\s*(NEW YORK|NY|NYC|MANHATTAN|BROOKLYN|QUEENS|BRONX|STATEN ISLAND).*$', '', addr, flags=re.IGNORECASE)
+    addr = re.sub(r',.*$', '', addr)  # remove remaining city/state
+    # Normalize street suffixes
     addr = addr.replace(' STREET', ' ST').replace(' AVENUE', ' AVE')
-    addr = addr.replace(' EAST ', ' E ').replace(' WEST ', ' W ')
-    addr = addr.replace(' NORTH ', ' N ').replace(' SOUTH ', ' S ')
-    addr = re.sub(r'\b(CORP|INC|LLC|OWNERS?|CORPORATION)\b.*', '', addr)
+    addr = addr.replace(' BOULEVARD', ' BLVD').replace(' PLACE', ' PL')
+    addr = addr.replace(' DRIVE', ' DR').replace(' ROAD', ' RD')
+    # Normalize directions
+    addr = re.sub(r'\bEAST\b', 'E', addr)
+    addr = re.sub(r'\bWEST\b', 'W', addr)
+    addr = re.sub(r'\bNORTH\b', 'N', addr)
+    addr = re.sub(r'\bSOUTH\b', 'S', addr)
+    # Remove dots after abbreviations (E. -> E)
+    addr = re.sub(r'\b([EWNS])\.\s*', r'\1 ', addr)
+    # Remove ordinal suffixes (86th -> 86, 1st -> 1)
+    addr = re.sub(r'(\d+)\s*(ST|ND|RD|TH)\b', r'\1', addr)
+    # Remove business entity suffixes
+    addr = re.sub(r'\b(CORP|INC|LLC|OWNERS?|CORPORATION|CO-OP|COOP|ASSOC|HOUSING)\b.*', '', addr)
     addr = re.sub(r'C/O.*$', '', addr)
     addr = re.sub(r'APT.*$', '', addr)
-    addr = addr.strip()
+    addr = re.sub(r'#\s*\d+.*$', '', addr)
+    # Remove trailing dots/punctuation
+    addr = re.sub(r'\.(?=\s|$)', '', addr)
+    addr = re.sub(r'\s+', ' ', addr).strip()
     return addr
 
 
@@ -823,7 +838,7 @@ def _match_building(raw_address):
                     return bbl, bldg, 0.9
 
     norm_input = _normalize_address(raw_address)
-    if not norm_input or len(norm_input) < 5:
+    if not norm_input or len(norm_input) < 3:
         return None, None, 0
 
     # Extract street number from input
@@ -843,6 +858,10 @@ def _match_building(raw_address):
         if input_num and db_num and input_num != db_num:
             continue
 
+        # Exact normalized match — highest confidence
+        if norm_input == norm_db:
+            return bbl, bldg, 1.0
+
         # Score based on common tokens
         input_tokens = set(norm_input.split())
         db_tokens = set(norm_db.split())
@@ -856,13 +875,17 @@ def _match_building(raw_address):
         if input_num and input_num == db_num:
             score += 0.3
 
+        # Boost if one normalized form contains the other
+        if norm_db in norm_input or norm_input in norm_db:
+            score += 0.2
+
         if score > best_score:
             best_score = score
             best_bbl = bbl
             best_bldg = bldg
 
     if best_score > 0.4:
-        return best_bbl, best_bldg, round(best_score, 2)
+        return best_bbl, best_bldg, round(min(best_score, 1.0), 2)
     return None, None, 0
 
 
