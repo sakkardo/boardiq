@@ -53,6 +53,37 @@ def _load_century_buildings():
 
 CENTURY_BUILDINGS = _load_century_buildings()
 
+# ── Vendor data persistence ───────────────────────────────────────────────────
+_VENDOR_DATA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "vendor_data.json")
+
+def _load_persisted_vendor_data():
+    """Load committed vendor data from disk and apply to BUILDINGS_DB."""
+    try:
+        if os.path.exists(_VENDOR_DATA_PATH):
+            with open(_VENDOR_DATA_PATH, "r") as f:
+                saved = json.load(f)
+            count = 0
+            for bbl, vendor_list in saved.items():
+                if bbl in BUILDINGS_DB:
+                    BUILDINGS_DB[bbl]["vendor_data"] = vendor_list
+                    count += 1
+            print(f"[BoardIQ] Loaded persisted vendor data for {count} buildings")
+    except Exception as e:
+        print(f"[BoardIQ] Warning: Could not load vendor_data.json: {e}")
+
+def _save_vendor_data():
+    """Persist all building vendor_data to disk."""
+    try:
+        to_save = {}
+        for bbl, building in BUILDINGS_DB.items():
+            if building.get("vendor_data"):
+                to_save[bbl] = building["vendor_data"]
+        with open(_VENDOR_DATA_PATH, "w") as f:
+            json.dump(to_save, f)
+        print(f"[BoardIQ] Saved vendor data for {len(to_save)} buildings")
+    except Exception as e:
+        print(f"[BoardIQ] Warning: Could not save vendor_data.json: {e}")
+
 # ── In-memory database (swap for PostgreSQL in production) ───────────────────
 BUILDINGS_DB = {
     "bbl_1022150001": {
@@ -310,6 +341,9 @@ BUILDINGS_DB = {
 
 # ── Merge Century buildings into main DB ─────────────────────────────────────
 BUILDINGS_DB.update(CENTURY_BUILDINGS)
+
+# ── Load any previously committed vendor data from disk ──────────────────────
+_load_persisted_vendor_data()
 
 # ── Auth (simple demo auth — swap for real auth in production) ───────────────
 DEMO_USERS = {
@@ -1087,6 +1121,9 @@ def commit_invoices():
             })
 
         updated_buildings[bbl] = building.get("address", bbl)
+
+    # Persist to disk so data survives restarts
+    _save_vendor_data()
 
     return jsonify({
         "success": True,
