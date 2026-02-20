@@ -492,6 +492,21 @@ CATEGORY_LABELS = {
     "MORTGAGE_FINANCING": "Mortgage/Financing",
     "SECURITY": "Security",
     "FACADE_REPAIRS": "Facade Repairs",
+    "REPAIRS_GENERAL": "General Repairs",
+    "LEGAL": "Legal Services",
+    "ACCOUNTING": "Accounting",
+    "ENGINEERING": "Engineering",
+    "UTILITIES_GAS": "Gas Utilities",
+    "UTILITIES_TELECOM": "Telecom",
+    "UTILITIES_ELECTRIC": "Electric Utilities",
+    "ROOFING": "Roofing",
+    "WINDOW_GLASS": "Windows & Glass",
+    "FIRE_SAFETY": "Fire Safety",
+    "PAINTING": "Painting",
+    "MORTGAGE": "Mortgage",
+    "LAUNDRY": "Laundry",
+    "SUPPLIES": "Supplies",
+    "OTHER": "Other",
 }
 
 ALL_CATEGORIES = list(CATEGORY_LABELS.keys())
@@ -781,6 +796,32 @@ def _match_building(raw_address):
     if not raw_address:
         return None, None, 0
 
+    # ── Known building name aliases ────────────────────────────────────────────
+    # These are building names used on invoices that map to known addresses
+    NAME_ALIASES = {
+        "bleecker court": "77 bleecker",
+        "77 bleecker": "77 bleecker",
+        "century operating corp": "77 bleecker",
+        "77 bleecker st. corp": "77 bleecker",
+        "77 bleecker street corp": "77 bleecker",
+        "the hopkins condominium": "172 west 79",
+        "hopkins condo": "172 west 79",
+        "172 west 79th street": "172 west 79",
+        "130 east 18th owners corp": "130 east 18",
+        "130 east 18th": "130 east 18",
+        "444 east 86th street": "444 east 86",
+        "444 east 86": "444 east 86",
+        "33 east 74th street": "33 east 74",
+    }
+    raw_lower = raw_address.lower().strip()
+    for alias, key_fragment in NAME_ALIASES.items():
+        if alias in raw_lower:
+            # Find building matching the key_fragment
+            for bbl, bldg in BUILDINGS_DB.items():
+                addr = bldg.get("address", "").lower()
+                if key_fragment in addr:
+                    return bbl, bldg, 0.9
+
     norm_input = _normalize_address(raw_address)
     if not norm_input or len(norm_input) < 5:
         return None, None, 0
@@ -828,38 +869,109 @@ def _match_building(raw_address):
 def _classify_category(vendor_name, description):
     """Classify vendor into a service category based on name and description."""
     text = (vendor_name + " " + description).lower()
-    rules = [
-        (["elevator", "lift", "cab", "unitec", "bp elevator", "otis", "schindler", "kone", "thyssen"], "ELEVATOR_MAINTENANCE"),
-        (["electric", "electrical", "wiring", "wire", "circuit", "panel", "we wire"], "UTILITIES_ELECTRIC"),
-        (["plumb", "plumber", "heating", "boiler", "hvac", "adriatic", "steam", "radiator"], "PLUMBING_REPAIRS"),
-        (["clean", "janitor", "porter", "maid", "sweep", "mop"], "CLEANING"),
-        (["pest", "exterminator", "exterminating", "rodent", "bedbug", "roach", "apex"], "EXTERMINATING"),
-        (["insurance", "amtrust", "chubb", "travelers", "liability", "property insur"], "INSURANCE"),
-        (["water treatment", "legionella", "vitralogy", "cooling tower"], "WATER_TREATMENT"),
-        (["waste", "garbage", "trash", "sanitation", "recycl"], "WASTE_REMOVAL"),
-        (["landscap", "flower", "garden", "plant", "ariston", "outdoor"], "LANDSCAPING"),
-        (["management fee", "management services", "mgmt fee"], "MANAGEMENT_FEE"),
-        (["gas", "piping", "bay city metering", "meter"], "UTILITIES_WATER"),
-        (["legal", "attorney", "counsel", "law office", "esquire", "schrager"], "PROFESSIONAL_SERVICES"),
-        (["security", "intercom", "camera", "access control", "lock", "locksmith", "abbey"], "SECURITY"),
-        (["facade", "fisp", "waterproof", "exterior", "concrete", "masonry", "pointing"], "FACADE_REPAIRS"),
-        (["telecom", "granite", "phone", "internet", "cable", "fios", "verizon"], "UTILITIES_ELECTRIC"),
-        (["supply", "hardware", "material", "national maintenance", "c&s hardware"], "PROFESSIONAL_SERVICES"),
-        (["environmental", "remediation", "asbestos", "mold", "innovacore"], "ENVIRONMENTAL"),
-        (["window", "glass", "glazing", "jesse shapiro"], "FACADE_REPAIRS"),
-        (["sprinkler", "fire", "buckmiller", "suppression"], "PROFESSIONAL_SERVICES"),
-        (["consulting", "engineer", "inspection", "lane engineering", "domani"], "PROFESSIONAL_SERVICES"),
-        (["mortgage", "loan", "financing", "bank", "cooperative bank"], "MORTGAGE_FINANCING"),
-    ]
-    for keywords, category in rules:
-        if any(k in text for k in keywords):
-            return category
-    return "PROFESSIONAL_SERVICES"
+
+    def m(*keywords):
+        for k in keywords:
+            if k.startswith(r'\b') or '(' in k:
+                if re.search(k, text):
+                    return True
+            else:
+                if k in text:
+                    return True
+        return False
+
+    # Handle known vendors by name first
+    if "con edison" in text or "consolidated edison" in text:
+        return "UTILITIES_ELECTRIC"
+    if "fox rothschild" in text:
+        return "LEGAL"
+    if "schrager" in text or "lrwof" in text:
+        return "LEGAL"
+
+    if m("elevator", "lift", r"\bcab\b", "unitec", "otis", "schindler", "kone", "thyssen"):
+        return "ELEVATOR_MAINTENANCE"
+    if m("plumb", "heating", "boiler", r"\bhvac\b", "adriatic", r"\bsteam\b", "radiator"):
+        return "PLUMBING_REPAIRS"
+    if m("water treatment", "legionella", "vitralogy", "cooling tower"):
+        return "WATER_TREATMENT"
+    if m("pest", "exterminator", "exterminating", "rodent", "bedbug", "roach", "termite"):
+        return "EXTERMINATING"
+    if m("insurance", "amtrust", "chubb", "travelers", "liability insur", "general liability"):
+        return "INSURANCE"
+    if m(r"\bwaste\b", "garbage", r"\btrash\b", r"\bsanitation\b", "recycl", "carting", "bi-coastal"):
+        return "WASTE_REMOVAL"
+    if m("landscap", r"\bflower\b", r"\bgarden\b", "ariston", r"\blawn\b", "horticulture", "grounds maint"):
+        return "LANDSCAPING"
+    if m("management fee", "mgmt fee", "managing agent"):
+        return "MANAGEMENT_FEE"
+    if m("bay city metering", "gas piping", "gas meter", "national fuel", "national grid"):
+        return "UTILITIES_GAS"
+    if m(r"\bgas\b"):
+        return "UTILITIES_GAS"
+    if m("water bill", "water meter", "dep water", r"\bsewer\b"):
+        return "UTILITIES_WATER"
+    if m("legal", "attorney", "counsel", "law office", r"\besq\.", "law firm", "fox rothschild", "schrager"):
+        return "LEGAL"
+    if m("security", "intercom", r"\bcamera\b", "access control", "locksmith", "abbey lock", "smartcon", r"\bkeys?\b"):
+        return "SECURITY"
+    if m("facade", "fisp", r"\bwaterproof\b", "exterior wall", r"\bmasonry\b", "pointing", "cgi northeast", "parapet"):
+        return "FACADE_REPAIRS"
+    if m("telecom", "granite telecom", "granitenet", "fios", "verizon", "spectrum", "optimum", "broadband"):
+        return "UTILITIES_TELECOM"
+    if m(r"\belectric\b", "electrical", r"\bwiring\b", "we wire", "coned", "consolidated edison", "con edison"):
+        return "UTILITIES_ELECTRIC"
+    if m(r"\bhardware\b", "c&s hardware", "building supply"):
+        return "SUPPLIES"
+    if m("environmental", "remediation", "asbestos", r"\bmold\b", "abatement", "lead paint", "stericycle"):
+        return "ENVIRONMENTAL"
+    if m(r"\broof(ing|er)?\b", "copper hill"):
+        return "ROOFING"
+    if m(r"\bwindow\b", r"\bglass\b", "glazing", "jesse shapiro", "james glass"):
+        return "WINDOW_GLASS"
+    if m("sprinkler", "fire alarm", "fire suppression", "fire safety"):
+        return "FIRE_SAFETY"
+    if m("accounting", "bookkeep", r"\baudit\b", r"\bcpa\b"):
+        return "ACCOUNTING"
+    if m(r"\bpaint(ing|er)?\b", r"\bplaster\b", "drywall"):
+        return "PAINTING"
+    if m("mortgage", r"\bloan\b", "cooperative bank"):
+        return "MORTGAGE"
+    if m("consulting", "engineer", "engineering", r"\binspection\b", "domani", "metric consult"):
+        return "ENGINEERING"
+    if m("laundry", r"\bwasher\b", r"\bdryer\b", "coinmach"):
+        return "LAUNDRY"
+    if m("simon industries", "isseks", "metro group", r"\bhvac\b", "mechanical", "procore"):
+        return "HVAC_MAINTENANCE"
+    if m("clean", "janitor", "porter", r"\bmaid\b", "bags galore", "cleaning supply"):
+        return "CLEANING"
+    if m("construction", "renovation", "contractor", "gc reliable", "atz enterprise", "reliable construction"):
+        return "REPAIRS_GENERAL"
+    if m(r"\bwater tank\b", "isseks", "tank repair"):
+        return "WATER_TREATMENT"
+    if m("nfpa", "fire protection", "fire inspection", "sprinkler", "fire alarm", "fire suppression", "fire safety"):
+        return "FIRE_SAFETY"
+    if m("florist", "flowers", "plants", "garden", "qflorist"):
+        return "LANDSCAPING"
+    if m("laundry", r"\bwasher\b", r"\bdryer\b", "sophie"):
+        return "LAUNDRY"
+    if m("professional services", "for services rendered", "for professional services", "law offices", "law office"):
+        return "LEGAL"
+    if m("monthly service", "monthly maintenance", "monthly invoice", "service agreement"):
+        return "REPAIRS_GENERAL"
+    if m("staples", "office supply", "office depot", "tru red", "copy paper"):
+        return "SUPPLIES"
+    return "REPAIRS_GENERAL"  # default: most unclassified items are repairs
 
 
 def _parse_pdf_invoices(pdf_path):
-    """Extract structured invoice data from a PDF using pypdf."""
-    import re
+    """Extract structured invoice data from a PDF.
+    
+    Strategy:
+    - Extract all page text
+    - Group consecutive pages belonging to the same invoice
+    - For each invoice, extract vendor, amount, date, building address
+    - Match building and classify category
+    """
     import warnings
 
     pages = []
@@ -867,176 +979,371 @@ def _parse_pdf_invoices(pdf_path):
         from pypdf import PdfReader
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
+            reader = PdfReader(pdf_path, strict=False)
+        for page in reader.pages:
             try:
-                reader = PdfReader(pdf_path, strict=False)
+                pages.append(page.extract_text() or "")
             except Exception:
-                # Try reading raw bytes as fallback
-                reader = None
+                pages.append("")
+    except Exception as e:
+        raise Exception(f"Could not parse PDF: {e}")
 
-        if reader:
-            for page in reader.pages:
-                try:
-                    text = page.extract_text() or ""
-                    pages.append(text)
-                except Exception:
-                    pages.append("")
-    except ImportError:
-        pass
-
-    # If pypdf failed or not installed, try raw text extraction
     if not pages:
-        try:
-            with open(pdf_path, 'rb') as f:
-                raw = f.read().decode('latin-1', errors='replace')
-            # Extract readable text chunks between stream markers
-            import re as _re
-            chunks = _re.findall(r'BT(.*?)ET', raw, _re.DOTALL)
-            page_text = ' '.join(chunks)
-            # Split into fake pages by form feed or large gaps
-            pages = [page_text[i:i+3000] for i in range(0, min(len(page_text), 60000), 3000)]
-        except Exception as e:
-            raise Exception(f"Could not parse PDF: {e}")
+        raise Exception("No pages extracted from PDF")
 
+    # ── Page grouping ────────────────────────────────────────────────────────
+    def _is_continuation(text):
+        """True if page continues prior invoice rather than starting new one."""
+        lines = [l.strip() for l in text.split('\n') if l.strip()]
+        if not lines:
+            return True  # blank page, append to current group
+        first = lines[0]
+        # "Account Number : 04118676" or "Page 5 of 6" at top = continuation
+        if re.match(r'Account Number\s*:', first, re.IGNORECASE):
+            return True
+        for l in lines[:3]:
+            if re.match(r'^Page\s+\d+\s+of\s+\d+$', l, re.IGNORECASE):
+                return True
+        # Con Edison multi-page: second page starts with just the account line
+        if re.match(r'^(?:Monthly|Breakdown)', first, re.IGNORECASE) and not re.search(r'\$', text[:200]):
+            return True
+        return False
+
+    def _is_junk(text):
+        """True if page doesn't contain a real invoice."""
+        if len(text.strip()) < 40:
+            return True
+        lines = [l.strip() for l in text.split('\n') if l.strip()]
+        if not lines:
+            return True
+        # Garbled encoding artifacts
+        if re.match(r'^[/\\][0-9a-zA-Z]{1,4}(?:\s+[/\\][0-9a-zA-Z]{1,4}){4,}', lines[0]):
+            return True
+        # Single-char vertical text
+        if len(lines) > 5 and all(len(l) <= 2 for l in lines[:6]):
+            return True
+        # Marketing/order confirmation pages
+        junk_phrases = ['Find your store', 'Shop the app', 'Free next-day delivery',
+                        'staples.com', 'amazon.com', 'unsubscribe', 'privacy policy',
+                        'add to address book']
+        if any(p.lower() in text.lower() for p in junk_phrases):
+            return True
+        # Must have a dollar amount
+        if not re.search(r'\$\s*\d', text):
+            return True
+        return False
+
+    # Group pages into invoice clusters
+    groups = []  # each element: (start_page_idx, [page_texts])
+    current = []
+    current_start = 0
+    for idx, pt in enumerate(pages):
+        if _is_continuation(pt):
+            if current:
+                current.append(pt)
+        else:
+            if current:
+                groups.append((current_start, current))
+            current = [pt]
+            current_start = idx
+    if current:
+        groups.append((current_start, current))
+
+    # ── Per-invoice extraction ───────────────────────────────────────────────
     invoices = []
-    seen_invoices = set()  # deduplicate only exact invoice numbers
+    seen = set()
 
-    for page_idx, page_text in enumerate(pages):
-        page_text = page_text.strip()
-        if not page_text or len(page_text) < 20:
+    # Known vendor aliases by page content signals
+    VENDOR_SPECIALS = [
+        (r'^\d{6,}INVOICE:', "Con Edison"),
+        (r'^101 PARK AVENUE', "Fox Rothschild LLP"),
+        (r'granitenet\.com|granite telecom', "Granite Telecom"),
+        (r'ADRIATIC PLUMBING|ADRIATIC PH', "Adriatic Plumbing & Heating Corp."),
+        (r'ISSEKS BROS', "Isseks Bros. LLC"),
+        (r'SMART\s*CON SOLUTIONS', "SmartCon Solutions LLC"),
+        (r'ABBEY LOCKSMITHS', "Abbey Locksmiths, Inc."),
+        (r'SIMON INDUSTRIES', "Simon Industries LLC"),
+        (r'BAY CITY METERING', "Bay City Metering Co., Inc."),
+        (r'UNITEC ELEVATOR', "Unitec Elevator Company"),
+        (r'ATZ ENTERPRISE', "ATZ Enterprise LLC"),
+        (r'BI-?COASTAL PROPERTIES', "Bi-Coastal Properties, Inc."),
+        (r'JESSE SHAPIRO|JAMES GLASS', "Jesse Shapiro & James Glass Corp."),
+        (r'G\.?C\.? RELIABLE', "G.C. Reliable Construction LLC"),
+        (r'COPPER HILL', "Copper Hill Inc."),
+        (r'METRIC CONSULTING', "Metric Consulting & Inspection"),
+        (r'DOMANI CONSULTING', "Domani Consulting, Inc."),
+        (r'WE WIRE ELECTRIC', "We Wire Electric Group Inc."),
+        (r'C\s*&\s*S HARDWARE', "C & S Hardware"),
+        (r'PROCORE MECHANICAL', "Procore Mechanical Corp."),
+        (r'SOPHIE.*LAUNDRY|LAUNDRY.*SOPHIE', "Sophie's Laundry"),
+    ]
+
+    IS_BILLEE = re.compile(
+        r'century management|century mgmt|440 ninth|440 9th|1430 broadway|'
+        r'c/o century|jacob sirotkin|board of managers|avidbill\.com',
+        re.IGNORECASE
+    )
+    IS_MGMT_ADDR = re.compile(r'440\s+(?:ninth|9th)|1430\s+broadway', re.IGNORECASE)
+
+    # Lines that are never vendor names
+    NOT_VENDOR = re.compile(
+        r'^(?:invoice|bill\s+to|ship\s+to|pay\s+to|sold\s+to|remit|page\s+\d|date[:\s]|terms[:\s]|'
+        r'payment|check\s+request|sent\s+from|c\s*o\s*p\s*y|description|qty|amount|subtotal|'
+        r'total|balance|dear\s|please\s|thank|account\s+number|www\.|https?:|tel:|fax:|phone:|'
+        r'cell:|e-?mail|january|february|march|april|may|june|july|august|september|october|'
+        r'november|december|for\s+professional|for\s+services|service\s+rendered|nyc\s+licensed|'
+        r'a/a/f\s|date\s+activity|class:|on\s+\d{1,2}/\d{1,2})',
+        re.IGNORECASE
+    )
+
+    for start_idx, group_pages in groups:
+        first_page = group_pages[0]
+        all_text = "\n".join(group_pages)
+
+        # Skip junk groups
+        if _is_junk(first_page) and _is_junk(all_text):
             continue
 
-        lines = [l.strip() for l in page_text.split('\n') if l.strip()]
+        lines = [l.strip() for l in first_page.split('\n') if l.strip()]
         if not lines:
             continue
 
-        # Skip pure continuation pages (no vendor name, no dollar amount)
-        has_dollar = bool(re.search(r'\$[\d,]+', page_text))
-        if not has_dollar:
+        # ── Vendor name ──────────────────────────────────────────────────────
+        vendor_name = ""
+        # Check known vendors first using full text signals
+        for pattern, name in VENDOR_SPECIALS:
+            if re.search(pattern, all_text, re.IGNORECASE):
+                vendor_name = name
+                break
+
+        if not vendor_name:
+            # Corporate keyword pattern - find first line with business entity indicator
+            CORP_KW = re.compile(
+                r'\b(LLC|LLP|Inc\.?|Corp\.?|Company|Co\.|Group|Solutions|Associates|'
+                r'Brothers|Bros\.?|Industries|Services|Properties|Partners|'
+                r'Plumbing|Electric|Elevator|Consulting|Construction|Maintenance|'
+                r'Metering|Engineering|Environmental|Mechanical|Enterprise|Gallery|'
+                r'Hardware|Supply|Telecom|Roofing|Sprinkler|Alarm|Exterminating|'
+                r'Carting|Landscap|Security|Painting|Glazing|Glass|Masonry|'
+                r'Laundry|Locksmiths?|Florist|Contractors)\b',
+                re.IGNORECASE
+            )
+            for line in lines[:15]:
+                if len(line) < 3 or len(line) > 80: continue
+                if NOT_VENDOR.match(line): continue
+                if IS_BILLEE.search(line): continue
+                # Skip if it looks like a building/property (starts with number + direction + number)
+                if re.match(r'^\d+\s+(?:E(?:ast)?|W(?:est)?|N(?:orth)?|S(?:outh)?)\s*\d+', line, re.IGNORECASE): continue
+                # Skip if it's a street address (number + word + Street/Ave etc.)
+                if re.match(r'^\d+\s+\w[\w\s]{2,30}(?:Street|St\.?|Avenue|Ave\.?|Blvd|Drive|Road|Place|Pkwy)\b', line, re.IGNORECASE): continue
+                # Skip city/state/zip lines
+                if re.search(r',\s*[A-Z]{2}\s+\d{5}', line): continue
+                # Skip pure number/phone/email lines
+                if re.match(r'^[\d\s\-\(\)\/\.\,\@\+]+$', line): continue
+                if CORP_KW.search(line):
+                    vendor_name = line
+                    break
+
+        if not vendor_name:
+            # Fallback: first reasonable text line that isn't junk
+            for line in lines[:10]:
+                if len(line) < 4 or len(line) > 80: continue
+                if NOT_VENDOR.match(line): continue
+                if IS_BILLEE.search(line): continue
+                if re.match(r'^\d+\s+\w[\w\s]{1,30}(?:St\.?|Ave\.?|Street|Avenue)\b', line, re.IGNORECASE): continue
+                if re.match(r'^\d+\s+(?:E(?:ast)?|W(?:est)?|N(?:orth)?|S(?:outh)?)\s*\d+', line, re.IGNORECASE): continue
+                if re.search(r',\s*[A-Z]{2}\s+\d{5}', line): continue
+                if re.match(r'^[\d\s\-\(\)\/\.\,\@\+]+$', line): continue
+                words = line.split()
+                if len(words) >= 2 or (len(words) == 1 and len(line) > 5 and line[0].isupper()):
+                    vendor_name = line
+                    break
+
+        if not vendor_name:
             continue
 
-        # --- Extract vendor name (first substantial non-address, non-header line) ---
-        vendor_name = ""
-        skip_words = {'invoice', 'bill to', 'ship to', 'page', 'date', 'terms', 'payment', 'century', 'check request', 'sent from'}
-        for line in lines[:6]:
-            low = line.lower()
-            if len(line) > 3 and not re.match(r'^\d', line) and not any(w in low for w in skip_words):
-                vendor_name = line[:80]
-                break
-        if not vendor_name:
-            continue  # can't identify vendor, skip
+        # Clean up vendor name
+        vendor_name = re.sub(r'\s+', ' ', vendor_name).strip()
+        # Truncate at "Bill to" / "Sold To" / "Ship to" if embedded
+        vendor_name = re.split(r'\s+(?:Bill\s+To|Sold\s+To|Ship\s+To|Invoice\s+Date|Invoice\s*#)', vendor_name, flags=re.IGNORECASE)[0].strip()
 
-        # --- Extract invoice number ---
+        # Final sanity checks
+        if len(vendor_name) < 3:
+            continue
+        if re.match(r'^\d{5,}', vendor_name):
+            continue
+        if re.match(r'^(?:For\s+(?:professional\s+)?services|NYC\s+Licensed|Page\s+\d|DATE\s+ACTIVITY|A/A/F)', vendor_name, re.IGNORECASE):
+            continue
+
+        # ── Invoice number ────────────────────────────────────────────────────
         inv_num = ""
         for pattern in [
-            r'Invoice\s*#\s*:?\s*([A-Z0-9\-]+)',
-            r'Invoice\s+No\.?\s*:?\s*([A-Z0-9\-]+)',
-            r'INV[\-#]?\s*([A-Z0-9\-]{4,})',
-            r'INVOICE\s*(?:NUMBER|#|NO)?\s*:?\s*([A-Z0-9\-]+)',
+            r'INV[-#]([A-Z0-9][\w\-]{2,20})',
+            r'Invoice\s*(?:#|No\.?|Number)[:\s]+([A-Z0-9][\w\-]{2,20})',
+            r'INVOICE\s*(?:#|NO|NUMBER)[:\s]+([A-Z0-9][\w\-]{2,20})',
+            r'INVOICE\s+(\d{4,10})',
+            r'Invoice[:\s#]+(\d{4,10})',
+            r'Invoice\s*No\.?\s*(\d{4,10})',
+            r'Invoice\s+number\s+(\d{4,10})',
         ]:
-            m = re.search(pattern, page_text, re.IGNORECASE)
-            if m and len(m.group(1)) > 2:
-                inv_num = m.group(1).strip()
+            m = re.search(pattern, all_text, re.IGNORECASE)
+            if m:
+                c = m.group(1).strip()
+                if len(c) >= 3 and c.upper() not in ('OICE', 'DATE', 'NUMBER', 'NVOICE', 'VOICE', 'WITH'):
+                    inv_num = c
+                    break
+
+        # ── Date ─────────────────────────────────────────────────────────────
+        inv_date = ""
+        for dpat in [
+            r'(?:Invoice\s*Date|Date\s*Issued|Invoice\s+date)[:\s]+(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})',
+            r'(?:Invoice\s*Date|Date\s*Issued)[:\s]+((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\w*\.?\s+\d{1,2},?\s+\d{4})',
+            r'\bDATE\b[:\s]+(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})',
+            r'((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\w*\.?\s+\d{1,2},?\s+20\d{2})',
+            r'(\d{1,2}[\/\-]\d{1,2}[\/\-]20\d{2})',
+        ]:
+            m = re.search(dpat, all_text, re.IGNORECASE)
+            if m:
+                inv_date = m.group(1).strip()
                 break
 
-        # Deduplicate only if we have a real invoice number (not page-generated)
-        dedup_key = f"{vendor_name[:20]}_{inv_num}" if inv_num else ""
-        if dedup_key and dedup_key in seen_invoices:
-            continue
-        if dedup_key:
-            seen_invoices.add(dedup_key)
-
-        # --- Extract date ---
-        inv_date = ""
-        date_m = re.search(r'(\d{1,2}/\d{1,2}/\d{2,4})', page_text)
-        if not date_m:
-            date_m = re.search(r'((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{1,2},?\s+\d{4})', page_text, re.IGNORECASE)
-        if date_m:
-            inv_date = date_m.group(1).strip()
-
-        # --- Extract total amount (last/largest dollar amount) ---
-        all_amounts = re.findall(r'\$[\d,]+\.?\d*', page_text)
+        # ── Total amount ──────────────────────────────────────────────────────
+        # Search specifically in the invoice's text for total/balance due patterns
         total_amount = 0.0
         total_str = ""
+
+        # Priority patterns: explicit "Total Due" / "Amount Due" / "Balance Due"
         for pat in [
-            r'(?:TOTAL AMOUNT DUE|AMOUNT DUE|BALANCE DUE|TOTAL)[:\s]+\$?([\d,]+\.?\d*)',
-            r'Total\s+\$?([\d,]+\.?\d*)',
+            r'(?:TOTAL\s+AMOUNT\s+DUE|AMOUNT\s+DUE|TOTAL\s+DUE|BALANCE\s+DUE|TOTAL\s+INVOICE)[:\s]*\$?\s*([\d,]+\.\d{2})',
+            r'TOTAL\s+DUE\s*\$\s*([\d,]+\.\d{2})',
+            r'Total\s+Due\s*\$?\s*([\d,]+\.\d{2})',
+            r'(?:^|\n)Total\s+\$\s*([\d,]+\.\d{2})',
+            r'(?:BALANCE|Balance)\s*\$\s*([\d,]+\.\d{2})',
+            r'TOTAL\b[^\n]{0,20}\$\s*([\d,]+\.\d{2})',
         ]:
-            m = re.search(pat, page_text, re.IGNORECASE)
-            if m:
+            for m in re.finditer(pat, all_text, re.IGNORECASE | re.MULTILINE):
                 try:
-                    total_amount = float(m.group(1).replace(',', ''))
-                    total_str = f"${total_amount:,.2f}"
-                    break
-                except:
+                    v = float(m.group(1).replace(',', ''))
+                    if v > total_amount:
+                        total_amount = v
+                        total_str = f"${v:,.2f}"
+                except Exception:
                     pass
-        if not total_str and all_amounts:
-            # Take largest amount as likely total
-            parsed = []
-            for a in all_amounts:
+
+        # If no explicit total pattern, take the largest dollar amount on the invoice
+        # but be careful not to grab a line-item that happens to be bigger than the total
+        if not total_str:
+            # Look for "TOTAL $X" or "$X" at end of invoice
+            all_amts = []
+            for m in re.finditer(r'\$\s*([\d,]+\.\d{2})', all_text):
                 try:
-                    parsed.append(float(a.replace('$','').replace(',','')))
-                except:
+                    all_amts.append(float(m.group(1).replace(',', '')))
+                except Exception:
                     pass
-            if parsed:
-                total_amount = max(parsed)
+            if all_amts:
+                total_amount = max(all_amts)
                 total_str = f"${total_amount:,.2f}"
 
-        # Skip pages with no extractable amount
-        if not total_str:
+        if not total_str or total_amount <= 0:
+            continue
+        if total_amount > 500000:
             continue
 
-        # --- Extract building address ---
+        # ── Building address extraction ───────────────────────────────────────
         raw_building = ""
-        for pattern in [
-            r'Site Location[:\s]*\n?([^\n]+(?:\n[^\n]+)?)',
-            r'Job Address[:\s]*\n?([^\n]+(?:\n[^\n]+)?)',
-            r'Ship To[:\s]*\n([^\n]+(?:\n[^\n]+)?)',
-            r'Property[:\s]+([^\n]+)',
-            r'RE[:\s]+([^\n]*(?:Street|St|Avenue|Ave|Place|Blvd)[^\n]*)',
-        ]:
-            m = re.search(pattern, page_text, re.IGNORECASE)
-            if m:
-                candidate = m.group(1).strip()[:120]
-                # Skip if it's Century's own address
-                if '440' not in candidate and '1430' not in candidate:
-                    raw_building = candidate
-                    break
 
-        # If no explicit label, look for NYC street addresses in the text
+        # Strategy 1: Look for "Ship To" block which usually has the property address
+        # Pattern: "Ship To" or "Ship to:" followed by building name / address
+        ship_to_m = re.search(
+            r'(?:SHIP\s+TO|Ship\s+to)[:\s]*\n?([^\n]{3,80})\n?([^\n]{3,80})?',
+            all_text, re.IGNORECASE
+        )
+        if ship_to_m:
+            ship_line1 = ship_to_m.group(1).strip()
+            ship_line2 = (ship_to_m.group(2) or "").strip()
+            # Prefer the address line over the building name line
+            if re.search(r'\d+\s+\w', ship_line2) and not IS_MGMT_ADDR.search(ship_line2):
+                raw_building = ship_line2
+            elif re.search(r'\d+\s+\w', ship_line1) and not IS_MGMT_ADDR.search(ship_line1):
+                raw_building = ship_line1
+            elif not IS_BILLEE.search(ship_line1) and not IS_MGMT_ADDR.search(ship_line1):
+                raw_building = ship_line1
+
+        # Strategy 2: "Job Address" / "RE:" / "Property Address"
         if not raw_building:
-            addr_matches = re.findall(
-                r'\b(\d+\s+(?:East|West|E\.|W\.)\s+\d+\w*\s*(?:Street|St|Avenue|Ave)?[^\n]*)',
-                page_text, re.IGNORECASE
+            for pattern in [
+                r'(?:Job\s+Address|Job\s+Site|Property\s+Address|Site\s+Location|Job\s+Location)[:\s]*\n?([^\n]{5,80})',
+                r'RE[:\s]+([^\n]*(?:\d+\s+(?:East|West|E\.|W\.|North|South)|Bleecker|Broadway)[^\n]*)',
+                r'(?:Property|Job)[:\s]+([^\n]*(?:Street|St\.?|Avenue|Ave\.?)[^\n]*)',
+            ]:
+                m = re.search(pattern, all_text, re.IGNORECASE)
+                if m:
+                    cand = m.group(1).strip()[:100]
+                    if not IS_BILLEE.search(cand) and not IS_MGMT_ADDR.search(cand):
+                        raw_building = cand
+                        break
+
+        # Strategy 3: Scan for NYC street addresses in text
+        if not raw_building:
+            addr_re = re.compile(
+                r'\b(\d+\s+(?:East|West|North|South|E\.|W\.)\s*\d+[^\n]{0,30}'
+                r'|\d+\s+(?:Bleecker|Broadway|Park|Madison|Lexington|Amsterdam|Columbus|'
+                r'Riverside|West End|Lenox|Fifth|Third|Second|First)[^\n]{0,40})',
+                re.IGNORECASE
             )
-            for addr in addr_matches:
-                addr = addr.strip()
-                if '440' not in addr and '1430' not in addr and len(addr) > 8:
-                    raw_building = addr[:80]
+            for m in addr_re.finditer(all_text):
+                cand = m.group(1).strip()
+                if not IS_MGMT_ADDR.search(cand) and len(cand) > 6:
+                    raw_building = cand[:80]
                     break
 
-        # --- Extract description ---
-        description = ""
-        for dpat in [
-            r'Description[:\s]*\n?([^\n]+)',
-            r'For Professional Services[^\n]*\n([^\n]+)',
-            r'(?:MAINTENANCE CONTRACT|SERVICE|WORK)[:\s]+([^\n]+)',
-        ]:
-            m = re.search(dpat, page_text, re.IGNORECASE)
-            if m:
-                description = m.group(1).strip()[:100]
-                break
-        if not description and len(lines) > 2:
-            description = lines[2][:80] if len(lines) > 2 else ""
+        # Clean up raw_building
+        if raw_building:
+            # Remove "C/O Century..." suffixes
+            raw_building = re.split(r'\s*-?\s*C/O\s+Century', raw_building, flags=re.IGNORECASE)[0].strip()
+            raw_building = re.split(r'\s*-?\s*C/O\s+CENTURY', raw_building)[0].strip()
 
-        # --- Match building ---
+        # ── Description ──────────────────────────────────────────────────────
+        description = ""
+        # Look for work description
+        for dpat in [
+            r'(?:FOR\s+(?:PROFESSIONAL\s+)?SERVICES|SERVICE\s+PROVIDED|WORK\s+PERFORMED|SERVICES\s+RENDERED)[:\s]*\n?([^\n]{5,120})',
+            r'(?:Monthly\s+(?:invoice|service|maintenance)[^\n]{0,80})',
+            r'Description[:\s]*\n?([^\n]{10,100})',
+        ]:
+            m = re.search(dpat, all_text, re.IGNORECASE)
+            if m:
+                dc = m.group(1).strip()[:120] if m.lastindex else m.group(0).strip()[:120]
+                if len(dc) > 5 and not IS_BILLEE.search(dc):
+                    description = dc
+                    break
+        # Fallback: extract a meaningful line from the invoice body
+        if not description and len(lines) > 3:
+            for line in lines[3:10]:
+                if len(line) > 15 and not NOT_VENDOR.match(line) and not IS_BILLEE.search(line):
+                    if not re.match(r'^\d+\s+\w[\w\s]{1,20}(?:St|Street|Ave)\b', line, re.IGNORECASE):
+                        description = line[:120]
+                        break
+
+        # ── Deduplication ────────────────────────────────────────────────────
+        # Use invoice number if available, else vendor+amount combo
+        if inv_num and inv_num.upper() not in ('OICE', 'DATE', 'WITH', 'NUMBER'):
+            dedup_key = f"{vendor_name[:20].upper()}|{inv_num.upper()}"
+        else:
+            dedup_key = f"{vendor_name[:20].upper()}|{total_str}"
+        if dedup_key in seen:
+            continue
+        seen.add(dedup_key)
+
+        # ── Match building ────────────────────────────────────────────────────
         matched_bbl, matched_bldg, confidence = _match_building(raw_building)
 
-        # --- Classify category ---
-        category = _classify_category(vendor_name, description)
+        # ── Category ─────────────────────────────────────────────────────────
+        category = _classify_category(vendor_name, description + " " + first_page[:500])
 
         invoices.append({
-            "page": page_idx + 1,
-            "invoice_number": inv_num or f"p{page_idx+1}",
+            "page": start_idx + 1,
+            "invoice_number": inv_num or f"p{start_idx+1}",
             "vendor": vendor_name,
             "date": inv_date,
             "total": total_str,
@@ -1050,7 +1357,7 @@ def _parse_pdf_invoices(pdf_path):
             "status": "matched" if matched_bbl else "unmatched",
         })
 
-    # Sort: matched first, then by building address
+    # Sort: matched first, then by address
     invoices.sort(key=lambda x: (0 if x["matched_bbl"] else 1, x["matched_address"]))
     return invoices
 
@@ -1118,8 +1425,15 @@ def commit_invoices():
         amount = float(inv.get("total_amount", 0))
         units = building.get("units", 1)
 
-        # Annualize if monthly invoice
-        annual = amount * 12
+        # Annualize only for recurring/monthly contracts; treat repairs as one-time
+        RECURRING_CATS = {"ELEVATOR_MAINTENANCE", "MANAGEMENT_FEE", "UTILITIES_ELECTRIC",
+                          "UTILITIES_GAS", "UTILITIES_WATER", "UTILITIES_TELECOM",
+                          "HVAC_MAINTENANCE", "EXTERMINATING", "WASTE_REMOVAL",
+                          "LANDSCAPING", "LAUNDRY", "CLEANING", "INSURANCE"}
+        is_recurring = (category in RECURRING_CATS or
+                        re.search(r'monthly|service agreement|annual contract|per month|/month',
+                                  inv.get("description", ""), re.IGNORECASE))
+        annual = amount * 12 if is_recurring else amount
 
         # Check if vendor already exists in building
         existing = None
