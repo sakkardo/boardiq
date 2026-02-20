@@ -355,6 +355,7 @@ DEMO_USERS = {
     "vendor@schindler.com":  {"password": "demo1234", "name": "Schindler Elevator Corp", "role": "vendor", "vendor_id": "v001", "buildings": []},
     "vendor@cleanstar.com":  {"password": "demo1234", "name": "Clean Star Services", "role": "vendor", "vendor_id": "v002", "buildings": []},
     "vendor@apexext.com":    {"password": "demo1234", "name": "Apex Exterminating", "role": "vendor", "vendor_id": "v003", "buildings": []},
+    "vendor@metroflow.com":  {"password": "demo1234", "name": "Metro Flow Plumbing & Heating", "role": "vendor", "vendor_id": "v004", "buildings": []},
 }
 
 # ── In-memory vendor profile store (keyed by vendor_id) ──────────────────────
@@ -457,6 +458,39 @@ VENDOR_PROFILES = {
             {"building": "120 W 72nd St", "contact": "Super", "years": 6},
             {"building": "740 Park Ave", "contact": "Board President", "years": 4},
             {"building": "Gramercy Plaza", "contact": "Management Office", "years": 2},
+        ],
+    },
+    "v004": {
+        "vendor_id": "v004",
+        "company_name": "Metro Flow Plumbing & Heating Corp",
+        "contact_name": "Frank DiNapoli",
+        "email": "vendor@metroflow.com",
+        "phone": "(212) 555-0419",
+        "categories": ["PLUMBING_REPAIRS", "BOILER_MAINTENANCE", "WATER_TREATMENT"],
+        "service_areas": ["Manhattan", "Brooklyn", "Queens"],
+        "years_in_business": 18,
+        "employees": 32,
+        "bio": "NYC-licensed master plumber firm specializing in residential multi-family buildings. Full-service plumbing, boiler maintenance, and backflow prevention. 24/7 emergency response, DOB-compliant gas inspections (LL152), and water treatment solutions for co-ops and condos.",
+        "pricing": [
+            {"type": "Monthly Service Contract", "unit": "per unit/mo", "low": 8, "high": 18, "notes": "Covers routine inspections + minor repairs in common areas"},
+            {"type": "Emergency Service Call", "unit": "per call", "low": 250, "high": 500, "notes": "24/7 response, after-hours premium applies"},
+            {"type": "Boiler Repair / Replacement", "unit": "per job", "low": 1500, "high": 8000, "notes": "Parts additional for major replacements"},
+        ],
+        "insurance": {
+            "gl_carrier": "Zurich Insurance",
+            "gl_policy": "ZI-3310-7788",
+            "gl_limit": "2,000,000",
+            "gl_expiry": "2026-09-30",
+            "workers_comp_carrier": "NY State Insurance Fund",
+            "workers_comp_expiry": "2026-09-30",
+            "additional_insured": True,
+            "certificate_on_file": True,
+        },
+        "certifications": ["NYC Master Plumber License", "Backflow Prevention Certified", "OSHA 30", "NYC Gas Qualification (LL152)"],
+        "current_buildings": ["bbl_1022150001", "bbl_1009270001"],
+        "references": [
+            {"building": "120 W 72nd St", "contact": "Building Manager", "years": 7},
+            {"building": "Gramercy Plaza", "contact": "Super", "years": 4},
         ],
     },
 }
