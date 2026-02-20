@@ -689,35 +689,668 @@ def api_building(bbl):
 @app.route("/api/upload-invoices", methods=["POST"])
 @login_required
 def upload_invoices():
-    """Accept CSV invoice upload and return benchmarking results."""
-    building = get_current_building()
-    if not building:
-        return jsonify({"error": "No active building"}), 400
-
+    """Accept PDF invoice upload, parse all invoices, return structured data for review."""
     if "file" not in request.files:
         return jsonify({"error": "No file provided"}), 400
 
     f = request.files["file"]
-    content = f.read().decode("utf-8-sig")
+    if not f.filename:
+        return jsonify({"error": "No file selected"}), 400
 
-    # Write to temp file
-    import tempfile
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.csv',
-                                     delete=False, newline='') as tmp:
-        tmp.write(content)
+    import tempfile, subprocess, re
+
+    # Save uploaded file
+    suffix = ".pdf" if f.filename.lower().endswith(".pdf") else ".csv"
+    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+        f.save(tmp.name)
         tmp_path = tmp.name
 
     try:
-        processor = InvoiceProcessor()
-        summary = processor.process_file(tmp_path, building["id"], building["units"])
+        if suffix == ".pdf":
+            invoices = _parse_pdf_invoices(tmp_path)
+        else:
+            invoices = _parse_csv_invoices(tmp_path)
         os.remove(tmp_path)
-        return jsonify({"success": True, "summary": summary,
-                        "records": len(processor.processed),
-                        "classification_rate": summary["classification_rate"]})
+        return jsonify({"success": True, "invoices": invoices, "count": len(invoices)})
     except Exception as e:
+        try: os.remove(tmp_path)
+        except: pass
         return jsonify({"error": str(e)}), 500
 
-@app.route("/api/sample-csv")
+
+def _normalize_address(addr):
+    """Normalize an address string for fuzzy matching."""
+    if not addr:
+        return ""
+    addr = addr.upper().strip()
+    addr = re.sub(r'\s+', ' ', addr)
+    addr = re.sub(r',.*$', '', addr)  # remove city/state
+    addr = addr.replace(' STREET', ' ST').replace(' AVENUE', ' AVE')
+    addr = addr.replace(' EAST ', ' E ').replace(' WEST ', ' W ')
+    addr = addr.replace(' NORTH ', ' N ').replace(' SOUTH ', ' S ')
+    addr = re.sub(r'\b(CORP|INC|LLC|OWNERS?|CORPORATION)\b.*', '', addr)
+    addr = re.sub(r'C/O.*$', '', addr)
+    addr = re.sub(r'APT.*$', '', addr)
+    addr = addr.strip()
+    return addr
+
+
+def _match_building(raw_address):
+    """Fuzzy match a raw address string to a building in BUILDINGS_DB.
+    Returns (bbl, building, confidence_score) or (None, None, 0)."""
+    if not raw_address:
+        return None, None, 0
+
+    norm_input = _normalize_address(raw_address)
+    if not norm_input or len(norm_input) < 5:
+        return None, None, 0
+
+    # Extract street number from input
+    num_match = re.match(r'^(\d+)', norm_input)
+    input_num = num_match.group(1) if num_match else ""
+
+    best_bbl, best_bldg, best_score = None, None, 0
+
+    for bbl, bldg in BUILDINGS_DB.items():
+        norm_db = _normalize_address(bldg.get("address", ""))
+        if not norm_db:
+            continue
+
+        # Street number must match exactly
+        db_num_match = re.match(r'^(\d+)', norm_db)
+        db_num = db_num_match.group(1) if db_num_match else ""
+        if input_num and db_num and input_num != db_num:
+            continue
+
+        # Score based on common tokens
+        input_tokens = set(norm_input.split())
+        db_tokens = set(norm_db.split())
+        if not input_tokens or not db_tokens:
+            continue
+
+        common = input_tokens & db_tokens
+        score = len(common) / max(len(input_tokens), len(db_tokens))
+
+        # Boost if street number matches
+        if input_num and input_num == db_num:
+            score += 0.3
+
+        if score > best_score:
+            best_score = score
+            best_bbl = bbl
+            best_bldg = bldg
+
+    if best_score > 0.4:
+        return best_bbl, best_bldg, round(best_score, 2)
+    return None, None, 0
+
+
+def _classify_category(vendor_name, description):
+    """Classify vendor into a service category based on name and description."""
+    text = (vendor_name + " " + description).lower()
+    rules = [
+        (["elevator", "lift", "cab", "unitec", "bp elevator", "otis", "schindler", "kone", "thyssen"], "ELEVATOR_MAINTENANCE"),
+        (["electric", "electrical", "wiring", "wire", "circuit", "panel", "we wire"], "UTILITIES_ELECTRIC"),
+        (["plumb", "plumber", "heating", "boiler", "hvac", "adriatic", "steam", "radiator"], "PLUMBING_REPAIRS"),
+        (["clean", "janitor", "porter", "maid", "sweep", "mop"], "CLEANING"),
+        (["pest", "exterminator", "exterminating", "rodent", "bedbug", "roach", "apex"], "EXTERMINATING"),
+        (["insurance", "amtrust", "chubb", "travelers", "liability", "property insur"], "INSURANCE"),
+        (["water treatment", "legionella", "vitralogy", "cooling tower"], "WATER_TREATMENT"),
+        (["waste", "garbage", "trash", "sanitation", "recycl"], "WASTE_REMOVAL"),
+        (["landscap", "flower", "garden", "plant", "ariston", "outdoor"], "LANDSCAPING"),
+        (["management fee", "management services", "mgmt fee"], "MANAGEMENT_FEE"),
+        (["gas", "piping", "bay city metering", "meter"], "UTILITIES_WATER"),
+        (["legal", "attorney", "counsel", "law office", "esquire", "schrager"], "PROFESSIONAL_SERVICES"),
+        (["security", "intercom", "camera", "access control", "lock", "locksmith", "abbey"], "SECURITY"),
+        (["facade", "fisp", "waterproof", "exterior", "concrete", "masonry", "pointing"], "FACADE_REPAIRS"),
+        (["telecom", "granite", "phone", "internet", "cable", "fios", "verizon"], "UTILITIES_ELECTRIC"),
+        (["supply", "hardware", "material", "national maintenance", "c&s hardware"], "PROFESSIONAL_SERVICES"),
+        (["environmental", "remediation", "asbestos", "mold", "innovacore"], "ENVIRONMENTAL"),
+        (["window", "glass", "glazing", "jesse shapiro"], "FACADE_REPAIRS"),
+        (["sprinkler", "fire", "buckmiller", "suppression"], "PROFESSIONAL_SERVICES"),
+        (["consulting", "engineer", "inspection", "lane engineering", "domani"], "PROFESSIONAL_SERVICES"),
+        (["mortgage", "loan", "financing", "bank", "cooperative bank"], "MORTGAGE_FINANCING"),
+    ]
+    for keywords, category in rules:
+        if any(k in text for k in keywords):
+            return category
+    return "PROFESSIONAL_SERVICES"
+
+
+def _parse_pdf_invoices(pdf_path):
+    """Extract structured invoice data from a PDF using pdftotext."""
+    import subprocess, re
+
+    result = subprocess.run(
+        ["pdftotext", "-layout", pdf_path, "-"],
+        capture_output=True, text=True, timeout=60
+    )
+    if result.returncode != 0:
+        raise Exception(f"PDF parsing failed: {result.stderr}")
+
+    pages = result.stdout.split('\f')
+    invoices = []
+    seen_invoices = set()  # deduplicate by invoice number
+
+    for page_idx, page_text in enumerate(pages):
+        page_text = page_text.strip()
+        if not page_text or len(page_text) < 30:
+            continue
+
+        lines = [l.strip() for l in page_text.split('\n') if l.strip()]
+        if not lines:
+            continue
+
+        # --- Extract vendor name (first substantial non-address line) ---
+        vendor_name = ""
+        for line in lines[:5]:
+            if len(line) > 3 and not re.match(r'^\d', line) and 'century' not in line.lower():
+                vendor_name = line[:80]
+                break
+
+        # --- Extract invoice number ---
+        inv_num = ""
+        for pattern in [
+            r'Invoice\s*#?\s*:?\s*([A-Z0-9\-]+)',
+            r'INV[OICE#\-]+\s*:?\s*([A-Z0-9\-]+)',
+            r'INVOICE\s*NUMBER\s*:?\s*([A-Z0-9\-]+)',
+        ]:
+            m = re.search(pattern, page_text, re.IGNORECASE)
+            if m and len(m.group(1)) > 2:
+                inv_num = m.group(1).strip()
+                break
+
+        # Skip if we've seen this invoice number already
+        if inv_num and inv_num in seen_invoices:
+            continue
+        if inv_num:
+            seen_invoices.add(inv_num)
+
+        # --- Extract date ---
+        inv_date = ""
+        date_m = re.search(r'(\d{1,2}/\d{1,2}/\d{2,4})', page_text)
+        if not date_m:
+            date_m = re.search(r'((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{1,2},?\s+\d{4})', page_text, re.IGNORECASE)
+        if date_m:
+            inv_date = date_m.group(1).strip()
+
+        # --- Extract total amount (last/largest dollar amount) ---
+        all_amounts = re.findall(r'\$[\d,]+\.?\d*', page_text)
+        total_amount = 0.0
+        total_str = ""
+        for pat in [
+            r'(?:TOTAL AMOUNT DUE|AMOUNT DUE|BALANCE DUE|TOTAL)[:\s]+\$?([\d,]+\.?\d*)',
+            r'Total\s+\$?([\d,]+\.?\d*)',
+        ]:
+            m = re.search(pat, page_text, re.IGNORECASE)
+            if m:
+                try:
+                    total_amount = float(m.group(1).replace(',', ''))
+                    total_str = f"${total_amount:,.2f}"
+                    break
+                except:
+                    pass
+        if not total_str and all_amounts:
+            # Take largest amount as likely total
+            parsed = []
+            for a in all_amounts:
+                try:
+                    parsed.append(float(a.replace('$','').replace(',','')))
+                except:
+                    pass
+            if parsed:
+                total_amount = max(parsed)
+                total_str = f"${total_amount:,.2f}"
+
+        if total_amount < 0.01:
+            continue
+
+        # --- Extract building address ---
+        raw_building = ""
+        for pattern in [
+            r'Site Location[:\s]*\n?([^\n]+(?:\n[^\n]+)?)',
+            r'Job Address[:\s]*\n?([^\n]+(?:\n[^\n]+)?)',
+            r'Ship To[:\s]*\n([^\n]+(?:\n[^\n]+)?)',
+            r'Property[:\s]+([^\n]+)',
+            r'RE[:\s]+([^\n]*(?:Street|St|Avenue|Ave|Place|Blvd)[^\n]*)',
+        ]:
+            m = re.search(pattern, page_text, re.IGNORECASE)
+            if m:
+                candidate = m.group(1).strip()[:120]
+                # Skip if it's Century's own address
+                if '440' not in candidate and '1430' not in candidate:
+                    raw_building = candidate
+                    break
+
+        # If no explicit label, look for NYC street addresses in the text
+        if not raw_building:
+            addr_matches = re.findall(
+                r'\b(\d+\s+(?:East|West|E\.|W\.)\s+\d+\w*\s*(?:Street|St|Avenue|Ave)?[^\n]*)',
+                page_text, re.IGNORECASE
+            )
+            for addr in addr_matches:
+                addr = addr.strip()
+                if '440' not in addr and '1430' not in addr and len(addr) > 8:
+                    raw_building = addr[:80]
+                    break
+
+        # --- Extract description ---
+        description = ""
+        for dpat in [
+            r'Description[:\s]*\n?([^\n]+)',
+            r'For Professional Services[^\n]*\n([^\n]+)',
+            r'(?:MAINTENANCE CONTRACT|SERVICE|WORK)[:\s]+([^\n]+)',
+        ]:
+            m = re.search(dpat, page_text, re.IGNORECASE)
+            if m:
+                description = m.group(1).strip()[:100]
+                break
+        if not description and len(lines) > 2:
+            description = lines[2][:80] if len(lines) > 2 else ""
+
+        # --- Match building ---
+        matched_bbl, matched_bldg, confidence = _match_building(raw_building)
+
+        # --- Classify category ---
+        category = _classify_category(vendor_name, description)
+
+        invoices.append({
+            "page": page_idx + 1,
+            "invoice_number": inv_num or f"p{page_idx+1}",
+            "vendor": vendor_name,
+            "date": inv_date,
+            "total": total_str,
+            "total_amount": total_amount,
+            "description": description,
+            "raw_building": raw_building,
+            "matched_bbl": matched_bbl,
+            "matched_address": matched_bldg["address"] if matched_bldg else "",
+            "match_confidence": confidence,
+            "category": category,
+            "status": "matched" if matched_bbl else "unmatched",
+        })
+
+    # Sort: matched first, then by building address
+    invoices.sort(key=lambda x: (0 if x["matched_bbl"] else 1, x["matched_address"]))
+    return invoices
+
+
+def _parse_csv_invoices(csv_path):
+    """Parse a CSV file into invoice records."""
+    import csv
+    invoices = []
+    with open(csv_path, newline='', encoding='utf-8-sig') as f:
+        reader = csv.DictReader(f)
+        for i, row in enumerate(reader):
+            vendor = row.get("Vendor", row.get("vendor", ""))
+            amount_str = row.get("Amount", row.get("amount", "0"))
+            try:
+                amount = float(str(amount_str).replace('$','').replace(',',''))
+            except:
+                amount = 0
+            address = row.get("Building", row.get("Address", row.get("building", "")))
+            matched_bbl, matched_bldg, confidence = _match_building(address)
+            category = _classify_category(vendor, row.get("Description", ""))
+            invoices.append({
+                "page": i + 1,
+                "invoice_number": row.get("Invoice Number", f"row{i+1}"),
+                "vendor": vendor,
+                "date": row.get("Invoice Date", ""),
+                "total": f"${amount:,.2f}",
+                "total_amount": amount,
+                "description": row.get("Description", ""),
+                "raw_building": address,
+                "matched_bbl": matched_bbl,
+                "matched_address": matched_bldg["address"] if matched_bldg else "",
+                "match_confidence": confidence,
+                "category": category,
+                "status": "matched" if matched_bbl else "unmatched",
+            })
+    return invoices
+
+
+@app.route("/api/commit-invoices", methods=["POST"])
+@login_required
+def commit_invoices():
+    """Commit reviewed/confirmed invoices into building vendor_data."""
+    data = request.get_json()
+    invoices = data.get("invoices", [])
+    if not invoices:
+        return jsonify({"error": "No invoices provided"}), 400
+
+    updated_buildings = {}
+    skipped = 0
+
+    for inv in invoices:
+        if inv.get("skip") or not inv.get("matched_bbl"):
+            skipped += 1
+            continue
+
+        bbl = inv["matched_bbl"]
+        building = BUILDINGS_DB.get(bbl)
+        if not building:
+            skipped += 1
+            continue
+
+        # Find existing vendor entry or create new one
+        vendor_name = inv.get("vendor", "Unknown")
+        category = inv.get("category", "PROFESSIONAL_SERVICES")
+        amount = float(inv.get("total_amount", 0))
+        units = building.get("units", 1)
+
+        # Annualize if monthly invoice
+        annual = amount * 12
+
+        # Check if vendor already exists in building
+        existing = None
+        for v in building.get("vendor_data", []):
+            if v.get("vendor", "").lower() == vendor_name.lower() and v.get("category") == category:
+                existing = v
+                break
+
+        if existing:
+            # Update with new data
+            existing["annual"] = annual
+            existing["per_unit"] = round(annual / max(units, 1))
+            existing["last_invoice_date"] = inv.get("date", "")
+            existing["last_invoice_amount"] = amount
+        else:
+            # Add new vendor entry
+            if "vendor_data" not in building:
+                building["vendor_data"] = []
+            building["vendor_data"].append({
+                "vendor": vendor_name,
+                "category": category,
+                "annual": annual,
+                "per_unit": round(annual / max(units, 1)),
+                "last_bid_year": None,
+                "months_left": None,
+                "last_invoice_date": inv.get("date", ""),
+                "last_invoice_amount": amount,
+            })
+
+        updated_buildings[bbl] = building.get("address", bbl)
+
+    return jsonify({
+        "success": True,
+        "updated": len(updated_buildings),
+        "skipped": skipped,
+        "buildings": list(updated_buildings.values()),
+    })
+
+
+UPLOAD_PAGE_HTML = None  # defined below
+
+@app.route("/upload")
+@login_required
+def upload_page():
+    # Build building list and category list for the template
+    bldg_list = json.dumps([{"bbl": k, "address": v["address"]} for k,v in BUILDINGS_DB.items()])
+    cat_list = json.dumps(list(CATEGORY_LABELS.items()))
+    html = _build_upload_html(bldg_list, cat_list)
+    return html
+
+
+def _build_upload_html(bldg_list_json, cat_list_json):
+    return """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BoardIQ · Invoice Upload</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --navy:#0A2342;--green:#00A550;--gold:#F59E0B;
+  --ink:#1a1714;--surface:#faf9f7;--surface2:#f3f1ee;--border:#e8e4df;--border2:#d4cfc9;
+  --muted:#8c8278;--dim:#6b6259;--text:#2c2825;
+  --red:#dc2626;--red-light:#fef2f2;--red-border:#fecaca;
+  --green-light:#f0fdf4;--green-border:#bbf7d0;
+  --yellow:#d97706;--yellow-border:#fde68a;
+}
+body{font-family:'Inter',sans-serif;background:var(--surface);color:var(--text);min-height:100vh}
+.topbar{position:sticky;top:0;z-index:100;background:var(--surface);border-bottom:1px solid var(--border);height:44px;display:flex;align-items:center;padding:0 24px;gap:12px}
+.topbar-logo{font-family:'Playfair Display',serif;font-size:16px;color:var(--ink);font-weight:700}
+.topbar-logo span{color:var(--gold)}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:16px}
+.topbar-back{font-size:12px;color:var(--muted);text-decoration:none;padding:6px 12px;border:1px solid var(--border2);border-radius:5px}
+.topbar-back:hover{color:var(--ink);border-color:var(--ink)}
+.topbar-signout{font-size:12px;font-weight:600;color:var(--ink);text-decoration:none;padding:6px 14px;border:1px solid var(--border2);border-radius:5px}
+.topbar-signout:hover{background:var(--ink);color:white}
+.container{max-width:1140px;margin:0 auto;padding:36px 24px}
+.page-title{font-family:'Playfair Display',serif;font-size:28px;color:var(--ink);margin-bottom:6px}
+.page-sub{font-size:13px;color:var(--muted);margin-bottom:32px}
+.drop-zone{border:2px dashed var(--border2);border-radius:12px;padding:48px;text-align:center;cursor:pointer;transition:all .2s;background:var(--surface);margin-bottom:32px}
+.drop-zone.drag-over{border-color:var(--gold);background:#fffbf0}
+.drop-title{font-size:16px;font-weight:600;color:var(--ink);margin-bottom:6px}
+.drop-sub{font-size:13px;color:var(--muted);margin-bottom:16px}
+.btn-upload{background:var(--ink);color:white;border:none;padding:10px 24px;border-radius:6px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.processing{display:none;text-align:center;padding:60px}
+.processing.show{display:block}
+.spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 16px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.results{display:none}
+.results.show{display:block}
+.results-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.results-title{font-size:18px;font-weight:700;color:var(--ink)}
+.stats-bar{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px}
+.stat-pill{padding:5px 13px;border-radius:20px;font-size:12px;font-weight:600}
+.stat-pill.green{background:var(--green-light);color:var(--green);border:1px solid var(--green-border)}
+.stat-pill.yellow{background:#fffbf0;color:var(--yellow);border:1px solid var(--yellow-border)}
+.stat-pill.red{background:var(--red-light);color:var(--red);border:1px solid var(--red-border)}
+.invoice-table{width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:80px}
+.invoice-table th{text-align:left;padding:8px 10px;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);background:var(--surface2);border-bottom:2px solid var(--border);white-space:nowrap}
+.invoice-table td{padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+.invoice-table tr.skipped td{opacity:.35}
+.invoice-table tr:hover td{background:#faf8f5}
+.vendor-name{font-weight:600;color:var(--ink);font-size:12px}
+.inv-num{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted)}
+.amount-val{font-family:'IBM Plex Mono',monospace;font-weight:700;color:var(--ink)}
+.badge{display:inline-flex;align-items:center;gap:3px;padding:3px 7px;border-radius:4px;font-size:10px;font-weight:700}
+.badge.matched{background:var(--green-light);color:var(--green);border:1px solid var(--green-border)}
+.badge.unmatched{background:var(--red-light);color:var(--red);border:1px solid var(--red-border)}
+.badge.low{background:#fffbf0;color:var(--yellow);border:1px solid var(--yellow-border)}
+.bldg-select{width:100%;padding:4px 7px;border:1px solid var(--border2);border-radius:4px;font-family:inherit;font-size:11px;background:white}
+.cat-select{width:100%;padding:4px 7px;border:1px solid var(--border2);border-radius:4px;font-family:inherit;font-size:11px;background:white}
+.raw-addr{font-size:9.5px;color:var(--muted);margin-top:3px;font-style:italic}
+.skip-btn{background:none;border:1px solid var(--border2);border-radius:4px;padding:3px 9px;font-size:11px;color:var(--muted);cursor:pointer;white-space:nowrap}
+.skip-btn.on{background:var(--red-light);color:var(--red);border-color:var(--red-border)}
+.commit-bar{position:fixed;bottom:0;left:0;right:0;background:white;border-top:1px solid var(--border);padding:14px 32px;display:flex;align-items:center;gap:16px;z-index:50;box-shadow:0 -4px 20px rgba(0,0,0,.06)}
+.commit-summary{font-size:13px;color:var(--dim);flex:1}
+.btn-commit{background:var(--green);color:white;border:none;padding:11px 28px;border-radius:6px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer}
+.btn-commit:hover{background:#009944}
+.btn-commit:disabled{opacity:.4;cursor:not-allowed}
+.btn-reset{background:none;border:1px solid var(--border2);border-radius:6px;padding:11px 18px;font-family:inherit;font-size:12px;color:var(--muted);cursor:pointer}
+.success-screen{display:none;text-align:center;padding:80px 0}
+.success-screen.show{display:block}
+.success-icon{font-size:52px;margin-bottom:16px}
+.success-title{font-family:'Playfair Display',serif;font-size:26px;color:var(--ink);margin-bottom:8px}
+.success-sub{font-size:14px;color:var(--muted);margin-bottom:20px}
+.bldg-tags{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:28px}
+.bldg-tag{padding:6px 14px;background:var(--green-light);border:1px solid var(--green-border);border-radius:20px;font-size:12px;color:var(--green);font-weight:600}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-logo">Board<span>IQ</span></div>
+  <div class="topbar-right">
+    <a href="/dashboard" class="topbar-back">← Dashboard</a>
+    <a href="/logout" class="topbar-signout">Sign Out</a>
+  </div>
+</header>
+<div class="container">
+  <div class="page-title">Invoice Upload</div>
+  <div class="page-sub">Upload a PDF with invoices from multiple buildings. BoardIQ extracts each invoice, matches it to the correct building, and updates vendor spend data.</div>
+
+  <div class="drop-zone" id="dropZone" onclick="document.getElementById('fi').click()">
+    <div style="font-size:40px;margin-bottom:12px">&#128196;</div>
+    <div class="drop-title">Drop invoice PDF here</div>
+    <div class="drop-sub">Supports multi-page PDFs with mixed vendors and buildings</div>
+    <button class="btn-upload" onclick="event.stopPropagation();document.getElementById('fi').click()">Choose File</button>
+    <input type="file" id="fi" accept=".pdf,.csv" style="display:none" onchange="handleFile(this)">
+  </div>
+
+  <div class="processing" id="proc">
+    <div class="spinner"></div>
+    <div style="font-size:14px;font-weight:600;color:var(--ink);margin-bottom:6px">Analyzing PDF...</div>
+    <div style="font-size:12px;color:var(--muted)" id="procDetail">Extracting text and matching buildings</div>
+  </div>
+
+  <div class="results" id="res">
+    <div class="results-header">
+      <div class="results-title">Review Extracted Invoices</div>
+      <button class="btn-reset" onclick="reset()">Upload Different File</button>
+    </div>
+    <div class="stats-bar" id="statsBar"></div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:14px">Verify building assignments and categories. Use the dropdowns to correct any errors, then commit.</p>
+    <table class="invoice-table">
+      <thead><tr>
+        <th>Vendor</th><th>Invoice #</th><th>Date</th><th>Amount</th>
+        <th>Building</th><th>Category</th><th>Description</th><th></th>
+      </tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+
+  <div class="success-screen" id="succ">
+    <div class="success-icon">&#9989;</div>
+    <div class="success-title">Invoices Committed</div>
+    <div class="success-sub" id="succSub"></div>
+    <div class="bldg-tags" id="succBldgs"></div>
+    <a href="/dashboard" style="display:inline-block;background:var(--ink);color:white;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:600;font-size:14px">Back to Dashboard →</a>
+  </div>
+</div>
+
+<div class="commit-bar" id="commitBar" style="display:none">
+  <div class="commit-summary" id="commitSum"></div>
+  <button class="btn-reset" onclick="reset()">Start Over</button>
+  <button class="btn-commit" id="commitBtn" onclick="commit()">Commit to Buildings →</button>
+</div>
+
+<script>
+const BUILDINGS = """ + bldg_list_json + """;
+const CATEGORIES = """ + cat_list_json + """;
+let invoices = [];
+
+const dz = document.getElementById('dropZone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('drag-over'); if(e.dataTransfer.files[0]) uploadFile(e.dataTransfer.files[0]); });
+
+function handleFile(inp) { if(inp.files[0]) uploadFile(inp.files[0]); }
+
+async function uploadFile(file) {
+  dz.style.display = 'none';
+  document.getElementById('proc').classList.add('show');
+  const steps = ['Extracting text from PDF...','Parsing invoice data...','Matching buildings...','Classifying vendors...'];
+  let s = 0;
+  const tick = setInterval(() => { if(s<steps.length) document.getElementById('procDetail').textContent=steps[s++]; }, 1400);
+  const fd = new FormData(); fd.append('file', file);
+  try {
+    const r = await fetch('/api/upload-invoices', {method:'POST', body:fd});
+    clearInterval(tick);
+    const d = await r.json();
+    if(!d.success) throw new Error(d.error||'Upload failed');
+    invoices = d.invoices;
+    renderResults();
+  } catch(e) {
+    clearInterval(tick);
+    document.getElementById('proc').classList.remove('show');
+    dz.style.display = '';
+    alert('Error: ' + e.message);
+  }
+}
+
+function renderResults() {
+  document.getElementById('proc').classList.remove('show');
+  document.getElementById('res').classList.add('show');
+  document.getElementById('commitBar').style.display = 'flex';
+
+  const matched = invoices.filter(i=>i.matched_bbl&&!i.skip).length;
+  const unmatched = invoices.filter(i=>!i.matched_bbl).length;
+  document.getElementById('statsBar').innerHTML =
+    `<span class="stat-pill green">✓ ${matched} matched</span>` +
+    (unmatched ? `<span class="stat-pill red">⚠ ${unmatched} unmatched</span>` : '') +
+    `<span class="stat-pill yellow">${invoices.length} total invoices</span>`;
+
+  const tbody = document.getElementById('tbody');
+  tbody.innerHTML = '';
+  invoices.forEach((inv, idx) => {
+    const pct = Math.round((inv.match_confidence||0)*100);
+    const bc = inv.matched_bbl ? (pct>65?'matched':'low') : 'unmatched';
+    const bl = inv.matched_bbl ? (pct>65?`✓ ${pct}%`:`⚠ ${pct}%`) : '✗ No match';
+    const bldgOpts = '<option value="">— Not assigned —</option>' +
+      BUILDINGS.map(b=>`<option value="${b.bbl}"${b.bbl===inv.matched_bbl?' selected':''}>${b.address.substring(0,38)}</option>`).join('');
+    const catOpts = CATEGORIES.map(([k,v])=>`<option value="${k}"${k===inv.category?' selected':''}>${v}</option>`).join('');
+    const tr = document.createElement('tr');
+    tr.id = 'r'+idx;
+    tr.innerHTML = `
+      <td><div class="vendor-name">${inv.vendor||'—'}</div></td>
+      <td><div class="inv-num">${inv.invoice_number||'—'}</div></td>
+      <td style="font-size:11px;color:var(--muted);white-space:nowrap">${inv.date||'—'}</td>
+      <td><div class="amount-val">${inv.total||'—'}</div></td>
+      <td>
+        <span class="badge ${bc}">${bl}</span><br>
+        <select class="bldg-select" style="margin-top:4px" onchange="updBldg(${idx},this.value)">${bldgOpts}</select>
+        ${inv.raw_building?`<div class="raw-addr">PDF: ${inv.raw_building.substring(0,45)}</div>`:''}
+      </td>
+      <td><select class="cat-select" onchange="updCat(${idx},this.value)">${catOpts}</select></td>
+      <td style="font-size:11px;color:var(--dim);max-width:140px">${(inv.description||'').substring(0,55)}</td>
+      <td><button class="skip-btn" id="sk${idx}" onclick="toggleSkip(${idx})">Skip</button></td>`;
+    tbody.appendChild(tr);
+  });
+  updateSum();
+}
+
+function updBldg(i, v) { invoices[i].matched_bbl=v; const b=BUILDINGS.find(x=>x.bbl===v); invoices[i].matched_address=b?b.address:''; updateSum(); }
+function updCat(i, v) { invoices[i].category=v; }
+function toggleSkip(i) {
+  invoices[i].skip=!invoices[i].skip;
+  document.getElementById('sk'+i).classList.toggle('on', invoices[i].skip);
+  document.getElementById('sk'+i).textContent=invoices[i].skip?'Skipped':'Skip';
+  document.getElementById('r'+i).classList.toggle('skipped', invoices[i].skip);
+  updateSum();
+}
+function updateSum() {
+  const toCommit = invoices.filter(i=>!i.skip&&i.matched_bbl);
+  const bldgs = new Set(toCommit.map(i=>i.matched_bbl));
+  const amt = toCommit.reduce((s,i)=>s+(i.total_amount||0),0);
+  document.getElementById('commitSum').innerHTML =
+    `<strong>${toCommit.length}</strong> invoices · <strong>${bldgs.size}</strong> buildings · $${amt.toLocaleString('en-US',{maximumFractionDigits:0})} total`;
+  document.getElementById('commitBtn').disabled = toCommit.length===0;
+}
+
+async function commit() {
+  const btn = document.getElementById('commitBtn');
+  btn.disabled=true; btn.textContent='Committing...';
+  try {
+    const r = await fetch('/api/commit-invoices',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({invoices})});
+    const d = await r.json();
+    if(!d.success) throw new Error(d.error);
+    document.getElementById('res').classList.remove('show');
+    document.getElementById('commitBar').style.display='none';
+    const ss = document.getElementById('succ'); ss.classList.add('show');
+    document.getElementById('succSub').textContent=`${d.updated} buildings updated · ${d.skipped} skipped`;
+    document.getElementById('succBldgs').innerHTML=(d.buildings||[]).map(b=>`<span class="bldg-tag">${b}</span>`).join('');
+  } catch(e) {
+    btn.disabled=false; btn.textContent='Commit to Buildings →';
+    alert('Error: '+e.message);
+  }
+}
+
+function reset() {
+  invoices=[];
+  ['res','proc','succ'].forEach(id=>document.getElementById(id).classList.remove('show'));
+  document.getElementById('commitBar').style.display='none';
+  dz.style.display=''; document.getElementById('fi').value='';
+}
+</script>
+</body>
+</html>"""
+
+
+
 @login_required
 def get_sample_csv():
     """Download a sample invoice CSV pre-filled for the active building."""
@@ -1002,7 +1635,7 @@ table.vt tr.click:hover td{background:var(--surface2)}
     <div class="nav-label">Building</div>
     <div class="nav-item">◷ &nbsp;Tax &amp; Assessment</div>
     <div class="nav-item">☰ &nbsp;Violations</div>
-    <div class="nav-item">↓ &nbsp;Data Upload</div>
+    <a href="/upload" class="nav-item" style="text-decoration:none;color:rgba(255,255,255,.5)">↑ &nbsp;Invoice Upload</a>
   </div>
   {% if all_buildings|length > 1 %}
   <div class="switch-links">
