@@ -1,5 +1,5 @@
 """
-BoardIQ — Web Application
+BoardIQ â Web Application
 ===========================
 Flask web server that ties together:
   - NYC public data pipeline (DOF, HPD, DOB)
@@ -35,7 +35,7 @@ from benchmarking_engine import benchmark_building, NETWORK_BENCHMARKS
 app = Flask(__name__)
 app.secret_key = "boardiq-dev-key-change-in-production"
 
-# ── In-memory database (swap for PostgreSQL in production) ───────────────────
+# ââ In-memory database (swap for PostgreSQL in production) âââââââââââââââââââ
 BUILDINGS_DB = {
     "bbl_1022150001": {
         "id": "bbl_1022150001",
@@ -69,7 +69,7 @@ BUILDINGS_DB = {
         "last_data_refresh": "2026-01-15",
         "compliance_deadlines": [
             {
-                "law": "Local Law 11 — FISP Facade Inspection",
+                "law": "Local Law 11 â FISP Facade Inspection",
                 "due_date": "Oct 2026",
                 "months_away": 9,
                 "urgency": "HIGH",
@@ -79,7 +79,7 @@ BUILDINGS_DB = {
                 "network_comps": 23,
             },
             {
-                "law": "Local Law 97 — Carbon Emissions",
+                "law": "Local Law 97 â Carbon Emissions",
                 "due_date": "Dec 2026",
                 "months_away": 11,
                 "urgency": "HIGH",
@@ -89,7 +89,7 @@ BUILDINGS_DB = {
                 "network_comps": 31,
             },
             {
-                "law": "Local Law 87 — Energy Audit",
+                "law": "Local Law 87 â Energy Audit",
                 "due_date": "Dec 2026",
                 "months_away": 11,
                 "urgency": "MEDIUM",
@@ -158,7 +158,7 @@ BUILDINGS_DB = {
         "last_data_refresh": "2026-01-15",
         "compliance_deadlines": [
             {
-                "law": "Local Law 11 — FISP Facade Inspection",
+                "law": "Local Law 11 â FISP Facade Inspection",
                 "due_date": "Jun 2027",
                 "months_away": 17,
                 "urgency": "MEDIUM",
@@ -211,7 +211,7 @@ BUILDINGS_DB = {
         "last_data_refresh": "2026-02-17",
         "compliance_deadlines": [
             {
-                "law": "Local Law 11 — FISP Facade Inspection",
+                "law": "Local Law 11 â FISP Facade Inspection",
                 "due_date": "Dec 2026",
                 "months_away": 10,
                 "urgency": "HIGH",
@@ -221,7 +221,7 @@ BUILDINGS_DB = {
                 "network_comps": 23,
             },
             {
-                "law": "Local Law 97 — Carbon Emissions",
+                "law": "Local Law 97 â Carbon Emissions",
                 "due_date": "May 2026",
                 "months_away": 3,
                 "urgency": "HIGH",
@@ -231,7 +231,7 @@ BUILDINGS_DB = {
                 "network_comps": 31,
             },
             {
-                "law": "Local Law 87 — Energy Audit",
+                "law": "Local Law 87 â Energy Audit",
                 "due_date": "Dec 2026",
                 "months_away": 10,
                 "urgency": "HIGH",
@@ -241,7 +241,7 @@ BUILDINGS_DB = {
                 "network_comps": 41,
             },
             {
-                "law": "Elevator Annual Inspection — 2 cabs",
+                "law": "Elevator Annual Inspection â 2 cabs",
                 "due_date": "Apr 2026",
                 "months_away": 2,
                 "urgency": "HIGH",
@@ -251,7 +251,7 @@ BUILDINGS_DB = {
                 "network_comps": 89,
             },
             {
-                "law": "Local Law 152 — Gas Piping Inspection",
+                "law": "Local Law 152 â Gas Piping Inspection",
                 "due_date": "Dec 2026",
                 "months_away": 10,
                 "urgency": "MEDIUM",
@@ -290,9 +290,9 @@ BUILDINGS_DB = {
     },
 }
 
-# ── Auth (simple demo auth — swap for real auth in production) ───────────────
+# ââ Auth (simple demo auth â swap for real auth in production) âââââââââââââââ
 
-# ── Century Management Buildings (from Monday.com Building Master List) ─────
+# ââ Century Management Buildings (from Monday.com Building Master List) âââââ
 import json as _json
 import os as _os
 
@@ -455,9 +455,9 @@ def compute_benchmarks(building):
     )
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 #  ROUTES
-# ═══════════════════════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 @app.route("/")
 def index():
@@ -581,14 +581,14 @@ def get_sample_csv():
     )
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 #  HTML TEMPLATES
-# ═══════════════════════════════════════════════════════════════════════════════
+# âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
 
 LOGIN_HTML = """<!DOCTYPE html>
 <html>
 <head>
-<title>BoardIQ — Sign In</title>
+<title>BoardIQ â Sign In</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -616,14 +616,14 @@ button:hover { background: #1a1714; }
     <label>Email Address</label>
     <input type="email" name="email" placeholder="board@yourbuilding.com" required>
     <label>Password</label>
-    <input type="password" name="password" placeholder="••••••••" required>
-    <button type="submit">Sign In →</button>
+    <input type="password" name="password" placeholder="â¢â¢â¢â¢â¢â¢â¢â¢" required>
+    <button type="submit">Sign In â</button>
   </form>
   <div class="demo-hint">
     <strong>Demo accounts:</strong><br>
-    board@120w72.com · demo1234 (120 W 72nd St)<br>
-    board@740park.com · demo1234 (740 Park Ave)<br>
-    admin@boardiq.com · admin (all buildings)
+    board@120w72.com Â· demo1234 (120 W 72nd St)<br>
+    board@740park.com Â· demo1234 (740 Park Ave)<br>
+    admin@boardiq.com Â· admin (all buildings)
   </div>
 </div>
 </body>
@@ -635,7 +635,7 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BoardIQ — {{ building.address }}</title>
+<title>BoardIQ â {{ building.address }}</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=IBM+Plex+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -800,27 +800,27 @@ table.vt tr.click:hover td{background:var(--surface2)}
   </div>
   <div class="nav">
     <div class="nav-label">Intelligence</div>
-    <div class="nav-item active">◈ &nbsp;Dashboard</div>
-    <div class="nav-item">◎ &nbsp;Savings
+    <div class="nav-item active">â &nbsp;Dashboard</div>
+    <div class="nav-item">â &nbsp;Savings
       {% if benchmarks.above_market_count > 0 %}
       <span class="nav-badge">{{ benchmarks.above_market_count }}</span>{% endif %}
     </div>
-    <div class="nav-item">⊞ &nbsp;BidBoard</div>
+    <div class="nav-item">â &nbsp;BidBoard</div>
     <div class="nav-label">Compliance</div>
-    <div class="nav-item">⚑ &nbsp;Compliance Calendar
+    <div class="nav-item">â &nbsp;Compliance Calendar
       <span class="nav-badge">{{ building.compliance_deadlines|selectattr('urgency','eq','HIGH')|list|length }}</span>
     </div>
-    <div class="nav-item">▤ &nbsp;Contracts</div>
+    <div class="nav-item">â¤ &nbsp;Contracts</div>
     <div class="nav-label">Building</div>
-    <div class="nav-item">◷ &nbsp;Tax &amp; Assessment</div>
-    <div class="nav-item">☰ &nbsp;Violations</div>
-    <div class="nav-item">↓ &nbsp;Data Upload</div>
+    <div class="nav-item">â· &nbsp;Tax &amp; Assessment</div>
+    <div class="nav-item">â° &nbsp;Violations</div>
+    <div class="nav-item">â &nbsp;Data Upload</div>
   </div>
   {% if all_buildings|length > 1 %}
   <div class="switch-links">
     <div style="padding:8px 18px 4px;font-size:10px;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.08em">Buildings</div>
     <div style="padding:0 12px 8px;">
-      <input id="bldg-search" type="text" placeholder="Search buildings…"
+      <input id="bldg-search" type="text" placeholder="Search buildingsâ¦"
         style="width:100%;box-sizing:border-box;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:4px;padding:5px 8px;color:#fff;font-size:11px;outline:none;"
         oninput="filterBuildings(this.value)">
     </div>
@@ -829,7 +829,7 @@ table.vt tr.click:hover td{background:var(--surface2)}
     <a href="/switch-building/{{ b.id }}"
        class="switch-link {% if b.id == active_bbl %}active-link{% endif %}"
        data-addr="{{ b.address|lower }}">
-      {% if b.id == active_bbl %}▶ {% endif %}{{ b.address[:30] }}
+      {% if b.id == active_bbl %}â¶ {% endif %}{{ b.address[:30] }}
     </a>
     {% endfor %}
     </div>
@@ -846,7 +846,7 @@ table.vt tr.click:hover td{background:var(--surface2)}
   <div class="bldg-block">
     <div class="bldg-tag">Active Building</div>
     <div class="bldg-name">{{ building.address }}</div>
-    <div class="bldg-meta">{{ building.units }} units · {{ building.neighborhood }}</div>
+    <div class="bldg-meta">{{ building.units }} units Â· {{ building.neighborhood }}</div>
   </div>
   <div class="user-block">
     <div class="user-name">{{ user_name }}</div>
@@ -858,12 +858,12 @@ table.vt tr.click:hover td{background:var(--surface2)}
   <div class="page-header">
     <div>
       <div class="page-title">Building Intelligence</div>
-      <div class="page-sub">{{ building.address }} &nbsp;·&nbsp; {{ building.managing_agent }} &nbsp;·&nbsp; Data from 187 comparable NYC buildings</div>
+      <div class="page-sub">{{ building.address }} &nbsp;Â·&nbsp; {{ building.get('managing_agent', building.get('management_company', 'Century Management')) }} &nbsp;Â·&nbsp; Data from 187 comparable NYC buildings</div>
     </div>
     <div class="header-badge">Refreshed {{ building.last_data_refresh }}</div>
   </div>
 
-  {# ── SUMMARY STRIP ── #}
+  {# ââ SUMMARY STRIP ââ #}
   {% set total_savings = benchmarks.total_savings_opportunity %}
   {% set above_count = benchmarks.above_market_count %}
   {% set urgent_deadlines = building.compliance_deadlines|selectattr('urgency','eq','HIGH')|list %}
@@ -893,7 +893,7 @@ table.vt tr.click:hover td{background:var(--surface2)}
     <div class="strip-item blue">
       <div class="strip-label">Est. Compliance Cost</div>
       <div class="strip-value blue">
-        {% if comp_cost_low > 0 %}${{ "{:,.0f}".format(comp_cost_low/1000)|int }}K–${{ "{:,.0f}".format(comp_cost_high/1000)|int }}K{% else %}None due{% endif %}
+        {% if comp_cost_low > 0 %}${{ "{:,.0f}".format(comp_cost_low/1000)|int }}Kâ${{ "{:,.0f}".format(comp_cost_high/1000)|int }}K{% else %}None due{% endif %}
       </div>
       <div class="strip-sub">plan &amp; budget now</div>
     </div>
@@ -901,11 +901,11 @@ table.vt tr.click:hover td{background:var(--surface2)}
 
   <div class="grid">
 
-    {# ── VENDOR TABLE ── #}
+    {# ââ VENDOR TABLE ââ #}
     <div class="card">
       <div class="ch">
         <div><div class="ct">Vendor Intelligence</div><div class="csub">Peer group: {{ benchmarks.peer_group.description }}</div></div>
-        <a href="#" class="ca">View All →</a>
+        <a href="#" class="ca">View All â</a>
       </div>
       <table class="vt">
         <thead>
@@ -924,7 +924,7 @@ table.vt tr.click:hover td{background:var(--surface2)}
           <tr class="click" onclick="openPanel('vendor', '{{ loop.index0 }}')">
             <td>
               <div class="vname">{{ bm.vendor_name }}</div>
-              <div class="vcat">{{ bm.category_label[:30] }}{% if bm.last_bid_year %} · Last bid {{ bm.last_bid_year }}{% endif %}</div>
+              <div class="vcat">{{ bm.category_label[:30] }}{% if bm.last_bid_year %} Â· Last bid {{ bm.last_bid_year }}{% endif %}</div>
             </td>
             <td class="mono r">${{ "{:,.0f}".format(bm.annual_spend) }}</td>
             <td class="mono r">${{ "{:,.0f}".format(bm.per_unit) }}</td>
@@ -936,9 +936,9 @@ table.vt tr.click:hover td{background:var(--surface2)}
                 <span class="pos-pct" style="color:var(--{{ status }})">{{ pct }}th</span>
               </div>
               <div style="margin-top:4px">
-                {% if status == 'red' %}<span class="pill pill-red">↑ Above Market</span>
-                {% elif status == 'yellow' %}<span class="pill pill-yellow">↑ Slightly Above</span>
-                {% else %}<span class="pill pill-green">✓ {% if pct < 40 %}Below{% else %}At{% endif %} Market</span>{% endif %}
+                {% if status == 'red' %}<span class="pill pill-red">â Above Market</span>
+                {% elif status == 'yellow' %}<span class="pill pill-yellow">â Slightly Above</span>
+                {% else %}<span class="pill pill-green">â {% if pct < 40 %}Below{% else %}At{% endif %} Market</span>{% endif %}
               </div>
             </td>
           </tr>
@@ -948,7 +948,7 @@ table.vt tr.click:hover td{background:var(--surface2)}
       </table>
     </div>
 
-    {# ── SAVINGS ── #}
+    {# ââ SAVINGS ââ #}
     <div class="card">
       <div class="savings-hdr">
         <div class="savings-lbl">Total Identified Savings</div>
@@ -961,10 +961,10 @@ table.vt tr.click:hover td{background:var(--surface2)}
       </div>
       {% for opp in benchmarks.top_opportunities %}
       <div class="opp" onclick="openPanel('vendor', '{{ loop.index0 }}')">
-        <div class="opp-rank">Priority {{ "%02d"|format(loop.index) }} · {{ opp.category_label[:25] }}</div>
+        <div class="opp-rank">Priority {{ "%02d"|format(loop.index) }} Â· {{ opp.category_label[:25] }}</div>
         <div class="opp-name">
           {% if opp.years_since_bid %}No competitive bid in {{ opp.years_since_bid }} years
-          {% else %}{{ opp.percentile }}th percentile — above peer median{% endif %}
+          {% else %}{{ opp.percentile }}th percentile â above peer median{% endif %}
         </div>
         <div class="opp-desc">
           You pay ${{ opp.per_unit }}/unit vs. peer median ${{ opp.peer_median }}/unit.
@@ -972,12 +972,12 @@ table.vt tr.click:hover td{background:var(--surface2)}
         </div>
         <div class="opp-row">
           <span class="opp-amt" style="color:var(--{{ opp.status.color }})">${{ "{:,.0f}".format(opp.savings_opportunity_annual) }}/yr</span>
-          <span class="opp-cta">Initiate Rebid via BidBoard →</span>
+          <span class="opp-cta">Initiate Rebid via BidBoard â</span>
         </div>
       </div>
       {% else %}
       <div style="padding:24px;text-align:center;color:var(--muted);font-size:13px">
-        ✓ All contracts at or below market. No action needed.
+        â All contracts at or below market. No action needed.
       </div>
       {% endfor %}
 
@@ -989,35 +989,35 @@ table.vt tr.click:hover td{background:var(--surface2)}
       </div>
       <div class="upload-result" id="uploadResult"></div>
       <div style="padding:0 20px 14px;text-align:center">
-        <a href="/api/sample-csv" style="font-size:11px;color:var(--muted)">↓ Download sample CSV format</a>
+        <a href="/api/sample-csv" style="font-size:11px;color:var(--muted)">â Download sample CSV format</a>
       </div>
     </div>
 
-    {# ── COMPLIANCE ── #}
+    {# ââ COMPLIANCE ââ #}
     <div class="card full">
       <div class="ch">
         <div><div class="ct">Compliance Calendar &amp; Cost Intelligence</div>
         <div class="csub">Deadlines with projected costs from comparable building data</div></div>
-        <a href="#" class="ca">Full Calendar →</a>
+        <a href="#" class="ca">Full Calendar â</a>
       </div>
       {% for d in building.compliance_deadlines %}
       <div class="comp-item" onclick="openPanel('compliance', '{{ loop.index0 }}')">
         <div>
           <div class="comp-urg" style="color:var(--{% if d.urgency == 'HIGH' %}red{% else %}yellow{% endif %})">
             <div class="comp-dot" style="background:var(--{% if d.urgency == 'HIGH' %}red{% else %}yellow{% endif %})"></div>
-            Due in {{ d.months_away }} months · {% if d.urgency == 'HIGH' %}Act now{% else %}Budget now{% endif %}
+            Due in {{ d.months_away }} months Â· {% if d.urgency == 'HIGH' %}Act now{% else %}Budget now{% endif %}
           </div>
           <div class="comp-law">{{ d.law }}</div>
           <div class="comp-desc">Network benchmark based on {{ d.network_comps }} comparable NYC buildings.</div>
-          <div class="comp-consequence">⚠ {{ d.consequence }}</div>
+          <div class="comp-consequence">â  {{ d.consequence }}</div>
           <div class="comp-actions">
-            <button class="btn-bid" onclick="event.stopPropagation()">Start BidBoard →</button>
+            <button class="btn-bid" onclick="event.stopPropagation()">Start BidBoard â</button>
             <button class="btn-out" onclick="event.stopPropagation()">View Requirements</button>
           </div>
         </div>
         <div class="comp-cost-box">
           <div class="comp-cost-lbl">Network Cost Range</div>
-          <div class="comp-cost-range">${{ "{:,.0f}".format(d.cost_low) }}–${{ "{:,.0f}".format(d.cost_high) }}</div>
+          <div class="comp-cost-range">${{ "{:,.0f}".format(d.cost_low) }}â${{ "{:,.0f}".format(d.cost_high) }}</div>
           <div class="comp-cost-src">Based on {{ d.network_comps }} comparable filings</div>
           <div class="comp-due">Due {{ d.due_date }}</div>
         </div>
@@ -1025,20 +1025,21 @@ table.vt tr.click:hover td{background:var(--surface2)}
       {% endfor %}
     </div>
 
-    {# ── BUILDING RECORD ── #}
+    {# ââ BUILDING RECORD ââ #}
     <div class="card full">
-      <div class="ch"><div><div class="ct">Building Record</div><div class="csub">Public data from NYC agencies · refreshed quarterly</div></div></div>
+      <div class="ch"><div><div class="ct">Building Record</div><div class="csub">Public data from NYC agencies Â· refreshed quarterly</div></div></div>
       <div class="two-mini">
         <div class="mini">
-          <div class="mini-title">Tax &amp; Assessment · DOF</div>
-          <div class="tax-val">${{ "{:,.0f}".format(building.tax_assessment.assessed_value) }}</div>
-          <div class="tax-sub">Assessed Value · {{ building.tax_assessment.fiscal_year }}</div>
+          <div class="mini-title">Tax &amp; Assessment Â· DOF</div>
+          {% if building.get('tax_assessment') %}<div class="tax-val">${{ "{:,.0f}".format(building.tax_assessment.assessed_value) }}</div>
+          <div class="tax-sub">Assessed Value Â· {{ building.tax_assessment.fiscal_year }}</div>
           {% if building.tax_assessment.certiorari_recommended %}
-          <div class="tax-alert">⚠ Assessment up {{ building.tax_assessment.trend_pct_2yr }}% in 2 years. Tax certiorari review recommended — comparable buildings achieve reductions averaging $28,000/yr.</div>
+          <div class="tax-alert">â  Assessment up {{ building.tax_assessment.trend_pct_2yr }}% in 2 years. Tax certiorari review recommended â comparable buildings achieve reductions averaging $28,000/yr.</div>
           {% endif %}
+          {% else %}<div class="tax-sub" style="color:#888">Tax data not yet loaded.</div>{% endif %}
         </div>
         <div class="mini">
-          <div class="mini-title">Violations Summary · HPD / DOB</div>
+          <div class="mini-title">Violations Summary Â· HPD / DOB</div>
           <div class="viol-nums">
             <div class="vn">
               <div class="vn-val {% if building.violations.hpd_open > 0 %}red{% else %}green{% endif %}">{{ building.violations.hpd_open }}</div>
@@ -1054,7 +1055,7 @@ table.vt tr.click:hover td{background:var(--surface2)}
             </div>
           </div>
           {% if building.violations.class_c_open %}
-          <div class="viol-flag">⚠ Open HPD Class C violation — Immediately Hazardous. Requires urgent attention.</div>
+          <div class="viol-flag">â  Open HPD Class C violation â Immediately Hazardous. Requires urgent attention.</div>
           {% endif %}
         </div>
       </div>
@@ -1063,10 +1064,10 @@ table.vt tr.click:hover td{background:var(--surface2)}
   </div>
 </main>
 
-{# ── DETAIL OVERLAY ── #}
+{# ââ DETAIL OVERLAY ââ #}
 <div class="overlay" id="overlay" onclick="if(event.target===this)closePanel()">
   <div class="panel" id="panel">
-    <button class="close-btn" onclick="closePanel()">✕</button>
+    <button class="close-btn" onclick="closePanel()">â</button>
     <div id="panelContent"></div>
   </div>
 </div>
@@ -1092,7 +1093,7 @@ function openPanel(type, idx) {
       <div class="panel-title">${bm.vendor_name || 'Unknown Vendor'}</div>
       <div class="panel-sub">${bm.category_label}</div>
       <div style="font-size:11px;color:var(--dim);background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:7px 10px;margin-bottom:14px">
-        📊 Peer group: ${peerGroup.description}
+        ð Peer group: ${peerGroup.description}
       </div>
       <div class="stat-grid">
         <div class="stat-box"><div class="stat-lbl">Annual Spend</div><div class="stat-val">$${(bm.annual_spend||0).toLocaleString()}</div></div>
@@ -1111,17 +1112,17 @@ function openPanel(type, idx) {
       </div>
       <div class="panel-section">Key Factors Affecting Price</div>
       <div style="font-size:12px;color:var(--dim);line-height:1.8;background:var(--surface2);padding:12px;border-radius:5px;border:1px solid var(--border)">
-        ${(bm.factors||[]).map(f => '• ' + f).join('<br>')}
+        ${(bm.factors||[]).map(f => 'â¢ ' + f).join('<br>')}
       </div>
       ${savings > 0 ? `
       <div class="action-box">
         <div class="action-title">Take Action</div>
         <div class="action-desc">Initiate a competitive bid through BidBoard. Your managing agent will be notified and compensated for executing the process.</div>
-        <button class="btn-full">Start BidBoard Rebid Process →</button>
+        <button class="btn-full">Start BidBoard Rebid Process â</button>
         <button class="btn-full-out">Send Analysis to Managing Agent</button>
       </div>` : `
       <div style="background:var(--green-light);border:1px solid var(--green-border);border-radius:6px;padding:14px;margin-top:16px;font-size:13px;color:var(--green)">
-        ✓ This contract is at or below market for your peer group. No action required at this time.
+        â This contract is at or below market for your peer group. No action required at this time.
       </div>`}`;
   } else {
     const d = complianceItems[idx];
@@ -1129,7 +1130,7 @@ function openPanel(type, idx) {
     const urgColor = d.urgency === 'HIGH' ? 'red' : 'yellow';
     content.innerHTML = `
       <div class="panel-title">${d.law}</div>
-      <div class="panel-sub">Due ${d.due_date} · ${d.months_away} months away</div>
+      <div class="panel-sub">Due ${d.due_date} Â· ${d.months_away} months away</div>
       <div class="stat-grid">
         <div class="stat-box"><div class="stat-lbl">Due Date</div><div class="stat-val">${d.due_date}</div></div>
         <div class="stat-box"><div class="stat-lbl">Time Remaining</div><div class="stat-val ${urgColor}">${d.months_away} months</div></div>
@@ -1138,7 +1139,7 @@ function openPanel(type, idx) {
       </div>
       <div class="panel-section">Consequence of Non-Compliance</div>
       <div style="background:var(--red-light);border:1px solid var(--red-border);border-radius:5px;padding:12px;font-size:12.5px;color:var(--red);font-weight:500">${d.consequence}</div>
-      <div class="panel-section">Cost Data — ${d.network_comps} Comparable Buildings</div>
+      <div class="panel-section">Cost Data â ${d.network_comps} Comparable Buildings</div>
       <div class="nbar-wrap">
         <div class="nbar-labels"><span>$${d.cost_low.toLocaleString()}</span><span>Typical Range</span><span>$${d.cost_high.toLocaleString()}</span></div>
         <div class="nbar-track"><div class="nbar-fill" style="width:100%"></div></div>
@@ -1147,7 +1148,7 @@ function openPanel(type, idx) {
       <div class="action-box">
         <div class="action-title">Start BidBoard</div>
         <div class="action-desc">A pre-filled scope of work will be generated based on your building profile. Qualified vendors from the network will be invited to submit competitive bids.</div>
-        <button class="btn-full">Start BidBoard — ${d.law.split('—')[0].trim()} →</button>
+        <button class="btn-full">Start BidBoard â ${d.law.split('â')[0].trim()} â</button>
         <button class="btn-full-out">Notify Managing Agent</button>
       </div>`;
   }
@@ -1165,19 +1166,19 @@ async function uploadInvoices(input) {
   formData.append('file', file);
   const resultEl = document.getElementById('uploadResult');
   resultEl.style.display = 'block';
-  resultEl.textContent = '⏳ Processing invoices...';
+  resultEl.textContent = 'â³ Processing invoices...';
   try {
     const resp = await fetch('/api/upload-invoices', {method:'POST', body:formData});
     const data = await resp.json();
     if (data.success) {
-      resultEl.textContent = `✓ Processed ${data.records} invoice records · ${data.classification_rate}% classified · Dashboard updated`;
+      resultEl.textContent = `â Processed ${data.records} invoice records Â· ${data.classification_rate}% classified Â· Dashboard updated`;
     } else {
       resultEl.style.background = 'var(--red-light)';
       resultEl.style.color = 'var(--red)';
       resultEl.textContent = `Error: ${data.error}`;
     }
   } catch(e) {
-    resultEl.textContent = 'Upload failed — check console.';
+    resultEl.textContent = 'Upload failed â check console.';
   }
 }
 </script>
@@ -1187,7 +1188,7 @@ async function uploadInvoices(input) {
 
 if __name__ == "__main__":
     print("\n" + "="*55)
-    print("  BoardIQ — Starting Web Application")
+    print("  BoardIQ â Starting Web Application")
     print("="*55)
     print("  URL:      http://localhost:5001")
     print()
