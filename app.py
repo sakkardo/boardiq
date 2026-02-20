@@ -660,13 +660,18 @@ def dashboard():
         return "No building found", 404
     building = ensure_building_data(building)
     benchmarks = compute_benchmarks(building)
+    user = DEMO_USERS.get(session["user_email"], {})
+    is_admin = user.get("is_admin", False) or user.get("role") == "admin"
     return render_template_string(DASHBOARD_HTML,
         building=building,
         benchmarks=benchmarks,
         user_name=session.get("user_name"),
+        is_admin=is_admin,
         all_buildings=[ensure_building_data(BUILDINGS_DB[b]) for b in
                        DEMO_USERS[session["user_email"]].get("buildings", [])],
         active_bbl=session.get("active_building"),
+        all_buildings_json=json.dumps([{"bbl": k, "address": v["address"]} for k,v in BUILDINGS_DB.items()]),
+        categories_json=json.dumps(list(CATEGORY_LABELS.items())),
     )
 
 @app.route("/switch-building/<bbl>")
@@ -818,17 +823,21 @@ def _classify_category(vendor_name, description):
 
 
 def _parse_pdf_invoices(pdf_path):
-    """Extract structured invoice data from a PDF using pdftotext."""
-    import subprocess, re
+    """Extract structured invoice data from a PDF using pypdf."""
+    import re
+    try:
+        from pypdf import PdfReader
+    except ImportError:
+        try:
+            from PyPDF2 import PdfReader
+        except ImportError:
+            raise Exception("PDF parsing library not available. Please install pypdf.")
 
-    result = subprocess.run(
-        ["pdftotext", "-layout", pdf_path, "-"],
-        capture_output=True, text=True, timeout=60
-    )
-    if result.returncode != 0:
-        raise Exception(f"PDF parsing failed: {result.stderr}")
-
-    pages = result.stdout.split('\f')
+    reader = PdfReader(pdf_path)
+    pages = []
+    for page in reader.pages:
+        text = page.extract_text() or ""
+        pages.append(text)
     invoices = []
     seen_invoices = set()  # deduplicate by invoice number
 
@@ -1601,6 +1610,52 @@ table.vt tr.click:hover td{background:var(--surface2)}
 .btn-full{width:100%;background:var(--ink);color:#fff;font-family:inherit;font-size:13px;font-weight:600;padding:10px;border:none;border-radius:4px;cursor:pointer;margin-bottom:7px}
 .btn-full-out{width:100%;background:transparent;color:var(--dim);font-family:inherit;font-size:12px;padding:8px;border:1px solid var(--border2);border-radius:4px;cursor:pointer}
 .upload-result{padding:14px 20px;background:var(--green-light);border:1px solid var(--green-border);border-radius:6px;margin:12px 20px;font-size:12.5px;color:var(--green);display:none}
+.topbar-upload-btn{font-size:12px;font-weight:600;color:var(--ink);background:#fffbf0;border:1px solid var(--yellow-border);border-radius:5px;padding:6px 14px;cursor:pointer;font-family:inherit}
+.topbar-upload-btn:hover{background:var(--gold);color:white;border-color:var(--gold)}
+
+/* ── Invoice Upload Drawer ─────────────────────────────────────────── */
+.upload-drawer{position:fixed;top:0;right:-700px;width:680px;max-width:96vw;height:100vh;background:var(--surface);border-left:1px solid var(--border);z-index:500;transition:right .3s ease;display:flex;flex-direction:column;box-shadow:-8px 0 40px rgba(0,0,0,.12)}
+.upload-drawer.open{right:0}
+.drawer-overlay{position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:499;display:none}
+.drawer-overlay.open{display:block}
+.drawer-header{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.drawer-title{font-family:'Playfair Display',serif;font-size:20px;color:var(--ink)}
+.drawer-close{background:none;border:1px solid var(--border2);border-radius:5px;width:32px;height:32px;cursor:pointer;font-size:16px;color:var(--muted);display:flex;align-items:center;justify-content:center}
+.drawer-close:hover{background:var(--surface2)}
+.drawer-body{flex:1;overflow-y:auto;padding:24px}
+.drawer-footer{padding:16px 24px;border-top:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-shrink:0;background:var(--surface)}
+
+/* Drop zone inside drawer */
+.d-drop{border:2px dashed var(--border2);border-radius:10px;padding:36px;text-align:center;cursor:pointer;transition:all .2s}
+.d-drop:hover,.d-drop.drag-over{border-color:var(--gold);background:#fffbf0}
+.d-drop.has-file{border-color:var(--green);background:var(--green-light)}
+.d-spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px}
+.d-stats{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.d-pill{padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700}
+.d-pill.g{background:var(--green-light);color:var(--green);border:1px solid var(--green-border)}
+.d-pill.y{background:#fffbf0;color:var(--yellow);border:1px solid var(--yellow-border)}
+.d-pill.r{background:var(--red-light);color:var(--red);border:1px solid var(--red-border)}
+.d-table{width:100%;border-collapse:collapse;font-size:12px}
+.d-table th{text-align:left;padding:7px 9px;font-size:9.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);background:var(--surface2);border-bottom:2px solid var(--border);white-space:nowrap}
+.d-table td{padding:8px 9px;border-bottom:1px solid var(--border);vertical-align:middle}
+.d-table tr.skipped td{opacity:.35}
+.d-table tr:hover td{background:#faf8f5}
+.d-vname{font-weight:600;color:var(--ink);font-size:11.5px}
+.d-mono{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--muted)}
+.d-amt{font-family:'IBM Plex Mono',monospace;font-weight:700;font-size:12px}
+.d-badge{display:inline-flex;align-items:center;padding:2px 6px;border-radius:3px;font-size:9.5px;font-weight:700}
+.d-badge.m{background:var(--green-light);color:var(--green);border:1px solid var(--green-border)}
+.d-badge.u{background:var(--red-light);color:var(--red);border:1px solid var(--red-border)}
+.d-badge.l{background:#fffbf0;color:var(--yellow);border:1px solid var(--yellow-border)}
+.d-sel{width:100%;padding:3px 6px;border:1px solid var(--border2);border-radius:3px;font-family:inherit;font-size:11px;background:white;margin-top:3px}
+.d-skip{background:none;border:1px solid var(--border2);border-radius:3px;padding:2px 7px;font-size:10px;color:var(--muted);cursor:pointer}
+.d-skip.on{background:var(--red-light);color:var(--red);border-color:var(--red-border)}
+.d-raw{font-size:9px;color:var(--muted);font-style:italic;margin-top:2px}
+.d-commit-btn{background:var(--green);color:white;border:none;padding:10px 24px;border-radius:6px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;flex-shrink:0}
+.d-commit-btn:hover{background:#009944}
+.d-commit-btn:disabled{opacity:.4;cursor:not-allowed}
+.d-reset-btn{background:none;border:1px solid var(--border2);border-radius:6px;padding:10px 16px;font-family:inherit;font-size:12px;color:var(--muted);cursor:pointer}
+.d-sum{font-size:12.5px;color:var(--dim);flex:1}
 </style>
 </head>
 <body>
@@ -1610,6 +1665,9 @@ table.vt tr.click:hover td{background:var(--surface2)}
   <div class="topbar-logo">Board<span>IQ</span></div>
   <div class="topbar-right">
     <span class="topbar-user">{{ user_name }}</span>
+    {% if is_admin %}
+    <button class="topbar-upload-btn" onclick="openUploadDrawer()">↑ Upload Invoices</button>
+    {% endif %}
     <a href="/logout" class="topbar-signout">Sign Out</a>
   </div>
 </header>
@@ -2113,6 +2171,197 @@ async function uploadInvoices(input) {
   } catch(e) {
     resultEl.textContent = 'Upload failed — check console.';
   }
+}
+</script>
+
+<!-- ── Invoice Upload Drawer ──────────────────────────────────────── -->
+<div class="drawer-overlay" id="drawerOverlay" onclick="closeUploadDrawer()"></div>
+<div class="upload-drawer" id="uploadDrawer">
+  <div class="drawer-header">
+    <div class="drawer-title">Invoice Upload</div>
+    <button class="drawer-close" onclick="closeUploadDrawer()">✕</button>
+  </div>
+  <div class="drawer-body" id="drawerBody">
+
+    <!-- Drop zone -->
+    <div id="dDropZone" class="d-drop" onclick="document.getElementById('dFileInput').click()">
+      <div style="font-size:36px;margin-bottom:10px">📄</div>
+      <div style="font-size:15px;font-weight:600;color:var(--ink);margin-bottom:5px">Drop invoice PDF here</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:14px">Multi-page PDFs with mixed vendors and buildings supported</div>
+      <button style="background:var(--ink);color:white;border:none;padding:9px 20px;border-radius:5px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer" onclick="event.stopPropagation();document.getElementById('dFileInput').click()">Choose File</button>
+      <input type="file" id="dFileInput" accept=".pdf,.csv" style="display:none" onchange="dHandleFile(this)">
+    </div>
+
+    <!-- Processing -->
+    <div id="dProc" style="display:none;text-align:center;padding:48px 0">
+      <div class="d-spinner"></div>
+      <div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:5px">Analyzing PDF...</div>
+      <div style="font-size:12px;color:var(--muted)" id="dProcDetail">Extracting text and matching buildings</div>
+    </div>
+
+    <!-- Results -->
+    <div id="dResults" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div style="font-size:15px;font-weight:700;color:var(--ink)">Review Extracted Invoices</div>
+        <button class="d-reset-btn" onclick="dReset()">Upload Different File</button>
+      </div>
+      <div class="d-stats" id="dStats"></div>
+      <p style="font-size:11.5px;color:var(--muted);margin-bottom:12px">Correct any building assignments or categories, then commit.</p>
+      <table class="d-table">
+        <thead><tr>
+          <th>Vendor</th><th>Amount</th><th>Building</th><th>Category</th><th></th>
+        </tr></thead>
+        <tbody id="dTbody"></tbody>
+      </table>
+    </div>
+
+    <!-- Success -->
+    <div id="dSuccess" style="display:none;text-align:center;padding:60px 0">
+      <div style="font-size:44px;margin-bottom:14px">✅</div>
+      <div style="font-family:'Playfair Display',serif;font-size:22px;color:var(--ink);margin-bottom:8px">Invoices Committed</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:16px" id="dSuccSub"></div>
+      <div style="display:flex;flex-wrap:wrap;gap:7px;justify-content:center;margin-bottom:24px" id="dSuccBldgs"></div>
+      <button style="background:var(--ink);color:white;border:none;padding:10px 24px;border-radius:6px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer" onclick="closeUploadDrawer();location.reload()">Close & Refresh Dashboard</button>
+    </div>
+
+  </div>
+  <div class="drawer-footer" id="drawerFooter" style="display:none">
+    <div class="d-sum" id="dSum"></div>
+    <button class="d-reset-btn" onclick="dReset()">Start Over</button>
+    <button class="d-commit-btn" id="dCommitBtn" onclick="dCommit()">Commit to Buildings →</button>
+  </div>
+</div>
+
+<script>
+// ── Upload Drawer ─────────────────────────────────────────────────────
+const D_BUILDINGS = {{ all_buildings_json | safe }};
+const D_CATEGORIES = {{ categories_json | safe }};
+let dInvoices = [];
+
+function openUploadDrawer() {
+  document.getElementById('uploadDrawer').classList.add('open');
+  document.getElementById('drawerOverlay').classList.add('open');
+}
+function closeUploadDrawer() {
+  document.getElementById('uploadDrawer').classList.remove('open');
+  document.getElementById('drawerOverlay').classList.remove('open');
+}
+
+// Drag and drop
+const ddz = document.getElementById('dDropZone');
+ddz.addEventListener('dragover', e => { e.preventDefault(); ddz.classList.add('drag-over'); });
+ddz.addEventListener('dragleave', () => ddz.classList.remove('drag-over'));
+ddz.addEventListener('drop', e => { e.preventDefault(); ddz.classList.remove('drag-over'); if(e.dataTransfer.files[0]) dUploadFile(e.dataTransfer.files[0]); });
+
+function dHandleFile(inp) { if(inp.files[0]) dUploadFile(inp.files[0]); }
+
+async function dUploadFile(file) {
+  document.getElementById('dDropZone').style.display = 'none';
+  document.getElementById('dProc').style.display = 'block';
+  const steps = ['Extracting text from PDF...','Parsing invoice data...','Matching buildings...','Classifying vendors...'];
+  let s = 0;
+  const tick = setInterval(() => { if(s < steps.length) document.getElementById('dProcDetail').textContent = steps[s++]; }, 1400);
+  const fd = new FormData(); fd.append('file', file);
+  try {
+    const r = await fetch('/api/upload-invoices', { method: 'POST', body: fd });
+    clearInterval(tick);
+    const d = await r.json();
+    if (!d.success) throw new Error(d.error || 'Upload failed');
+    dInvoices = d.invoices;
+    dRenderResults();
+  } catch(e) {
+    clearInterval(tick);
+    document.getElementById('dProc').style.display = 'none';
+    document.getElementById('dDropZone').style.display = '';
+    alert('Error: ' + e.message);
+  }
+}
+
+function dRenderResults() {
+  document.getElementById('dProc').style.display = 'none';
+  document.getElementById('dResults').style.display = 'block';
+  document.getElementById('drawerFooter').style.display = 'flex';
+
+  const matched = dInvoices.filter(i => i.matched_bbl && !i.skip).length;
+  const unmatched = dInvoices.filter(i => !i.matched_bbl).length;
+  document.getElementById('dStats').innerHTML =
+    `<span class="d-pill g">✓ ${matched} matched</span>` +
+    (unmatched ? `<span class="d-pill r">⚠ ${unmatched} unmatched</span>` : '') +
+    `<span class="d-pill y">${dInvoices.length} total</span>`;
+
+  const tbody = document.getElementById('dTbody');
+  tbody.innerHTML = '';
+  dInvoices.forEach((inv, idx) => {
+    const pct = Math.round((inv.match_confidence || 0) * 100);
+    const bc = inv.matched_bbl ? (pct > 65 ? 'm' : 'l') : 'u';
+    const bl = inv.matched_bbl ? (pct > 65 ? `✓ ${pct}%` : `⚠ ${pct}%`) : '✗';
+    const bOpts = '<option value="">— Not assigned —</option>' +
+      D_BUILDINGS.map(b => `<option value="${b.bbl}"${b.bbl === inv.matched_bbl ? ' selected' : ''}>${b.address.substring(0,36)}</option>`).join('');
+    const cOpts = D_CATEGORIES.map(([k,v]) => `<option value="${k}"${k === inv.category ? ' selected' : ''}>${v}</option>`).join('');
+    const tr = document.createElement('tr');
+    tr.id = 'dr' + idx;
+    tr.innerHTML = `
+      <td>
+        <div class="d-vname">${inv.vendor || '—'}</div>
+        <div class="d-mono">${inv.invoice_number || ''} · ${inv.date || ''}</div>
+      </td>
+      <td><div class="d-amt">${inv.total || '—'}</div></td>
+      <td>
+        <span class="d-badge ${bc}">${bl}</span>
+        <select class="d-sel" onchange="dUpdBldg(${idx},this.value)">${bOpts}</select>
+        ${inv.raw_building ? `<div class="d-raw">${inv.raw_building.substring(0,40)}</div>` : ''}
+      </td>
+      <td><select class="d-sel" onchange="dUpdCat(${idx},this.value)">${cOpts}</select></td>
+      <td><button class="d-skip" id="dsk${idx}" onclick="dToggleSkip(${idx})">Skip</button></td>`;
+    tbody.appendChild(tr);
+  });
+  dUpdateSum();
+}
+
+function dUpdBldg(i, v) { dInvoices[i].matched_bbl = v; const b = D_BUILDINGS.find(x => x.bbl === v); dInvoices[i].matched_address = b ? b.address : ''; dUpdateSum(); }
+function dUpdCat(i, v) { dInvoices[i].category = v; }
+function dToggleSkip(i) {
+  dInvoices[i].skip = !dInvoices[i].skip;
+  document.getElementById('dsk' + i).classList.toggle('on', dInvoices[i].skip);
+  document.getElementById('dsk' + i).textContent = dInvoices[i].skip ? 'Skipped' : 'Skip';
+  document.getElementById('dr' + i).classList.toggle('skipped', dInvoices[i].skip);
+  dUpdateSum();
+}
+function dUpdateSum() {
+  const toCommit = dInvoices.filter(i => !i.skip && i.matched_bbl);
+  const bldgs = new Set(toCommit.map(i => i.matched_bbl));
+  const amt = toCommit.reduce((s, i) => s + (i.total_amount || 0), 0);
+  document.getElementById('dSum').innerHTML =
+    `<strong>${toCommit.length}</strong> invoices · <strong>${bldgs.size}</strong> buildings · $${amt.toLocaleString('en-US', {maximumFractionDigits: 0})} total`;
+  document.getElementById('dCommitBtn').disabled = toCommit.length === 0;
+}
+
+async function dCommit() {
+  const btn = document.getElementById('dCommitBtn');
+  btn.disabled = true; btn.textContent = 'Committing...';
+  try {
+    const r = await fetch('/api/commit-invoices', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ invoices: dInvoices }) });
+    const d = await r.json();
+    if (!d.success) throw new Error(d.error);
+    document.getElementById('dResults').style.display = 'none';
+    document.getElementById('drawerFooter').style.display = 'none';
+    document.getElementById('dSuccess').style.display = 'block';
+    document.getElementById('dSuccSub').textContent = `${d.updated} buildings updated · ${d.skipped} skipped`;
+    document.getElementById('dSuccBldgs').innerHTML = (d.buildings || []).map(b => `<span style="padding:5px 12px;background:var(--green-light);border:1px solid var(--green-border);border-radius:20px;font-size:11px;color:var(--green);font-weight:600">${b}</span>`).join('');
+  } catch(e) {
+    btn.disabled = false; btn.textContent = 'Commit to Buildings →';
+    alert('Error: ' + e.message);
+  }
+}
+
+function dReset() {
+  dInvoices = [];
+  document.getElementById('dDropZone').style.display = '';
+  document.getElementById('dProc').style.display = 'none';
+  document.getElementById('dResults').style.display = 'none';
+  document.getElementById('dSuccess').style.display = 'none';
+  document.getElementById('drawerFooter').style.display = 'none';
+  document.getElementById('dFileInput').value = '';
 }
 </script>
 </body>
