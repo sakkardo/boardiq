@@ -1291,27 +1291,164 @@ function openPanel(type, idx) {
     const d = complianceItems[idx];
     if (!d) return;
     const urgColor = d.urgency === 'HIGH' ? 'red' : 'yellow';
+    const urgLabel = d.urgency === 'HIGH' ? 'Act Now' : (d.urgency === 'MEDIUM' ? 'Budget Now' : 'Plan Ahead');
+
+    // Law-specific requirement details
+    const lawDetails = {
+      'Local Law 11': {
+        icon: '🏗',
+        what: 'A licensed facade engineer must physically inspect every inch of your building\'s exterior walls, balconies, and appurtenances. The engineer files a FISP report with the DOB classifying the facade as <strong>Safe</strong>, <strong>SWARMP</strong> (Safe With Repair & Maintenance Program), or <strong>Unsafe</strong>.',
+        who: 'A licensed NYC Professional Engineer (PE) or Registered Architect (RA) with FISP experience. They must be hired directly by the building, not through the contractor.',
+        timeline: [
+          'Hire engineer 12+ months before deadline',
+          'Engineer conducts rope/scaffold/drone inspection (2–8 weeks)',
+          'Report preparation and DOB filing (4–6 weeks)',
+          'If SWARMP/Unsafe: repairs required before or concurrent with filing',
+          'Sidewalk shed may be required if unsafe conditions found'
+        ],
+        filing: 'Engineer files FISP report electronically through DOB NOW: Safety. Building receives a FISP cycle number.',
+        tip: 'Get 3 quotes from FISP engineers — prices vary 40–60% for the same building. Start early; engineers book up in the 6 months before cycle deadlines.'
+      },
+      'Local Law 97': {
+        icon: '🌿',
+        what: 'NYC\'s landmark climate law caps annual carbon emissions for buildings over 25,000 sq ft. Buildings that exceed their cap pay <strong>$268 per metric ton of CO₂</strong> over the limit every year. An annual benchmarking report must be filed with DOB by May 1st covering the prior calendar year.',
+        who: 'A licensed LL97 consultant or energy engineer to assess your current emissions against your cap, identify retrofit options, and prepare the required DOB filing.',
+        timeline: [
+          'Commission LL97 benchmarking study to quantify penalty exposure',
+          'Evaluate retrofit options: heat pumps, insulation, LED, RECs',
+          'Implement highest-ROI retrofits before compliance year ends',
+          'File annual report with DOB by May 1st each year',
+          'Penalties assessed annually — no cure period once year ends'
+        ],
+        filing: 'Annual Building Energy and Emissions Report filed through DOB NOW: Energy. Requires Energy Star Portfolio Manager benchmarking data.',
+        tip: 'Renewable Energy Credits (RECs) can offset up to 30% of your penalty exposure at lower cost than physical retrofits. Check current REC market pricing before committing to capital improvements.'
+      },
+      'Elevator': {
+        icon: '🛗',
+        what: 'All elevator cabs must be inspected and tested annually by a licensed DOB elevator inspector. If an elevator fails inspection or the inspection lapses, the DOB can <strong>order the cab shut down immediately</strong> — requiring residents to use stairs until the cab passes re-inspection.',
+        who: 'Your elevator maintenance contractor typically coordinates the annual inspection with a DOB-licensed inspector. Confirm they are handling this — do not assume.',
+        timeline: [
+          'Confirm inspection schedule with your elevator contractor 60+ days out',
+          'Ensure all maintenance is current before inspection date',
+          'Inspector conducts safety tests on each cab (2–4 hours per cab)',
+          'DOB issues Certificate of Operation if passed',
+          'Failed cabs must be repaired and re-inspected before reopening'
+        ],
+        filing: 'Inspector files elevator inspection report through DOB. Certificate of Operation posted inside cab.',
+        tip: 'Ask your elevator contractor for written confirmation of the scheduled inspection date and inspector name each year. Keep copies of certificates of operation on file.'
+      },
+      'Local Law 152': {
+        icon: '🔧',
+        what: 'All exposed gas piping must be inspected by a licensed master plumber every 4 years. The plumber files a <strong>GPS1 form</strong> with the DOB. If defects are found, they must be corrected and re-inspected before the filing deadline.',
+        who: 'A NYC-licensed master plumber who is familiar with LL152 GPS inspections. They must inspect all exposed gas lines in common areas, basements, and mechanical rooms.',
+        timeline: [
+          'Hire licensed master plumber 3+ months before deadline',
+          'Plumber inspects all exposed gas piping (1–2 days for most buildings)',
+          'Any deficiencies must be repaired before filing',
+          'Plumber files GPS1 report with DOB upon completion',
+          'Defects requiring emergency repair must be addressed immediately'
+        ],
+        filing: 'Licensed master plumber files GPS1 form through DOB NOW. Building retains copy for records.',
+        tip: 'Inspectors book up quickly near the Dec 31 deadline. Schedule in September or October. If defects are found, you\'ll need time for repairs before the filing window closes.'
+      },
+      'Local Law 87': {
+        icon: '⚡',
+        what: 'Buildings over 50,000 sq ft must conduct a professional <strong>energy audit</strong> and <strong>retro-commissioning study</strong> every 10 years. The audit covers all building systems (HVAC, lighting, envelope, hot water) and identifies efficiency improvements. Retro-commissioning ensures existing systems are working as designed.',
+        who: 'A qualified energy auditor (typically a licensed engineer) and a retro-commissioning agent. Often done by the same firm. Check DOB BIS to confirm your last filing date.',
+        timeline: [
+          'Verify last LL87 filing date in DOB BIS records',
+          'Issue RFP to 3 qualified energy audit firms (6+ months before deadline)',
+          'Audit and retro-commissioning study takes 3–6 months',
+          'Final report preparation and DOB filing',
+          'Consider implementing high-ROI recommendations to reduce LL97 exposure'
+        ],
+        filing: 'Filed through DOB NOW: Energy. Requires submission of energy audit report and retro-commissioning report.',
+        tip: 'An LL87 audit and an LL97 benchmarking study can often be combined with one firm, reducing total cost. The audit findings also inform your LL97 retrofit strategy.'
+      },
+      'Local Law 26': {
+        icon: '🚒',
+        what: 'High-rise buildings (75ft+) must install automatic sprinkler systems throughout the building. Compliance involves a phased installation schedule with annual progress reports filed with the DOB.',
+        who: 'A licensed fire suppression contractor and a licensed professional engineer for design and filing.',
+        timeline: [
+          'Engage licensed fire suppression engineer for design',
+          'DOB permit application and approval (3–6 months)',
+          'Installation in phases per approved schedule',
+          'Annual progress reports filed with DOB',
+          'Final inspection and sign-off'
+        ],
+        filing: 'Annual progress reports through DOB. Final certificate of occupancy amendment upon completion.',
+        tip: 'Contact your managing agent and attorney to review your current compliance status and phased schedule before taking any action.'
+      }
+    };
+
+    // Match law to details
+    let details = null;
+    const lawStr = d.law.toLowerCase();
+    if (lawStr.includes('11') || lawStr.includes('fisp') || lawStr.includes('facade')) details = lawDetails['Local Law 11'];
+    else if (lawStr.includes('97') || lawStr.includes('carbon') || lawStr.includes('emission')) details = lawDetails['Local Law 97'];
+    else if (lawStr.includes('elevator') || lawStr.includes('lift')) details = lawDetails['Elevator'];
+    else if (lawStr.includes('152') || lawStr.includes('gas')) details = lawDetails['Local Law 152'];
+    else if (lawStr.includes('87') || lawStr.includes('energy audit')) details = lawDetails['Local Law 87'];
+    else if (lawStr.includes('26') || lawStr.includes('sprinkler')) details = lawDetails['Local Law 26'];
+
+    const timelineHTML = details ? details.timeline.map((t,i) => `
+      <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:8px">
+        <div style="width:20px;height:20px;border-radius:50%;background:var(--ink);color:white;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px">${i+1}</div>
+        <div style="font-size:12.5px;color:var(--dim);line-height:1.5">${t}</div>
+      </div>`).join('') : '';
+
     content.innerHTML = `
-      <div class="panel-title">${d.law}</div>
-      <div class="panel-sub">Due ${d.due_date} · ${d.months_away} months away</div>
-      <div class="stat-grid">
-        <div class="stat-box"><div class="stat-lbl">Due Date</div><div class="stat-val">${d.due_date}</div></div>
-        <div class="stat-box"><div class="stat-lbl">Time Remaining</div><div class="stat-val ${urgColor}">${d.months_away} months</div></div>
-        <div class="stat-box"><div class="stat-lbl">Cost Range (Low)</div><div class="stat-val gold">$${d.cost_low.toLocaleString()}</div></div>
-        <div class="stat-box"><div class="stat-lbl">Cost Range (High)</div><div class="stat-val gold">$${d.cost_high.toLocaleString()}</div></div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+        <span style="font-size:28px">${details ? details.icon : '📋'}</span>
+        <div>
+          <div class="panel-title" style="margin-bottom:0">${d.law}</div>
+          <div style="font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--${urgColor});margin-top:2px">${urgLabel} · Due ${d.due_date}</div>
+        </div>
       </div>
+
+      <div class="stat-grid" style="margin-top:16px">
+        <div class="stat-box"><div class="stat-lbl">Due Date</div><div class="stat-val ${urgColor}">${d.due_date}</div></div>
+        <div class="stat-box"><div class="stat-lbl">Time Remaining</div><div class="stat-val ${urgColor}">${d.months_away > 0 ? d.months_away + ' months' : 'Overdue'}</div></div>
+        <div class="stat-box"><div class="stat-lbl">Estimated Cost (Low)</div><div class="stat-val gold">$${d.cost_low.toLocaleString()}</div></div>
+        <div class="stat-box"><div class="stat-lbl">Estimated Cost (High)</div><div class="stat-val gold">$${d.cost_high.toLocaleString()}</div></div>
+      </div>
+
+      ${details ? `
+      <div class="panel-section">What This Requires</div>
+      <div style="font-size:12.5px;color:var(--dim);line-height:1.7;background:var(--surface2);padding:13px 14px;border-radius:6px;border:1px solid var(--border)">${details.what}</div>
+
+      <div class="panel-section">Who Does This Work</div>
+      <div style="font-size:12.5px;color:var(--dim);line-height:1.7;background:var(--surface2);padding:13px 14px;border-radius:6px;border:1px solid var(--border)">${details.who}</div>
+
+      <div class="panel-section">Step-by-Step Timeline</div>
+      <div style="background:var(--surface2);padding:13px 14px;border-radius:6px;border:1px solid var(--border)">${timelineHTML}</div>
+
+      <div class="panel-section">DOB Filing</div>
+      <div style="font-size:12.5px;color:var(--dim);line-height:1.7;background:var(--surface2);padding:13px 14px;border-radius:6px;border:1px solid var(--border)">📄 ${details.filing}</div>
+
+      <div class="panel-section">Board Tip</div>
+      <div style="font-size:12.5px;color:var(--ink);line-height:1.7;background:#fffbf0;padding:13px 14px;border-radius:6px;border:1px solid var(--yellow-border)">💡 ${details.tip}</div>
+      ` : ''}
+
       <div class="panel-section">Consequence of Non-Compliance</div>
-      <div style="background:var(--red-light);border:1px solid var(--red-border);border-radius:5px;padding:12px;font-size:12.5px;color:var(--red);font-weight:500">${d.consequence}</div>
-      <div class="panel-section">Cost Data — ${d.network_comps} Comparable Buildings</div>
+      <div style="background:var(--red-light);border:1px solid var(--red-border);border-radius:5px;padding:12px;font-size:12.5px;color:var(--red);font-weight:500">⚠ ${d.consequence}</div>
+
+      <div class="panel-section">Cost Benchmark — ${d.network_comps} Comparable Buildings</div>
       <div class="nbar-wrap">
         <div class="nbar-labels"><span>$${d.cost_low.toLocaleString()}</span><span>Typical Range</span><span>$${d.cost_high.toLocaleString()}</span></div>
         <div class="nbar-track"><div class="nbar-fill" style="width:100%"></div></div>
         <div class="nbar-caption">Based on ${d.network_comps} comparable NYC buildings that completed this work in the past 24 months</div>
       </div>
+
+      ${d.context ? `
+      <div class="panel-section">Additional Context</div>
+      <div style="font-size:12px;color:var(--dim);line-height:1.7;background:var(--surface2);padding:13px 14px;border-radius:6px;border:1px solid var(--border)">${d.context}</div>
+      ` : ''}
+
       <div class="action-box">
-        <div class="action-title">Start BidBoard</div>
-        <div class="action-desc">A pre-filled scope of work will be generated based on your building profile. Qualified vendors from the network will be invited to submit competitive bids.</div>
-        <button class="btn-full">Start BidBoard — ${d.law.split('—')[0].trim()} →</button>
+        <div class="action-title">Get Competitive Bids via BidBoard</div>
+        <div class="action-desc">A pre-filled scope of work will be generated based on your building profile. Qualified, pre-vetted vendors from the network will be invited to submit competitive bids. Your managing agent handles coordination.</div>
+        <button class="btn-full">Start BidBoard — ${d.law.split(/[-—]/)[0].trim()} →</button>
         <button class="btn-full-out">Notify Managing Agent</button>
       </div>`;
   }
