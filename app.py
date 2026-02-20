@@ -529,7 +529,7 @@ def get_current_building():
     return BUILDINGS_DB.get(bbl)
 
 def compute_benchmarks(building):
-    """Compute live benchmark scores for a building's vendor data."""
+    """Compute live benchmark scores for a building's vendor data against its peer group."""
     vendor_flat = {}
     for v in building.get("vendor_data", []):
         key = f"{v['vendor']}::{v['category']}"
@@ -541,7 +541,15 @@ def compute_benchmarks(building):
         }
     last_bids = {v["category"]: v["last_bid_year"]
                  for v in building.get("vendor_data", []) if v.get("last_bid_year")}
-    return benchmark_building(vendor_flat, units=building["units"], last_bid_years=last_bids)
+    return benchmark_building(
+        vendor_flat,
+        units=building["units"],
+        last_bid_years=last_bids,
+        neighborhood=building.get("neighborhood", "Upper West Side"),
+        borough=building.get("borough", "Manhattan"),
+        is_prewar=building.get("is_prewar", True),
+        building_type=building.get("building_type", "coop").lower(),
+    )
 
 
 def ensure_building_data(building):
@@ -2375,7 +2383,7 @@ table.vt tr.click:hover td{background:var(--surface2)}
   <div class="page-header">
     <div>
       <div class="page-title">Building Intelligence</div>
-      <div class="page-sub">{{ building.address }} &nbsp;·&nbsp; {{ building.managing_agent }} &nbsp;·&nbsp; Data from 187 comparable NYC buildings</div>
+      <div class="page-sub">{{ building.address }} &nbsp;·&nbsp; {{ building.managing_agent }} &nbsp;·&nbsp; Peer group: {{ benchmarks.peer_group.description }}</div>
     </div>
     <div class="header-badge">Refreshed {{ building.last_data_refresh }}</div>
   </div>
@@ -2421,7 +2429,7 @@ table.vt tr.click:hover td{background:var(--surface2)}
     {# ── VENDOR TABLE ── #}
     <div class="card">
       <div class="ch">
-        <div><div class="ct">Vendor Intelligence</div><div class="csub">Benchmarked against 187 comparable NYC buildings</div></div>
+        <div><div class="ct">Vendor Intelligence</div><div class="csub">Benchmarked against {{ benchmarks.peer_group.peer_building_count }} comparable {{ benchmarks.peer_group.era }} {{ benchmarks.peer_group.building_type }}s in {{ benchmarks.peer_group.cluster_label }}</div></div>
         <a href="#" class="ca">View All →</a>
       </div>
       <table class="vt">
@@ -2617,7 +2625,7 @@ function openPanel(type, idx) {
           <div class="nbar-fill" style="width:100%"></div>
           <div class="nbar-pin" style="left:${Math.min(95,bm.percentile||50)}%;border-color:var(--${statusColor})"></div>
         </div>
-        <div class="nbar-caption">You are at the <strong>${bm.percentile}th percentile</strong> — paying more than ${bm.percentile}% of comparable buildings</div>
+        <div class="nbar-caption">You are at the <strong>${bm.percentile}th percentile</strong> — paying more than ${bm.percentile}% of peer buildings (${bm.n_peer_buildings} similar buildings in your area)</div>
       </div>
       <div class="panel-section">Key Factors Affecting Price</div>
       <div style="font-size:12px;color:var(--dim);line-height:1.8;background:var(--surface2);padding:12px;border-radius:5px;border:1px solid var(--border)">
