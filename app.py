@@ -768,9 +768,12 @@ def upload_invoices():
         os.remove(tmp_path)
         return jsonify({"success": True, "invoices": invoices, "count": len(invoices)})
     except Exception as e:
+        import traceback
+        tb = traceback.format_exc()
+        print(f"[UPLOAD ERROR] {tb}")
         try: os.remove(tmp_path)
         except: pass
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": str(e), "traceback": tb.split("\n")[-4:]}), 500
 
 
 def _normalize_address(addr):
@@ -1828,7 +1831,7 @@ async function uploadFile(file) {
     const txt = await r.text();
     let d;
     try { d = JSON.parse(txt); } catch(je) { throw new Error('Server returned invalid JSON (possible timeout). Status: ' + r.status); }
-    if(!d.success) throw new Error(d.error||'Upload failed');
+    if(!d.success) throw new Error(d.error + (d.traceback ? ' | ' + d.traceback.join(' ') : '') || 'Upload failed');
     invoices = d.invoices;
     renderResults();
   } catch(e) {
@@ -2922,7 +2925,7 @@ async function dUploadFile(file) {
     const txt = await r.text();
     let d;
     try { d = JSON.parse(txt); } catch(je) { throw new Error('Server returned invalid JSON (possible timeout). Status: ' + r.status); }
-    if (!d.success) throw new Error(d.error || 'Upload failed');
+    if (!d.success) throw new Error(d.error + (d.traceback ? ' | ' + d.traceback.join(' ') : '') || 'Upload failed');
     dInvoices = d.invoices;
     dRenderResults();
   } catch(e) {
