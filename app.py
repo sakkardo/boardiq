@@ -704,10 +704,10 @@ def upload_invoices():
 
     import tempfile, subprocess, re
 
-    # Save uploaded file
+    # Save uploaded file in binary mode
     suffix = ".pdf" if f.filename.lower().endswith(".pdf") else ".csv"
     with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
-        f.save(tmp.name)
+        f.save(tmp)
         tmp_path = tmp.name
 
     try:
@@ -827,17 +827,23 @@ def _parse_pdf_invoices(pdf_path):
     import re
     try:
         from pypdf import PdfReader
+        reader = PdfReader(pdf_path, strict=False)
     except ImportError:
         try:
             from PyPDF2 import PdfReader
+            reader = PdfReader(pdf_path, strict=False)
         except ImportError:
             raise Exception("PDF parsing library not available. Please install pypdf.")
+    except Exception as e:
+        raise Exception(f"Could not open PDF: {e}")
 
-    reader = PdfReader(pdf_path)
     pages = []
-    for page in reader.pages:
-        text = page.extract_text() or ""
-        pages.append(text)
+    for i, page in enumerate(reader.pages):
+        try:
+            text = page.extract_text() or ""
+            pages.append(text)
+        except Exception:
+            pages.append("")  # skip unreadable pages
     invoices = []
     seen_invoices = set()  # deduplicate by invoice number
 
