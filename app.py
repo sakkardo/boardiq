@@ -1138,10 +1138,11 @@ def _parse_pdf_invoices(pdf_path):
                 invoices.append({
                     "vendor": vendor,
                     "description": desc or f"{CATEGORY_LABELS.get(category, category)} service",
-                    "amount": amt,
+                    "total": f"${amt:,.2f}",
+                    "total_amount": amt,
+                    "date": inv_date,
                     "annual": annual,
                     "invoice_number": inv_num,
-                    "invoice_date": inv_date,
                     "service_type": svc_type,
                     "raw_building": addr,
                     "matched_bbl": matched_bbl,
@@ -1824,7 +1825,9 @@ async function uploadFile(file) {
   try {
     const r = await fetch('/api/upload-invoices', {method:'POST', body:fd});
     clearInterval(tick);
-    const d = await r.json();
+    const txt = await r.text();
+    let d;
+    try { d = JSON.parse(txt); } catch(je) { throw new Error('Server returned invalid JSON (possible timeout). Status: ' + r.status); }
     if(!d.success) throw new Error(d.error||'Upload failed');
     invoices = d.invoices;
     renderResults();
@@ -2809,7 +2812,9 @@ async function uploadInvoices(input) {
   resultEl.textContent = '⏳ Processing invoices...';
   try {
     const resp = await fetch('/api/upload-invoices', {method:'POST', body:formData});
-    const data = await resp.json();
+    const txt = await resp.text();
+    let data;
+    try { data = JSON.parse(txt); } catch(je) { throw new Error('Server returned invalid JSON. Status: ' + resp.status); }
     if (data.success) {
       resultEl.textContent = `✓ Processed ${data.records} invoice records · ${data.classification_rate}% classified · Dashboard updated`;
     } else {
@@ -2914,7 +2919,9 @@ async function dUploadFile(file) {
   try {
     const r = await fetch('/api/upload-invoices', { method: 'POST', body: fd });
     clearInterval(tick);
-    const d = await r.json();
+    const txt = await r.text();
+    let d;
+    try { d = JSON.parse(txt); } catch(je) { throw new Error('Server returned invalid JSON (possible timeout). Status: ' + r.status); }
     if (!d.success) throw new Error(d.error || 'Upload failed');
     dInvoices = d.invoices;
     dRenderResults();
