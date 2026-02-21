@@ -2479,8 +2479,8 @@ table.vt tr.click:hover td{background:var(--surface2)}
           <div class="comp-desc">Network benchmark based on {{ d.network_comps }} comparable NYC buildings.</div>
           <div class="comp-consequence">⚠ {{ d.consequence }}</div>
           <div class="comp-actions">
-            <button class="btn-bid" onclick="event.stopPropagation()">Start BidBoard →</button>
-            <button class="btn-out" onclick="event.stopPropagation()">View Requirements</button>
+            <button class="btn-bid" onclick="event.stopPropagation(); openPanel('compliance', '{{ loop.index0 }}')">Start BidBoard →</button>
+            <button class="btn-out" onclick="event.stopPropagation(); openPanel('compliance', '{{ loop.index0 }}')">View Requirements</button>
           </div>
         </div>
         <div class="comp-cost-box">
