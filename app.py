@@ -146,6 +146,7 @@ BUILDINGS_DB = {
                 "cost_low": 14000,
                 "cost_high": 22000,
                 "network_comps": 23,
+                "context": "NYC requires all buildings over 6 stories to have a licensed engineer inspect the exterior facade every 5 years under the Facade Inspection Safety Program (FISP). The engineer files a report classifying the facade as Safe, Safe with Repair and Maintenance Program (SWARMP), or Unsafe. If Unsafe, repairs must begin immediately or the DOB can issue a vacate order.",
             },
             {
                 "law": "Local Law 97 — Carbon Emissions",
@@ -156,6 +157,7 @@ BUILDINGS_DB = {
                 "cost_low": 18000,
                 "cost_high": 35000,
                 "network_comps": 31,
+                "context": "Local Law 97 is NYC's landmark climate legislation that caps carbon emissions for buildings over 25,000 sq ft. Buildings that exceed their cap pay $268 per metric ton of CO2 over the limit every year until compliant. The annual compliance report must be filed with the DOB by May 1st.",
             },
             {
                 "law": "Local Law 87 — Energy Audit",
@@ -166,6 +168,7 @@ BUILDINGS_DB = {
                 "cost_low": 8000,
                 "cost_high": 16000,
                 "network_comps": 41,
+                "context": "Buildings over 50,000 sq ft must conduct a professional energy audit and retro-commissioning study every 10 years. The audit covers all building systems (HVAC, lighting, envelope, hot water) and identifies efficiency improvements.",
             },
             {
                 "law": "Elevator Annual Inspection",
@@ -176,6 +179,7 @@ BUILDINGS_DB = {
                 "cost_low": 800,
                 "cost_high": 1400,
                 "network_comps": 89,
+                "context": "All elevator cabs must be inspected and tested annually by a licensed DOB elevator inspector. If an elevator fails inspection or the inspection lapses, the DOB can order the cab shut down immediately — requiring residents to use stairs until the cab passes re-inspection.",
             },
         ],
         "vendor_data": [
@@ -235,6 +239,7 @@ BUILDINGS_DB = {
                 "cost_low": 18000,
                 "cost_high": 28000,
                 "network_comps": 23,
+                "context": "NYC requires all buildings over 6 stories to have a licensed engineer inspect the exterior facade every 5 years under the Facade Inspection Safety Program (FISP). The engineer files a report classifying the facade as Safe, Safe with Repair and Maintenance Program (SWARMP), or Unsafe. If Unsafe, repairs must begin immediately or the DOB can issue a vacate order.",
             },
             {
                 "law": "Local Law 97 — Carbon Emissions",
@@ -245,6 +250,7 @@ BUILDINGS_DB = {
                 "cost_low": 22000,
                 "cost_high": 48000,
                 "network_comps": 31,
+                "context": "Local Law 97 is NYC's landmark climate legislation that caps carbon emissions for buildings over 25,000 sq ft. Buildings that exceed their cap pay $268 per metric ton of CO2 over the limit every year until compliant. The annual compliance report must be filed with the DOB by May 1st.",
             },
             {
                 "law": "Local Law 87 — Energy Audit",
@@ -255,6 +261,7 @@ BUILDINGS_DB = {
                 "cost_low": 8000,
                 "cost_high": 16000,
                 "network_comps": 41,
+                "context": "Buildings over 50,000 sq ft must conduct a professional energy audit and retro-commissioning study every 10 years. The audit covers all building systems (HVAC, lighting, envelope, hot water) and identifies efficiency improvements.",
             },
             {
                 "law": "Elevator Annual Inspection",
@@ -265,6 +272,7 @@ BUILDINGS_DB = {
                 "cost_low": 800,
                 "cost_high": 1400,
                 "network_comps": 89,
+                "context": "All elevator cabs must be inspected and tested annually by a licensed DOB elevator inspector. If an elevator fails inspection or the inspection lapses, the DOB can order the cab shut down immediately — requiring residents to use stairs until the cab passes re-inspection.",
             },
             {
                 "law": "Local Law 26 — Fire Safety / Sprinkler",
@@ -275,6 +283,7 @@ BUILDINGS_DB = {
                 "cost_low": 45000,
                 "cost_high": 120000,
                 "network_comps": 18,
+                "context": "High-rise buildings (75ft+) must install automatic sprinkler systems throughout. Compliance involves a phased installation schedule with annual progress reports filed with the DOB. Full completion may take several years depending on building size.",
             },
         ],
         "vendor_data": [
@@ -328,6 +337,7 @@ BUILDINGS_DB = {
                 "cost_low": 22000,
                 "cost_high": 38000,
                 "network_comps": 23,
+                "context": "NYC requires all buildings over 6 stories to have a licensed engineer inspect the exterior facade every 5 years under the Facade Inspection Safety Program (FISP). The engineer files a report classifying the facade as Safe, Safe with Repair and Maintenance Program (SWARMP), or Unsafe. If Unsafe, repairs must begin immediately or the DOB can issue a vacate order.",
             },
             {
                 "law": "Local Law 97 — Carbon Emissions",
@@ -338,6 +348,7 @@ BUILDINGS_DB = {
                 "cost_low": 35000,
                 "cost_high": 65000,
                 "network_comps": 31,
+                "context": "Local Law 97 is NYC's landmark climate legislation that caps carbon emissions for buildings over 25,000 sq ft. Buildings that exceed their cap pay $268 per metric ton of CO2 over the limit every year until compliant. The annual compliance report must be filed with the DOB by May 1st.",
             },
             {
                 "law": "Local Law 87 — Energy Audit",
@@ -348,6 +359,7 @@ BUILDINGS_DB = {
                 "cost_low": 14000,
                 "cost_high": 24000,
                 "network_comps": 41,
+                "context": "Buildings over 50,000 sq ft must conduct a professional energy audit and retro-commissioning study every 10 years. The audit covers all building systems (HVAC, lighting, envelope, hot water) and identifies efficiency improvements.",
             },
             {
                 "law": "Elevator Annual Inspection — 2 cabs",
@@ -358,6 +370,7 @@ BUILDINGS_DB = {
                 "cost_low": 1600,
                 "cost_high": 2800,
                 "network_comps": 89,
+                "context": "All elevator cabs must be inspected and tested annually by a licensed DOB elevator inspector. If an elevator fails inspection or the inspection lapses, the DOB can order the cab shut down immediately — requiring residents to use stairs until the cab passes re-inspection.",
             },
             {
                 "law": "Local Law 152 — Gas Piping Inspection",
@@ -368,6 +381,7 @@ BUILDINGS_DB = {
                 "cost_low": 3500,
                 "cost_high": 7000,
                 "network_comps": 67,
+                "context": "All exposed gas piping must be inspected by a licensed master plumber every 4 years. The plumber files a GPS1 form with the DOB. If defects are found, they must be corrected and re-inspected before the filing deadline.",
             },
         ],
         "vendor_data": [
@@ -408,6 +422,7 @@ _load_persisted_vendor_data()
 
 # ── Auth (simple demo auth — swap for real auth in production) ───────────────
 DEMO_USERS = {
+    "board@130e18.com":      {"password": "demo1234", "buildings": ["bbl_1009270001"], "name": "130 East 18th Board", "role": "board"},
     "board@120w72.com":      {"password": "demo1234", "buildings": ["bbl_1022150001"], "name": "Margaret Chen", "role": "board"},
     "board@740park.com":     {"password": "demo1234", "buildings": ["bbl_1012660001"], "name": "Robert Steinberg", "role": "board"},
     "board@gramercyplaza.com": {"password": "demo1234", "buildings": ["bbl_1009270001"], "name": "Gramercy Plaza Board", "role": "board"},
@@ -616,7 +631,15 @@ def compute_benchmarks(building):
         }
     last_bids = {v["category"]: v["last_bid_year"]
                  for v in building.get("vendor_data", []) if v.get("last_bid_year")}
-    return benchmark_building(vendor_flat, units=building["units"], last_bid_years=last_bids)
+    return benchmark_building(
+        vendor_flat,
+        units=building["units"],
+        last_bid_years=last_bids,
+        neighborhood=building.get("neighborhood", ""),
+        borough=building.get("borough", "Manhattan"),
+        is_prewar=building.get("is_prewar", building.get("year_built", 1960) < 1940),
+        building_type=building.get("building_type", "Coop"),
+    )
 
 
 def ensure_building_data(building):
@@ -683,6 +706,7 @@ def ensure_building_data(building):
             "cost_high": 45000 if floors > 6 else 18000,
             "network_comps": 23,
             "consequence": "DOB violations + fines from $1,000/month",
+            "context": "NYC requires all buildings over 6 stories to have a licensed engineer inspect the exterior facade every 5 years under the Facade Inspection Safety Program (FISP). The engineer files a report classifying the facade as Safe, SWARMP, or Unsafe. If Unsafe, repairs must begin immediately or the DOB can issue a vacate order.",
         })
 
         # Local Law 97 — carbon emissions, buildings >25 units
@@ -698,6 +722,7 @@ def ensure_building_data(building):
                 "cost_high": 55000,
                 "network_comps": 31,
                 "consequence": f"Est. ${rng(15,50)*1000:,}/yr penalty at current emissions",
+                "context": "Local Law 97 is NYC's landmark climate legislation that caps carbon emissions for buildings over 25,000 sq ft. Buildings that exceed their cap pay $268 per metric ton of CO2 over the limit every year until compliant. The annual compliance report must be filed with the DOB by May 1st.",
             })
 
         # Local Law 87 — energy audit every 10 years
@@ -712,6 +737,7 @@ def ensure_building_data(building):
             "cost_high": 16000,
             "network_comps": 41,
             "consequence": "$3,000 year one, $5,000/yr thereafter",
+            "context": "Buildings over 50,000 sq ft must conduct a professional energy audit and retro-commissioning study every 10 years covering HVAC, lighting, envelope, and hot water systems to identify efficiency improvements.",
         })
 
         # Elevator annual inspection
@@ -726,6 +752,7 @@ def ensure_building_data(building):
                 "cost_high": 1400,
                 "network_comps": 89,
                 "consequence": "Mandatory shutdown until re-inspected",
+                "context": "All elevator cabs must be inspected and tested annually by a licensed DOB elevator inspector. If an elevator fails or the inspection lapses, the DOB can order the cab shut down immediately until it passes re-inspection.",
             })
 
         # Sort by urgency
@@ -1476,8 +1503,11 @@ def _parse_pdf_invoices(pdf_path):
         if ship_to_m:
             ship_line1 = ship_to_m.group(1).strip()
             ship_line2 = (ship_to_m.group(2) or "").strip()
-            # Prefer the address line over the building name line
-            if re.search(r'\d+\s+\w', ship_line2) and not IS_MGMT_ADDR.search(ship_line2):
+            # If line1 already starts with a street number, it IS the address — use it
+            if re.match(r'^\d+\s+(?:East|West|North|South|E\.?|W\.?)\s', ship_line1, re.IGNORECASE) and not IS_MGMT_ADDR.search(ship_line1):
+                raw_building = ship_line1
+            # Otherwise prefer line2 (address) over line1 (building name)
+            elif re.search(r'\d+\s+\w', ship_line2) and not IS_MGMT_ADDR.search(ship_line2) and not re.match(r'(?:Description|Service|Monthly|Invoice)', ship_line2, re.IGNORECASE):
                 raw_building = ship_line2
             elif re.search(r'\d+\s+\w', ship_line1) and not IS_MGMT_ADDR.search(ship_line1):
                 raw_building = ship_line1
@@ -1963,20 +1993,25 @@ function reset() {
 
 
 
+@app.route("/api/sample-csv")
 @login_required
 def get_sample_csv():
     """Download a sample invoice CSV pre-filled for the active building."""
     building = get_current_building()
-    rows = [["Invoice Date", "Vendor", "Description", "Amount", "Invoice Number"]]
+    if not building:
+        return "No active building", 400
+    rows = [["Invoice Date", "Vendor", "Description", "Amount", "Invoice Number", "Building"]]
     for v in building.get("vendor_data", []):
         monthly = round(v["annual"] / 12, 2)
+        cat_label = CATEGORY_LABELS.get(v['category'], v['category'])
         for month in range(1, 7):
             rows.append([
                 f"0{month}/15/2025",
                 v["vendor"],
-                f"Monthly service - {CATEGORIES.get(v['category'], {}).get('label', v['category'])}",
+                f"Monthly service - {cat_label}",
                 str(monthly),
-                f"INV-{month:02d}-{v['category'][:6]}"
+                f"INV-{month:02d}-{v['category'][:6]}",
+                building.get("address", ""),
             ])
 
     output = io.StringIO()
@@ -1989,7 +2024,7 @@ def get_sample_csv():
         output.getvalue(),
         mimetype="text/csv",
         headers={"Content-Disposition":
-                 f"attachment; filename=invoices_{building['id']}.csv"}
+                 f"attachment; filename=invoices_{building.get('address', 'building').replace(' ', '_')}.csv"}
     )
 
 
@@ -2033,6 +2068,7 @@ button:hover { background: #1a1714; }
   </form>
   <div class="demo-hint">
     <strong>Demo accounts:</strong><br>
+    board@130e18.com · demo1234 (130 East 18th St)<br>
     board@120w72.com · demo1234 (120 W 72nd St)<br>
     board@740park.com · demo1234 (740 Park Ave)<br>
     admin@boardiq.com · admin (all buildings)<br><br>
@@ -2326,7 +2362,7 @@ table.vt tr.click:hover td{background:var(--surface2)}
   <div class="page-header">
     <div>
       <div class="page-title">Building Intelligence</div>
-      <div class="page-sub">{{ building.address }} &nbsp;·&nbsp; {{ building.managing_agent }} &nbsp;·&nbsp; Data from 187 comparable NYC buildings</div>
+      <div class="page-sub">{{ building.address }} &nbsp;·&nbsp; {{ building.managing_agent }} &nbsp;·&nbsp; Peer group: {{ benchmarks.peer_group.peer_building_count }} comparable buildings</div>
     </div>
     <div class="header-badge">Refreshed {{ building.last_data_refresh }}</div>
   </div>
@@ -2367,12 +2403,23 @@ table.vt tr.click:hover td{background:var(--surface2)}
     </div>
   </div>
 
+  {# ── PEER GROUP INFO ── #}
+  <div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:12px 18px;margin-bottom:18px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+    <div style="font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);font-weight:600">Peer Group</div>
+    <div style="font-size:13px;color:var(--ink);font-weight:500">{{ benchmarks.peer_group.description }}</div>
+    <div style="display:flex;gap:14px;margin-left:auto">
+      <div style="text-align:center"><div style="font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:600;color:var(--ink)">{{ building.units }}</div><div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--muted)">Units</div></div>
+      <div style="text-align:center"><div style="font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:600;color:var(--ink)">{{ building.year_built }}</div><div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--muted)">Built</div></div>
+      <div style="text-align:center"><div style="font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:600;color:var(--ink)">{{ building.floors }}</div><div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--muted)">Floors</div></div>
+    </div>
+  </div>
+
   <div class="grid">
 
     {# ── VENDOR TABLE ── #}
     <div class="card">
       <div class="ch">
-        <div><div class="ct">Vendor Intelligence</div><div class="csub">Benchmarked against 187 comparable NYC buildings</div></div>
+        <div><div class="ct">Vendor Intelligence</div><div class="csub">Benchmarked against {{ benchmarks.peer_group.peer_building_count }} comparable {{ benchmarks.peer_group.era }} buildings ({{ benchmarks.peer_group.size_bucket }})</div></div>
         <a href="#" class="ca">View All →</a>
       </div>
       <table class="vt">
@@ -2476,7 +2523,7 @@ table.vt tr.click:hover td{background:var(--surface2)}
             Due in {{ d.months_away }} months · {% if d.urgency == 'HIGH' %}Act now{% else %}Budget now{% endif %}
           </div>
           <div class="comp-law">{{ d.law }}</div>
-          <div class="comp-desc">Network benchmark based on {{ d.network_comps }} comparable NYC buildings.</div>
+          <div class="comp-desc">{% if d.context %}{{ d.context[:200] }}{% if d.context|length > 200 %}…{% endif %}{% else %}Network benchmark based on {{ d.network_comps }} comparable NYC buildings.{% endif %}</div>
           <div class="comp-consequence">⚠ {{ d.consequence }}</div>
           <div class="comp-actions">
             <button class="btn-bid" onclick="event.stopPropagation(); openPanel('compliance', '{{ loop.index0 }}')">Start BidBoard →</button>
@@ -2594,7 +2641,7 @@ function openPanel(type, idx) {
     const lawDetails = {
       'Local Law 11': {
         icon: '🏗',
-        what: 'A licensed facade engineer must physically inspect every inch of your building\'s exterior walls, balconies, and appurtenances. The engineer files a FISP report with the DOB classifying the facade as <strong>Safe</strong>, <strong>SWARMP</strong> (Safe With Repair & Maintenance Program), or <strong>Unsafe</strong>.',
+        what: 'A licensed facade engineer must physically inspect every inch of your building\\'s exterior walls, balconies, and appurtenances. The engineer files a FISP report with the DOB classifying the facade as <strong>Safe</strong>, <strong>SWARMP</strong> (Safe With Repair & Maintenance Program), or <strong>Unsafe</strong>.',
         who: 'A licensed NYC Professional Engineer (PE) or Registered Architect (RA) with FISP experience. They must be hired directly by the building, not through the contractor.',
         timeline: [
           'Hire engineer 12+ months before deadline',
@@ -2608,7 +2655,7 @@ function openPanel(type, idx) {
       },
       'Local Law 97': {
         icon: '🌿',
-        what: 'NYC\'s landmark climate law caps annual carbon emissions for buildings over 25,000 sq ft. Buildings that exceed their cap pay <strong>$268 per metric ton of CO₂</strong> over the limit every year. An annual benchmarking report must be filed with DOB by May 1st covering the prior calendar year.',
+        what: 'NYC\\'s landmark climate law caps annual carbon emissions for buildings over 25,000 sq ft. Buildings that exceed their cap pay <strong>$268 per metric ton of CO₂</strong> over the limit every year. An annual benchmarking report must be filed with DOB by May 1st covering the prior calendar year.',
         who: 'A licensed LL97 consultant or energy engineer to assess your current emissions against your cap, identify retrofit options, and prepare the required DOB filing.',
         timeline: [
           'Commission LL97 benchmarking study to quantify penalty exposure',
@@ -2646,7 +2693,7 @@ function openPanel(type, idx) {
           'Defects requiring emergency repair must be addressed immediately'
         ],
         filing: 'Licensed master plumber files GPS1 form through DOB NOW. Building retains copy for records.',
-        tip: 'Inspectors book up quickly near the Dec 31 deadline. Schedule in September or October. If defects are found, you\'ll need time for repairs before the filing window closes.'
+        tip: 'Inspectors book up quickly near the Dec 31 deadline. Schedule in September or October. If defects are found, you\\'ll need time for repairs before the filing window closes.'
       },
       'Local Law 87': {
         icon: '⚡',
@@ -2743,10 +2790,91 @@ function openPanel(type, idx) {
       ` : ''}
 
       <div class="action-box">
-        <div class="action-title">Get Competitive Bids via BidBoard</div>
-        <div class="action-desc">A pre-filled scope of work will be generated based on your building profile. Qualified, pre-vetted vendors from the network will be invited to submit competitive bids. Your managing agent handles coordination.</div>
-        <button class="btn-full">Start BidBoard — ${d.law.split(/[-—]/)[0].trim()} →</button>
-        <button class="btn-full-out">Notify Managing Agent</button>
+        <div class="action-title">BidBoard — Competitive Bid Solicitation</div>
+        <div class="action-desc">Pre-filled scope of work for your building. Qualified vendors from the BoardIQ network will receive this RFP and submit competitive bids through your managing agent.</div>
+
+        <div style="background:white;border:1px solid var(--border);border-radius:5px;padding:14px;margin:12px 0">
+          <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:8px">Scope of Work — ${d.law.split(/[-—]/)[0].trim()}</div>
+          <div style="font-size:12px;color:var(--dim);line-height:1.7">
+            <strong>Building:</strong> {{ building.address }}<br>
+            <strong>Type:</strong> {{ building.building_type }} · {{ building.units }} units · {{ building.floors }} floors · Built {{ building.year_built }}<br>
+            <strong>Deadline:</strong> ${d.due_date}<br>
+            <strong>Budget Range:</strong> $${d.cost_low.toLocaleString()} – $${d.cost_high.toLocaleString()}<br>
+            ${details ? `<strong>Requirement:</strong> ${details.what.replace(/<[^>]+>/g, '').substring(0, 150)}…` : ''}
+          </div>
+        </div>
+
+        ${details ? `
+        <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);font-weight:600;margin:12px 0 8px">Sample Vendor Bids from Network</div>
+        <div style="border:1px solid var(--border);border-radius:5px;overflow:hidden">
+          <table style="width:100%;border-collapse:collapse;font-size:12px">
+            <thead><tr style="background:var(--surface2);border-bottom:1px solid var(--border)">
+              <th style="padding:8px 10px;text-align:left;font-weight:600;color:var(--muted);font-size:10px;letter-spacing:0.5px;text-transform:uppercase">Vendor</th>
+              <th style="padding:8px 10px;text-align:right;font-weight:600;color:var(--muted);font-size:10px;letter-spacing:0.5px;text-transform:uppercase">Bid</th>
+              <th style="padding:8px 10px;text-align:center;font-weight:600;color:var(--muted);font-size:10px;letter-spacing:0.5px;text-transform:uppercase">Timeline</th>
+              <th style="padding:8px 10px;text-align:center;font-weight:600;color:var(--muted);font-size:10px;letter-spacing:0.5px;text-transform:uppercase">Rating</th>
+            </tr></thead>
+            <tbody>` +
+            (function() {
+              const bidData = {
+                'Local Law 11': [
+                  {name:'CGI Northeast Facade',bid_low:0.85,bid_high:0.95,weeks:'8–12 wks',rating:4.8,jobs:31},
+                  {name:'Superstructures Engineers',bid_low:0.90,bid_high:1.05,weeks:'10–14 wks',rating:4.6,jobs:24},
+                  {name:'Rand Engineering',bid_low:1.00,bid_high:1.10,weeks:'6–10 wks',rating:4.9,jobs:47},
+                ],
+                'Local Law 97': [
+                  {name:'LL97 Consulting Group',bid_low:0.80,bid_high:0.90,weeks:'4–6 wks',rating:4.7,jobs:38},
+                  {name:'CodeGreen Solutions',bid_low:0.85,bid_high:1.00,weeks:'3–5 wks',rating:4.8,jobs:52},
+                  {name:'Bright Power Energy',bid_low:0.95,bid_high:1.10,weeks:'4–8 wks',rating:4.5,jobs:29},
+                ],
+                'Elevator': [
+                  {name:'Schindler Elevator',bid_low:0.85,bid_high:0.95,weeks:'1–2 wks',rating:4.6,jobs:67},
+                  {name:'KONE Elevator',bid_low:0.90,bid_high:1.00,weeks:'1–2 wks',rating:4.7,jobs:43},
+                  {name:'PS Marcato Elevator',bid_low:0.80,bid_high:0.90,weeks:'1–2 wks',rating:4.4,jobs:21},
+                ],
+                'Local Law 152': [
+                  {name:'Adriatic Plumbing',bid_low:0.80,bid_high:0.90,weeks:'2–3 wks',rating:4.5,jobs:35},
+                  {name:'Harris Plumbing & Heating',bid_low:0.85,bid_high:0.95,weeks:'2–4 wks',rating:4.6,jobs:28},
+                  {name:'Manhattan Mechanical',bid_low:0.90,bid_high:1.05,weeks:'3–5 wks',rating:4.3,jobs:19},
+                ],
+                'Local Law 87': [
+                  {name:'Bright Power Energy',bid_low:0.85,bid_high:0.95,weeks:'10–14 wks',rating:4.8,jobs:44},
+                  {name:'Steven Winter Associates',bid_low:0.90,bid_high:1.05,weeks:'12–16 wks',rating:4.7,jobs:36},
+                  {name:'RAND Engineering',bid_low:0.95,bid_high:1.10,weeks:'8–12 wks',rating:4.6,jobs:31},
+                ],
+                'Local Law 26': [
+                  {name:'Island Fire Sprinkler',bid_low:0.85,bid_high:0.95,weeks:'16–24 wks',rating:4.5,jobs:22},
+                  {name:'AAA Fire Protection',bid_low:0.90,bid_high:1.05,weeks:'20–28 wks',rating:4.4,jobs:18},
+                  {name:'Cosco Fire Protection',bid_low:0.80,bid_high:0.90,weeks:'18–26 wks',rating:4.6,jobs:15},
+                ],
+              };
+              let lawKey = null;
+              const ls = d.law.toLowerCase();
+              if (ls.includes('11') || ls.includes('fisp')) lawKey = 'Local Law 11';
+              else if (ls.includes('97') || ls.includes('carbon')) lawKey = 'Local Law 97';
+              else if (ls.includes('elevator')) lawKey = 'Elevator';
+              else if (ls.includes('152') || ls.includes('gas')) lawKey = 'Local Law 152';
+              else if (ls.includes('87') || ls.includes('energy')) lawKey = 'Local Law 87';
+              else if (ls.includes('26') || ls.includes('sprinkler')) lawKey = 'Local Law 26';
+              const bids = bidData[lawKey] || bidData['Local Law 11'];
+              return bids.map((b,i) => {
+                const lo = Math.round(d.cost_low * b.bid_low);
+                const hi = Math.round(d.cost_high * b.bid_high);
+                const mid = Math.round((lo + hi) / 2);
+                return '<tr style="border-bottom:1px solid var(--border)">' +
+                  '<td style="padding:8px 10px"><div style="font-weight:600;color:var(--ink)">' + b.name + '</div><div style="font-size:10px;color:var(--muted)">' + b.jobs + ' NYC jobs completed</div></td>' +
+                  '<td style="padding:8px 10px;text-align:right;font-family:IBM Plex Mono,monospace;font-weight:500;color:var(--ink)">$' + mid.toLocaleString() + '</td>' +
+                  '<td style="padding:8px 10px;text-align:center;font-size:11px;color:var(--dim)">' + b.weeks + '</td>' +
+                  '<td style="padding:8px 10px;text-align:center;font-size:12px;color:var(--gold);font-weight:600">★ ' + b.rating + '</td></tr>';
+              }).join('');
+            })() +
+            `</tbody></table>
+        </div>
+        <div style="font-size:10px;color:var(--muted);margin-top:6px;text-align:center;font-style:italic">Sample bids based on network pricing data · Actual quotes may vary</div>
+        ` : ''}
+
+        <button class="btn-full" style="margin-top:14px">Request Live Bids — ${d.law.split(/[-—]/)[0].trim()} →</button>
+        <button class="btn-full-out">Send Scope to Managing Agent</button>
       </div>`;
   }
   document.getElementById('overlay').classList.add('open');
@@ -4011,6 +4139,7 @@ if __name__ == "__main__":
     print("  URL:      http://localhost:5001")
     print()
     print("  Board logins:")
+    print("  board@130e18.com   / demo1234  (130 East 18th St)")
     print("  board@120w72.com   / demo1234")
     print("  board@740park.com  / demo1234")
     print("  admin@boardiq.com  / admin")
