@@ -493,6 +493,356 @@ VENDOR_PROFILES = {
             {"building": "Gramercy Plaza", "contact": "Super", "years": 4},
         ],
     },
+    # ── Bid-only vendor profiles (no login accounts) ─────────────────────────
+    "v005": {
+        "vendor_id": "v005",
+        "company_name": "Champion Elevator Corp",
+        "contact_name": "David Park",
+        "email": "bids@championelevator.com",
+        "phone": "(212) 555-0533",
+        "categories": ["ELEVATOR_MAINTENANCE", "ELEVATOR_MODERNIZATION"],
+        "service_areas": ["Manhattan", "Brooklyn", "Queens"],
+        "years_in_business": 30,
+        "employees": 85,
+        "bio": "One of NYC's largest independent elevator companies. Maintaining over 3,000 units across the five boroughs. DOB-licensed agency, union shop, 24/7 emergency service.",
+        "pricing": [
+            {"type": "Monthly Maintenance Contract", "unit": "per elevator/mo", "low": 300, "high": 480, "notes": "Full maintenance including parts and labor"},
+            {"type": "Emergency Service Call", "unit": "per call", "low": 300, "high": 550, "notes": "1-hour response time guaranteed"},
+        ],
+        "insurance": {
+            "gl_carrier": "AIG",
+            "gl_policy": "AIG-4521-9900",
+            "gl_limit": "5,000,000",
+            "gl_expiry": "2026-09-30",
+            "workers_comp_carrier": "Hartford",
+            "workers_comp_expiry": "2026-09-30",
+            "additional_insured": True,
+            "certificate_on_file": True,
+        },
+        "certifications": ["DOB Elevator Agency", "NAEC Certified", "NYC Licensed Contractor", "OSHA 30"],
+        "current_buildings": [],
+        "references": [],
+    },
+    "v006": {
+        "vendor_id": "v006",
+        "company_name": "National Elevator Inspection Services",
+        "contact_name": "Lisa Romero",
+        "email": "bids@nationalelevator.com",
+        "phone": "(718) 555-0622",
+        "categories": ["ELEVATOR_MAINTENANCE"],
+        "service_areas": ["Manhattan", "Brooklyn"],
+        "years_in_business": 12,
+        "employees": 28,
+        "bio": "Boutique elevator maintenance firm specializing in pre-war residential buildings. Deep experience with legacy Otis, Westinghouse, and Dover equipment.",
+        "pricing": [
+            {"type": "Monthly Maintenance Contract", "unit": "per elevator/mo", "low": 250, "high": 400, "notes": "Pre-war equipment specialists"},
+            {"type": "Emergency Service Call", "unit": "per call", "low": 275, "high": 500, "notes": "24/7 response"},
+        ],
+        "insurance": {
+            "gl_carrier": "Chubb Insurance",
+            "gl_policy": "CH-8812-3344",
+            "gl_limit": "2,000,000",
+            "gl_expiry": "2026-12-31",
+            "workers_comp_carrier": "NY State Insurance Fund",
+            "workers_comp_expiry": "2026-12-31",
+            "additional_insured": True,
+            "certificate_on_file": True,
+        },
+        "certifications": ["DOB Elevator Inspector", "NAEC Certified"],
+        "current_buildings": [],
+        "references": [],
+    },
+    "v007": {
+        "vendor_id": "v007",
+        "company_name": "Rand Engineering & Architecture",
+        "contact_name": "Howard Zimmerman",
+        "email": "bids@randengineering.com",
+        "phone": "(212) 555-0788",
+        "categories": ["FACADE_REPAIRS", "ENGINEERING"],
+        "service_areas": ["Manhattan", "Brooklyn", "Queens", "Bronx"],
+        "years_in_business": 35,
+        "employees": 60,
+        "bio": "Premier facade inspection and engineering firm. Performed FISP inspections on over 1,500 NYC buildings. Full-service from inspection through repair oversight.",
+        "pricing": [
+            {"type": "FISP Inspection", "unit": "per building", "low": 15000, "high": 45000, "notes": "Varies by building size and facade complexity"},
+            {"type": "Facade Repair Oversight", "unit": "per project", "low": 25000, "high": 150000, "notes": "Engineering oversight of repair contractors"},
+        ],
+        "insurance": {
+            "gl_carrier": "Travelers",
+            "gl_policy": "TR-5500-2211",
+            "gl_limit": "5,000,000",
+            "gl_expiry": "2027-01-31",
+            "workers_comp_carrier": "Hartford",
+            "workers_comp_expiry": "2027-01-31",
+            "additional_insured": True,
+            "certificate_on_file": True,
+        },
+        "certifications": ["NYS PE License", "NYC RA License", "FISP Qualified Inspector"],
+        "current_buildings": [],
+        "references": [],
+    },
+    "v008": {
+        "vendor_id": "v008",
+        "company_name": "Vidaris Inc.",
+        "contact_name": "Mark Thompson",
+        "email": "bids@vidaris.com",
+        "phone": "(212) 555-0899",
+        "categories": ["FACADE_REPAIRS", "ENGINEERING"],
+        "service_areas": ["Manhattan", "Brooklyn", "Queens"],
+        "years_in_business": 25,
+        "employees": 45,
+        "bio": "Specialty facade engineering and building envelope consulting. Expert FISP reporting with drone-assisted inspection capabilities for reduced cost and disruption.",
+        "pricing": [
+            {"type": "FISP Inspection (Drone-Assisted)", "unit": "per building", "low": 12000, "high": 35000, "notes": "Drone-first approach reduces scaffold costs"},
+        ],
+        "insurance": {
+            "gl_carrier": "Zurich",
+            "gl_policy": "ZR-3300-7788",
+            "gl_limit": "3,000,000",
+            "gl_expiry": "2026-08-31",
+            "workers_comp_carrier": "SFM Mutual",
+            "workers_comp_expiry": "2026-08-31",
+            "additional_insured": True,
+            "certificate_on_file": True,
+        },
+        "certifications": ["NYS PE License", "FISP Qualified Inspector", "Drone FAA Part 107"],
+        "current_buildings": [],
+        "references": [],
+    },
+    "v009": {
+        "vendor_id": "v009",
+        "company_name": "Falcon Engineering & Architecture",
+        "contact_name": "Angela Russo",
+        "email": "bids@falconeng.com",
+        "phone": "(212) 555-0944",
+        "categories": ["FACADE_REPAIRS", "ENGINEERING"],
+        "service_areas": ["Manhattan"],
+        "years_in_business": 18,
+        "employees": 22,
+        "bio": "Boutique facade engineering firm focused exclusively on high-end co-ops and condos. Personalized service with deep UES/UWS expertise.",
+        "pricing": [
+            {"type": "FISP Inspection", "unit": "per building", "low": 18000, "high": 40000, "notes": "Luxury residential specialist"},
+        ],
+        "insurance": {
+            "gl_carrier": "Liberty Mutual",
+            "gl_policy": "LM-6610-2233",
+            "gl_limit": "2,000,000",
+            "gl_expiry": "2026-11-30",
+            "workers_comp_carrier": "State Fund",
+            "workers_comp_expiry": "2026-11-30",
+            "additional_insured": True,
+            "certificate_on_file": False,
+        },
+        "certifications": ["NYS PE License", "FISP Qualified Inspector"],
+        "current_buildings": [],
+        "references": [],
+    },
+}
+
+# ── BidBoard Projects (in-memory) ────────────────────────────────────────────
+BID_PROJECTS = {
+    "bp001": {
+        "id": "bp001",
+        "building_bbl": "bbl_1022150001",
+        "category": "ELEVATOR_MAINTENANCE",
+        "title": "Elevator Maintenance Contract — Competitive Rebid",
+        "description": (
+            "Annual elevator maintenance contract for 120 West 72nd Street. "
+            "Building has 2 passenger elevators (original 1928 Otis, modernized 2003) "
+            "and 1 service elevator. Current contract with Schindler Elevator Corp at "
+            "$67,200/yr ($560/unit) has been in place since 2016 with no competitive bid "
+            "in 10 years. Scope includes: monthly preventive maintenance on all 3 cabs, "
+            "24/7 emergency callback service, annual DOB inspection coordination, "
+            "all parts and labor for routine maintenance. Modernization and capital "
+            "improvements excluded."
+        ),
+        "scope_items": [
+            "Monthly preventive maintenance — 3 elevator cabs",
+            "24/7 emergency callback with 1-hour response time",
+            "Annual DOB Category 1 and Category 5 inspection coordination",
+            "All parts and labor for routine maintenance items",
+            "Quarterly oil analysis and machine room inspections",
+            "Annual load testing and safety device testing",
+        ],
+        "status": "awarded",
+        "created_by": "century@boardiq.com",
+        "created_date": "2026-01-15",
+        "bids_due_date": "2026-02-01",
+        "awarded_date": "2026-02-10",
+        "previous_vendor": "Schindler Elevator Corp",
+        "previous_annual": 67200,
+        "previous_per_unit": 560,
+        "invited_vendors": ["v001", "v005", "v006"],
+        "bids": [
+            {
+                "vendor_id": "v001",
+                "vendor_name": "Schindler Elevator Corp",
+                "amount": 54000,
+                "per_unit": 450,
+                "proposal_summary": (
+                    "As incumbent provider since 2016, Schindler proposes a renewed "
+                    "full-maintenance contract with enhanced SLA: 45-minute emergency "
+                    "response (reduced from 1 hour), dedicated technician assignment, "
+                    "and quarterly management reporting. Price reflects competitive "
+                    "adjustment recognizing long-term relationship and deep knowledge "
+                    "of this equipment."
+                ),
+                "submitted_date": "2026-01-28",
+                "status": "selected",
+                "insurance_current": True,
+                "response_time_sla": "45 min",
+                "contract_term": "3 years",
+            },
+            {
+                "vendor_id": "v005",
+                "vendor_name": "Champion Elevator Corp",
+                "amount": 57600,
+                "per_unit": 480,
+                "proposal_summary": (
+                    "Champion proposes a comprehensive maintenance plan with 1-hour "
+                    "emergency response, dedicated on-call technician for the UWS "
+                    "portfolio, and quarterly preventive maintenance reports. Includes "
+                    "all DOB inspection coordination and testing. 30-day transition "
+                    "plan from incumbent provider included."
+                ),
+                "submitted_date": "2026-01-30",
+                "status": "rejected",
+                "insurance_current": True,
+                "response_time_sla": "1 hour",
+                "contract_term": "3 years",
+            },
+            {
+                "vendor_id": "v006",
+                "vendor_name": "National Elevator Inspection Services",
+                "amount": 50400,
+                "per_unit": 420,
+                "proposal_summary": (
+                    "NEIS specializes in pre-war elevator systems and proposes "
+                    "dedicated maintenance for all 3 cabs including the original "
+                    "1928 Otis components. Our pre-war expertise reduces risk of "
+                    "unexpected breakdowns. Includes full DOB inspection coordination, "
+                    "monthly service visits, and 24/7 callback."
+                ),
+                "submitted_date": "2026-01-31",
+                "status": "rejected",
+                "insurance_current": True,
+                "response_time_sla": "1 hour",
+                "contract_term": "2 years",
+            },
+        ],
+        "awarded_vendor_id": "v001",
+        "award_notes": (
+            "Schindler selected as incumbent with significantly reduced pricing. "
+            "Competitive bid process drove 19.6% cost reduction ($13,200/yr savings). "
+            "Incumbent advantage: deep knowledge of building equipment, no transition risk. "
+            "Enhanced SLA with 45-minute response time and dedicated technician."
+        ),
+        "timeline": [
+            {"date": "2026-01-15", "event": "Bid project created", "actor": "Century Management"},
+            {"date": "2026-01-16", "event": "RFP sent to 3 elevator maintenance vendors", "actor": "BoardIQ Platform"},
+            {"date": "2026-01-28", "event": "Bid received from Schindler Elevator Corp", "actor": "Schindler"},
+            {"date": "2026-01-30", "event": "Bid received from Champion Elevator Corp", "actor": "Champion"},
+            {"date": "2026-01-31", "event": "Bid received from National Elevator Inspection", "actor": "NEIS"},
+            {"date": "2026-02-01", "event": "Bid period closed — 3 of 3 bids received", "actor": "BoardIQ Platform"},
+            {"date": "2026-02-05", "event": "Board review of all proposals completed", "actor": "Board of Directors"},
+            {"date": "2026-02-10", "event": "Contract awarded to Schindler Elevator Corp", "actor": "Century Management"},
+        ],
+        "savings_annual": 13200,
+        "savings_pct": 19.6,
+    },
+    "bp002": {
+        "id": "bp002",
+        "building_bbl": "bbl_1012660001",
+        "category": "FACADE_REPAIRS",
+        "title": "FISP Cycle 10 Facade Inspection — 740 Park Avenue",
+        "description": (
+            "Local Law 11 / FISP Cycle 10 facade inspection for 740 Park Avenue. "
+            "18-story pre-war limestone and brick facade (1930, Rosario Candela design). "
+            "Previous FISP Cycle 9 filed 2022 as SWARMP with minor pointing repairs "
+            "completed. Scope: full FISP close-up inspection of all four facades and "
+            "roof parapets, preparation and filing of technical report with DOB, "
+            "identification of any required repairs, and preliminary repair cost "
+            "estimate if SWARMP or Unsafe conditions found."
+        ),
+        "scope_items": [
+            "Full FISP close-up inspection — all four building facades",
+            "Roof parapet and setback terrace inspection",
+            "Probe and test areas from scaffold or swing stage",
+            "FISP technical report preparation and DOB filing",
+            "Documentation of all facade conditions with photography",
+            "Preliminary repair scope and cost estimate if SWARMP/Unsafe",
+        ],
+        "status": "bids_received",
+        "created_by": "admin@boardiq.com",
+        "created_date": "2026-02-01",
+        "bids_due_date": "2026-02-28",
+        "awarded_date": None,
+        "previous_vendor": None,
+        "previous_annual": None,
+        "previous_per_unit": None,
+        "invited_vendors": ["v007", "v008", "v009"],
+        "bids": [
+            {
+                "vendor_id": "v007",
+                "vendor_name": "Rand Engineering & Architecture",
+                "amount": 28500,
+                "per_unit": 339,
+                "proposal_summary": (
+                    "Rand proposes a comprehensive FISP Cycle 10 inspection using "
+                    "rope-access technicians and drone photogrammetry for enhanced "
+                    "documentation. Includes full FISP report, DOB filing, and if "
+                    "SWARMP conditions found, a detailed repair scope with contractor "
+                    "cost estimates. 35+ years of FISP experience."
+                ),
+                "submitted_date": "2026-02-12",
+                "status": "pending",
+                "insurance_current": True,
+                "estimated_duration": "6-8 weeks",
+                "contract_term": "Per project",
+            },
+            {
+                "vendor_id": "v008",
+                "vendor_name": "Vidaris Inc.",
+                "amount": 22000,
+                "per_unit": 262,
+                "proposal_summary": (
+                    "Vidaris proposes FISP inspection with our proprietary drone-first "
+                    "methodology, reducing scaffold time and cost. Full photographic "
+                    "documentation, FISP report with DOB electronic filing, and repair "
+                    "recommendations if warranted. Drone approach minimizes disruption "
+                    "to residents and reduces sidewalk shed requirements."
+                ),
+                "submitted_date": "2026-02-18",
+                "status": "pending",
+                "insurance_current": True,
+                "estimated_duration": "4-6 weeks",
+                "contract_term": "Per project",
+            },
+            {
+                "vendor_id": "v009",
+                "vendor_name": "Falcon Engineering & Architecture",
+                "amount": None,
+                "per_unit": None,
+                "proposal_summary": None,
+                "submitted_date": None,
+                "status": "invited",
+                "insurance_current": False,
+                "estimated_duration": None,
+                "contract_term": None,
+            },
+        ],
+        "awarded_vendor_id": None,
+        "award_notes": None,
+        "timeline": [
+            {"date": "2026-02-01", "event": "Bid project created for FISP Cycle 10", "actor": "BoardIQ Admin"},
+            {"date": "2026-02-02", "event": "RFP sent to 3 qualified facade engineering firms", "actor": "BoardIQ Platform"},
+            {"date": "2026-02-12", "event": "Bid received from Rand Engineering — $28,500", "actor": "Rand Engineering"},
+            {"date": "2026-02-18", "event": "Bid received from Vidaris Inc. — $22,000", "actor": "Vidaris"},
+            {"date": "2026-02-20", "event": "Awaiting bid from Falcon Engineering (due Feb 28)", "actor": ""},
+        ],
+        "savings_annual": None,
+        "savings_pct": None,
+    },
 }
 
 # Map: management company name → list of building BBLs
@@ -584,6 +934,36 @@ def compute_benchmarks(building):
         is_prewar=building.get("is_prewar", True),
         building_type=building.get("building_type", "coop").lower(),
     )
+
+
+# ── BidBoard helpers ─────────────────────────────────────────────────────────
+
+def get_bidboard_projects_for_building(bbl):
+    """Return all bid projects for a specific building, sorted by created_date desc."""
+    return sorted(
+        [p for p in BID_PROJECTS.values() if p["building_bbl"] == bbl],
+        key=lambda x: x["created_date"],
+        reverse=True,
+    )
+
+def get_bidboard_projects_for_vendor(vendor_id):
+    """Return all bid projects where a vendor has been invited."""
+    return [p for p in BID_PROJECTS.values() if vendor_id in p["invited_vendors"]]
+
+def get_bidboard_summary():
+    """Return summary stats for the admin BidBoard dashboard."""
+    projects = list(BID_PROJECTS.values())
+    active = [p for p in projects if p["status"] in ("soliciting", "bids_received")]
+    awarded = [p for p in projects if p["status"] == "awarded"]
+    total_bids = sum(len([b for b in p["bids"] if b.get("amount")]) for p in projects)
+    total_savings = sum(p.get("savings_annual", 0) or 0 for p in awarded)
+    return {
+        "total_projects": len(projects),
+        "active_projects": len(active),
+        "awarded_projects": len(awarded),
+        "total_bids": total_bids,
+        "total_savings": total_savings,
+    }
 
 
 def ensure_building_data(building):
@@ -754,11 +1134,14 @@ def dashboard():
     benchmarks = compute_benchmarks(building)
     user = DEMO_USERS.get(session["user_email"], {})
     is_admin = user.get("is_admin", False) or user.get("role") == "admin"
+    bbl = building.get("id") or building.get("bbl", "")
+    bidboard_projects = get_bidboard_projects_for_building(bbl)
     return render_template_string(DASHBOARD_HTML,
         building=building,
         benchmarks=benchmarks,
         user_name=session.get("user_name"),
         is_admin=is_admin,
+        bidboard_projects=bidboard_projects,
         all_buildings=[ensure_building_data(BUILDINGS_DB[b]) for b in
                        DEMO_USERS[session["user_email"]].get("buildings", [])],
         active_bbl=session.get("active_building"),
@@ -1691,6 +2074,519 @@ def commit_invoices():
 
 UPLOAD_PAGE_HTML = None  # defined below
 
+# ── BidBoard Routes ──────────────────────────────────────────────────────────
+
+@app.route("/bidboard")
+@login_required
+def bidboard():
+    user = DEMO_USERS.get(session["user_email"], {})
+    is_admin = user.get("is_admin", False) or user.get("role") == "admin"
+    if not is_admin:
+        return redirect(url_for("dashboard"))
+    summary = get_bidboard_summary()
+    projects = sorted(BID_PROJECTS.values(), key=lambda x: x["created_date"], reverse=True)
+    enriched = []
+    for p in projects:
+        bldg = BUILDINGS_DB.get(p["building_bbl"], {})
+        submitted_bids = [b for b in p["bids"] if b.get("amount")]
+        enriched.append({
+            **p,
+            "building_address": bldg.get("address", "Unknown"),
+            "building_units": bldg.get("units", 0),
+            "building_neighborhood": bldg.get("neighborhood", ""),
+            "category_label": CATEGORY_LABELS.get(p["category"], p["category"]),
+            "submitted_bid_count": len(submitted_bids),
+            "invited_count": len(p["invited_vendors"]),
+            "lowest_bid": min((b["amount"] for b in submitted_bids), default=None),
+            "highest_bid": max((b["amount"] for b in submitted_bids), default=None),
+        })
+    return render_template_string(BIDBOARD_HTML,
+        summary=summary,
+        projects=enriched,
+        user_name=session.get("user_name"),
+        is_admin=is_admin,
+        category_labels=CATEGORY_LABELS,
+    )
+
+
+@app.route("/bidboard/<project_id>")
+@login_required
+def bidboard_detail(project_id):
+    user = DEMO_USERS.get(session["user_email"], {})
+    is_admin = user.get("is_admin", False) or user.get("role") == "admin"
+    project = BID_PROJECTS.get(project_id)
+    if not project:
+        return "Project not found", 404
+    if not is_admin and project["building_bbl"] not in user.get("buildings", []):
+        return redirect(url_for("dashboard"))
+    bldg = BUILDINGS_DB.get(project["building_bbl"], {})
+    enriched_bids = []
+    for bid in project["bids"]:
+        vp = VENDOR_PROFILES.get(bid["vendor_id"], {})
+        enriched_bids.append({
+            **bid,
+            "company_name": vp.get("company_name", bid.get("vendor_name", "Unknown")),
+            "years_in_business": vp.get("years_in_business", 0),
+            "employees": vp.get("employees", 0),
+            "certifications": vp.get("certifications", []),
+            "gl_limit": vp.get("insurance", {}).get("gl_limit", ""),
+            "bio": vp.get("bio", ""),
+        })
+    return render_template_string(BIDBOARD_DETAIL_HTML,
+        project=project,
+        building=bldg,
+        bids=enriched_bids,
+        user_name=session.get("user_name"),
+        is_admin=is_admin,
+        category_label=CATEGORY_LABELS.get(project["category"], project["category"]),
+    )
+
+
+@app.route("/api/bidboard/award", methods=["POST"])
+@login_required
+def bidboard_award():
+    user = DEMO_USERS.get(session["user_email"], {})
+    is_admin = user.get("is_admin", False) or user.get("role") == "admin"
+    if not is_admin:
+        return jsonify({"error": "Admin only"}), 403
+    data = request.get_json()
+    project_id = data.get("project_id")
+    vendor_id = data.get("vendor_id")
+    notes = data.get("notes", "")
+    project = BID_PROJECTS.get(project_id)
+    if not project:
+        return jsonify({"error": "Project not found"}), 404
+    for bid in project["bids"]:
+        if bid["vendor_id"] == vendor_id:
+            bid["status"] = "selected"
+        elif bid.get("amount"):
+            bid["status"] = "rejected"
+    project["status"] = "awarded"
+    project["awarded_vendor_id"] = vendor_id
+    project["awarded_date"] = datetime.now().strftime("%Y-%m-%d")
+    project["award_notes"] = notes
+    winning_bid = next((b for b in project["bids"] if b["vendor_id"] == vendor_id), None)
+    if winning_bid and project.get("previous_annual"):
+        project["savings_annual"] = project["previous_annual"] - winning_bid["amount"]
+        project["savings_pct"] = round((project["savings_annual"] / project["previous_annual"]) * 100, 1)
+    project["timeline"].append({
+        "date": datetime.now().strftime("%Y-%m-%d"),
+        "event": f"Contract awarded to {winning_bid['vendor_name'] if winning_bid else 'vendor'}",
+        "actor": session.get("user_name", "Admin"),
+    })
+    return jsonify({"ok": True})
+
+
+@app.route("/api/bidboard/submit-bid", methods=["POST"])
+@login_required
+def bidboard_submit_bid():
+    if session.get("user_role") != "vendor":
+        return jsonify({"error": "Vendor only"}), 403
+    vid = session.get("vendor_id")
+    data = request.get_json()
+    project_id = data.get("project_id")
+    project = BID_PROJECTS.get(project_id)
+    if not project:
+        return jsonify({"error": "Project not found"}), 404
+    if vid not in project["invited_vendors"]:
+        return jsonify({"error": "Not invited"}), 403
+    for bid in project["bids"]:
+        if bid["vendor_id"] == vid:
+            bid["amount"] = float(data.get("amount", 0))
+            units = BUILDINGS_DB.get(project["building_bbl"], {}).get("units", 1)
+            bid["per_unit"] = round(bid["amount"] / units)
+            bid["proposal_summary"] = data.get("proposal_summary", "")
+            bid["submitted_date"] = datetime.now().strftime("%Y-%m-%d")
+            bid["status"] = "pending"
+            bid["insurance_current"] = VENDOR_PROFILES.get(vid, {}).get("insurance", {}).get("certificate_on_file", False)
+            break
+    project["timeline"].append({
+        "date": datetime.now().strftime("%Y-%m-%d"),
+        "event": f"Bid received from {VENDOR_PROFILES.get(vid, {}).get('company_name', 'vendor')}",
+        "actor": VENDOR_PROFILES.get(vid, {}).get("company_name", "Vendor"),
+    })
+    return jsonify({"ok": True})
+
+
+# ── BidBoard Templates ───────────────────────────────────────────────────────
+
+BIDBOARD_HTML = """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BoardIQ · BidBoard</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#f4f1eb;--surface:#fff;--surface2:#f9f7f3;--border:#e5e0d5;--border2:#d4cdc0;--text:#1a1714;--muted:#8a8278;--dim:#6b6560;--green:#1a7a4a;--green-light:#e8f5ee;--green-border:#b8deca;--yellow:#b5720a;--yellow-light:#fef6e6;--yellow-border:#f0d090;--red:#c0392b;--red-light:#fdecea;--gold:#c4893a;--gold-light:#fdf3e6;--ink:#2c2825}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);font-size:13px;line-height:1.5}
+a{color:var(--gold);text-decoration:none}
+.topbar{position:sticky;top:0;z-index:100;background:var(--surface);border-bottom:1px solid var(--border);height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 20px 0 240px}
+.topbar-logo{font-family:'Playfair Display',serif;font-size:18px;color:var(--ink)}
+.topbar-logo span{color:var(--gold)}
+.topbar-right{display:flex;align-items:center;gap:16px;font-size:12px;color:var(--muted)}
+.topbar-right a{color:var(--muted);text-decoration:none;font-size:12px}
+.sidebar{position:fixed;left:0;top:0;width:220px;height:100vh;background:var(--ink);color:rgba(255,255,255,.7);padding:16px 0;overflow-y:auto;z-index:200}
+.sidebar .logo-mark{font-family:'Playfair Display',serif;font-size:22px;color:#fff;padding:0 20px;margin-bottom:2px}
+.sidebar .logo-mark span{color:var(--gold)}
+.sidebar .logo-sub{font-size:10px;color:rgba(255,255,255,.35);padding:0 20px;margin-bottom:20px;letter-spacing:1px;text-transform:uppercase}
+.nav{padding:0 10px}
+.nav-label{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,.3);padding:14px 10px 6px;font-weight:600}
+.nav-item{padding:7px 10px;border-radius:6px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:6px;transition:background .15s;color:rgba(255,255,255,.5);text-decoration:none}
+.nav-item:hover{background:rgba(255,255,255,.06);color:rgba(255,255,255,.8)}
+.nav-item.active{background:rgba(196,137,58,.15);color:var(--gold);font-weight:600}
+.nav-badge{margin-left:auto;background:var(--gold);color:var(--ink);font-size:10px;font-weight:700;padding:1px 7px;border-radius:10px}
+.main{margin-left:220px;padding:24px 28px 60px;max-width:1100px}
+.page-title{font-family:'Playfair Display',serif;font-size:26px;color:var(--ink);margin-bottom:2px}
+.page-sub{font-size:12px;color:var(--muted);margin-bottom:20px}
+.strip{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
+.scard{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center}
+.scard .sv{font-family:'IBM Plex Mono',monospace;font-size:28px;font-weight:700;color:var(--ink)}
+.scard .sv.green{color:var(--green)}
+.scard .sl{font-size:11px;color:var(--muted);margin-top:4px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:16px;overflow:hidden}
+.ch{padding:16px 20px 12px;display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px solid var(--border)}
+.ct{font-size:15px;font-weight:700;color:var(--ink)}
+.csub{font-size:11px;color:var(--muted);margin-top:2px}
+table.vt{width:100%;border-collapse:collapse}
+table.vt th{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:600;padding:10px 16px;text-align:left;border-bottom:1px solid var(--border)}
+table.vt td{padding:12px 16px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:top}
+table.vt tr.click{cursor:pointer;transition:background .1s}
+table.vt tr.click:hover{background:var(--surface2)}
+table.vt .r{text-align:right}
+.mono{font-family:'IBM Plex Mono',monospace;font-size:12px}
+.vname{font-weight:600;color:var(--ink)}
+.vcat{font-size:11px;color:var(--muted)}
+.bb-status{display:inline-block;font-size:11px;font-weight:600;padding:3px 10px;border-radius:12px;letter-spacing:.3px}
+.bb-status-draft{background:var(--surface2);color:var(--muted)}
+.bb-status-soliciting{background:#e8f0fe;color:#1a4a7a}
+.bb-status-bids_received{background:var(--yellow-light);color:var(--yellow);border:1px solid var(--yellow-border)}
+.bb-status-awarded{background:var(--green-light);color:var(--green);border:1px solid var(--green-border)}
+.badge{display:inline-block;font-size:10px;font-weight:600;padding:2px 8px;border-radius:4px;background:var(--gold-light);color:var(--gold);border:1px solid #f0d090}
+.ca{font-size:12px;font-weight:600;color:var(--gold);white-space:nowrap}
+</style>
+</head>
+<body>
+<div class="sidebar">
+  <div class="logo-mark">Board<span>IQ</span></div>
+  <div class="logo-sub">Property Intelligence</div>
+  <div class="nav">
+    <div class="nav-label">Intelligence</div>
+    <a href="/dashboard" class="nav-item" style="text-decoration:none">&#9670; &nbsp;Dashboard</a>
+    <div class="nav-label">Bidding</div>
+    <a href="/bidboard" class="nav-item active" style="text-decoration:none">&#8862; &nbsp;BidBoard
+      <span class="nav-badge">{{ summary.total_projects }}</span>
+    </a>
+    <div class="nav-label">Tools</div>
+    <a href="/upload" class="nav-item" style="text-decoration:none;color:rgba(255,255,255,.5)">&uarr; &nbsp;Invoice Upload</a>
+  </div>
+</div>
+<div class="topbar">
+  <div class="topbar-logo">Board<span>IQ</span></div>
+  <div class="topbar-right">
+    <span>{{ user_name }}</span>
+    <a href="/login">Sign out &rarr;</a>
+  </div>
+</div>
+<main class="main">
+  <div class="page-title">BidBoard</div>
+  <div class="page-sub">Competitive bidding for vendor contracts across your portfolio</div>
+
+  <div class="strip">
+    <div class="scard">
+      <div class="sv">{{ summary.active_projects }}</div>
+      <div class="sl">Active Projects</div>
+    </div>
+    <div class="scard">
+      <div class="sv">{{ summary.total_bids }}</div>
+      <div class="sl">Bids Received</div>
+    </div>
+    <div class="scard">
+      <div class="sv">{{ summary.awarded_projects }}</div>
+      <div class="sl">Awarded This Year</div>
+    </div>
+    <div class="scard">
+      <div class="sv green">${{ "{:,.0f}".format(summary.total_savings) }}</div>
+      <div class="sl">Annual Savings</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch">
+      <div><div class="ct">Bid Projects</div>
+      <div class="csub">All competitive bid processes across your portfolio</div></div>
+    </div>
+    <table class="vt">
+      <thead>
+        <tr>
+          <th>Building</th>
+          <th>Service</th>
+          <th>Status</th>
+          <th class="r">Bids</th>
+          <th>Deadline</th>
+          <th class="r">Bid Range</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in projects %}
+        <tr class="click" onclick="location.href='/bidboard/{{ p.id }}'">
+          <td>
+            <div class="vname">{{ p.building_address }}</div>
+            <div class="vcat">{{ p.building_neighborhood }} &middot; {{ p.building_units }} units</div>
+          </td>
+          <td><span class="badge">{{ p.category_label }}</span></td>
+          <td><span class="bb-status bb-status-{{ p.status }}">{{ p.status|replace('_',' ')|title }}</span></td>
+          <td class="mono r">{{ p.submitted_bid_count }} / {{ p.invited_count }}</td>
+          <td class="mono">{{ p.bids_due_date }}</td>
+          <td class="mono r">
+            {% if p.lowest_bid %}${{ "{:,.0f}".format(p.lowest_bid) }}&ndash;${{ "{:,.0f}".format(p.highest_bid) }}{% else %}&mdash;{% endif %}
+          </td>
+          <td><a href="/bidboard/{{ p.id }}" class="ca">View &rarr;</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</main>
+</body></html>"""
+
+
+BIDBOARD_DETAIL_HTML = """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BoardIQ · {{ project.title[:40] }}</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#f4f1eb;--surface:#fff;--surface2:#f9f7f3;--border:#e5e0d5;--border2:#d4cdc0;--text:#1a1714;--muted:#8a8278;--dim:#6b6560;--green:#1a7a4a;--green-light:#e8f5ee;--green-border:#b8deca;--yellow:#b5720a;--yellow-light:#fef6e6;--yellow-border:#f0d090;--red:#c0392b;--red-light:#fdecea;--gold:#c4893a;--gold-light:#fdf3e6;--ink:#2c2825}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);font-size:13px;line-height:1.5}
+a{color:var(--gold);text-decoration:none}
+.topbar{position:sticky;top:0;z-index:100;background:var(--surface);border-bottom:1px solid var(--border);height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 20px 0 240px}
+.topbar-logo{font-family:'Playfair Display',serif;font-size:18px;color:var(--ink)}
+.topbar-logo span{color:var(--gold)}
+.topbar-right{display:flex;align-items:center;gap:16px;font-size:12px;color:var(--muted)}
+.topbar-right a{color:var(--muted);text-decoration:none}
+.sidebar{position:fixed;left:0;top:0;width:220px;height:100vh;background:var(--ink);color:rgba(255,255,255,.7);padding:16px 0;overflow-y:auto;z-index:200}
+.sidebar .logo-mark{font-family:'Playfair Display',serif;font-size:22px;color:#fff;padding:0 20px;margin-bottom:2px}
+.sidebar .logo-mark span{color:var(--gold)}
+.sidebar .logo-sub{font-size:10px;color:rgba(255,255,255,.35);padding:0 20px;margin-bottom:20px;letter-spacing:1px;text-transform:uppercase}
+.nav{padding:0 10px}
+.nav-label{font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:rgba(255,255,255,.3);padding:14px 10px 6px;font-weight:600}
+.nav-item{padding:7px 10px;border-radius:6px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:6px;transition:background .15s;color:rgba(255,255,255,.5);text-decoration:none}
+.nav-item:hover{background:rgba(255,255,255,.06);color:rgba(255,255,255,.8)}
+.nav-item.active{background:rgba(196,137,58,.15);color:var(--gold);font-weight:600}
+.nav-badge{margin-left:auto;background:var(--gold);color:var(--ink);font-size:10px;font-weight:700;padding:1px 7px;border-radius:10px}
+.main{margin-left:220px;padding:24px 28px 60px;max-width:1100px}
+.back{font-size:12px;color:var(--muted);margin-bottom:12px;display:inline-block}
+.back:hover{color:var(--gold)}
+.page-title{font-family:'Playfair Display',serif;font-size:22px;color:var(--ink);margin-bottom:2px}
+.page-sub{font-size:12px;color:var(--muted);margin-bottom:18px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:16px;overflow:hidden}
+.ch{padding:16px 20px 12px;display:flex;justify-content:space-between;align-items:flex-start;border-bottom:1px solid var(--border)}
+.ct{font-size:15px;font-weight:700;color:var(--ink)}
+.csub{font-size:11px;color:var(--muted);margin-top:2px}
+.mono{font-family:'IBM Plex Mono',monospace;font-size:12px}
+.bb-status{display:inline-block;font-size:11px;font-weight:600;padding:3px 10px;border-radius:12px;letter-spacing:.3px}
+.bb-status-awarded{background:var(--green-light);color:var(--green);border:1px solid var(--green-border)}
+.bb-status-bids_received{background:var(--yellow-light);color:var(--yellow);border:1px solid var(--yellow-border)}
+.bb-status-soliciting{background:#e8f0fe;color:#1a4a7a}
+.badge{display:inline-block;font-size:10px;font-weight:600;padding:2px 8px;border-radius:4px;background:var(--gold-light);color:var(--gold);border:1px solid #f0d090}
+.savings-box{background:var(--green-light);border:1px solid var(--green-border);border-radius:10px;padding:20px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
+.savings-box .sv-main{font-family:'IBM Plex Mono',monospace;font-size:28px;font-weight:700;color:var(--green)}
+.savings-box .sv-sub{font-size:12px;color:var(--green);margin-top:2px}
+.savings-box .sv-detail{font-size:13px;color:#1a5c3a;line-height:1.6}
+.scope-list{padding:14px 20px;list-style:none}
+.scope-list li{padding:6px 0;font-size:13px;color:var(--text);border-bottom:1px solid var(--border)}
+.scope-list li:last-child{border:none}
+.scope-list li::before{content:"\\2713 ";color:var(--green);font-weight:700;margin-right:6px}
+table.bt{width:100%;border-collapse:collapse}
+table.bt th{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:600;padding:10px 14px;text-align:left;border-bottom:1px solid var(--border);background:var(--surface2)}
+table.bt td{padding:12px 14px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:top}
+table.bt tr.selected{background:var(--green-light)}
+table.bt tr.rejected{opacity:.55}
+table.bt tr.invited{opacity:.4;font-style:italic}
+table.bt .r{text-align:right}
+.bid-status{font-size:11px;font-weight:600;padding:2px 8px;border-radius:4px;display:inline-block}
+.bid-status-selected{background:var(--green-light);color:var(--green);border:1px solid var(--green-border)}
+.bid-status-rejected{background:var(--surface2);color:var(--muted)}
+.bid-status-pending{background:var(--yellow-light);color:var(--yellow);border:1px solid var(--yellow-border)}
+.bid-status-invited{background:var(--surface2);color:var(--muted)}
+.ins-ok{color:var(--green);font-weight:600}
+.ins-no{color:var(--red);font-weight:600}
+.tl{padding:16px 20px}
+.tl-item{display:flex;gap:14px;padding:8px 0;border-bottom:1px solid var(--border)}
+.tl-item:last-child{border:none}
+.tl-date{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);min-width:80px;flex-shrink:0}
+.tl-event{font-size:13px;color:var(--text);flex:1}
+.tl-actor{font-size:11px;color:var(--dim);min-width:120px;text-align:right;flex-shrink:0}
+.award-box{background:var(--gold-light);border:1px solid #f0d090;border-radius:10px;padding:20px;margin-bottom:16px}
+.award-box .aw-title{font-size:14px;font-weight:700;color:var(--ink);margin-bottom:8px}
+.award-box .aw-notes{font-size:13px;color:var(--dim);line-height:1.6}
+.btn-award{background:var(--green);color:#fff;border:none;padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer}
+.btn-award:hover{background:#15663e}
+.proposal-text{font-size:12px;color:var(--dim);line-height:1.5;max-width:280px}
+</style>
+</head>
+<body>
+<div class="sidebar">
+  <div class="logo-mark">Board<span>IQ</span></div>
+  <div class="logo-sub">Property Intelligence</div>
+  <div class="nav">
+    <div class="nav-label">Intelligence</div>
+    <a href="/dashboard" class="nav-item" style="text-decoration:none">&#9670; &nbsp;Dashboard</a>
+    <div class="nav-label">Bidding</div>
+    <a href="/bidboard" class="nav-item active" style="text-decoration:none">&#8862; &nbsp;BidBoard</a>
+    <div class="nav-label">Tools</div>
+    <a href="/upload" class="nav-item" style="text-decoration:none;color:rgba(255,255,255,.5)">&uarr; &nbsp;Invoice Upload</a>
+  </div>
+</div>
+<div class="topbar">
+  <div class="topbar-logo">Board<span>IQ</span></div>
+  <div class="topbar-right">
+    <span>{{ user_name }}</span>
+    <a href="/login">Sign out &rarr;</a>
+  </div>
+</div>
+<main class="main">
+  <a href="/bidboard" class="back">&larr; Back to BidBoard</a>
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:4px;flex-wrap:wrap">
+    <div class="page-title">{{ project.title }}</div>
+    <span class="bb-status bb-status-{{ project.status }}">{{ project.status|replace('_',' ')|title }}</span>
+  </div>
+  <div class="page-sub">
+    {{ building.address }} &middot; {{ building.get('neighborhood','') }} &middot; {{ building.units }} units
+    &middot; <span class="badge">{{ category_label }}</span>
+    &middot; Created {{ project.created_date }} &middot; Bids due {{ project.bids_due_date }}
+  </div>
+
+  {% if project.status == 'awarded' and project.savings_annual %}
+  <div class="savings-box">
+    <div>
+      <div style="font-size:11px;font-weight:600;color:var(--green);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Competitive Bid Result</div>
+      <div class="sv-main">${{ "{:,.0f}".format(project.savings_annual) }}/yr savings</div>
+      <div class="sv-sub">{{ project.savings_pct }}% reduction from previous contract</div>
+    </div>
+    <div class="sv-detail">
+      <div><strong>Previous:</strong> ${{ "{:,.0f}".format(project.previous_annual) }}/yr (${{ project.previous_per_unit }}/unit)</div>
+      <div><strong>New:</strong> ${{ "{:,.0f}".format(project.bids|selectattr('status','eq','selected')|map(attribute='amount')|first) }}/yr (${{ project.bids|selectattr('status','eq','selected')|map(attribute='per_unit')|first }}/unit)</div>
+      <div><strong>Winner:</strong> {{ project.bids|selectattr('status','eq','selected')|map(attribute='vendor_name')|first }}</div>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if project.award_notes %}
+  <div class="award-box">
+    <div class="aw-title">Award Decision</div>
+    <div class="aw-notes">{{ project.award_notes }}</div>
+  </div>
+  {% endif %}
+
+  <div class="card">
+    <div class="ch">
+      <div><div class="ct">Scope of Work</div></div>
+    </div>
+    <div style="padding:14px 20px;font-size:13px;color:var(--dim);line-height:1.7">{{ project.description }}</div>
+    <ul class="scope-list">
+      {% for item in project.scope_items %}
+      <li>{{ item }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <div class="card">
+    <div class="ch">
+      <div><div class="ct">Bid Comparison</div>
+      <div class="csub">{{ project.bids|selectattr('amount')|list|length }} of {{ project.bids|length }} bids received</div></div>
+    </div>
+    <table class="bt">
+      <thead>
+        <tr>
+          <th>Vendor</th>
+          <th class="r">Bid Amount</th>
+          <th class="r">Per Unit</th>
+          {% if project.previous_annual %}<th class="r">vs. Current</th>{% endif %}
+          <th>Proposal</th>
+          <th>Insurance</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in bids %}
+        <tr class="{{ b.status }}">
+          <td>
+            <div style="font-weight:600;color:var(--ink)">{{ b.company_name }}</div>
+            <div style="font-size:11px;color:var(--muted)">{{ b.years_in_business }} yrs &middot; {{ b.employees }} staff</div>
+            <div style="font-size:10px;color:var(--muted);margin-top:2px">{{ b.certifications|join(', ') }}</div>
+          </td>
+          {% if b.amount %}
+          <td class="mono r" style="font-weight:600">${{ "{:,.0f}".format(b.amount) }}{% if b.contract_term %}<div style="font-size:10px;color:var(--muted);font-weight:400">{{ b.contract_term }}</div>{% endif %}</td>
+          <td class="mono r">${{ "{:,.0f}".format(b.per_unit) }}</td>
+          {% if project.previous_annual %}
+          <td class="mono r" style="color:var(--green)">
+            {% set diff = project.previous_per_unit - b.per_unit %}-${{ "{:,.0f}".format(diff) }}/unit
+          </td>
+          {% endif %}
+          <td><div class="proposal-text">{{ b.proposal_summary[:200] }}{% if b.proposal_summary|length > 200 %}...{% endif %}</div></td>
+          <td>{% if b.insurance_current %}<span class="ins-ok">&#10003; Current</span>{% else %}<span class="ins-no">&#10007; Expired</span>{% endif %}
+            {% if b.gl_limit %}<div style="font-size:10px;color:var(--muted)">${{ b.gl_limit }} GL</div>{% endif %}
+          </td>
+          <td>
+            <span class="bid-status bid-status-{{ b.status }}">{{ b.status|title }}</span>
+            {% if b.response_time_sla %}<div style="font-size:10px;color:var(--muted);margin-top:4px">SLA: {{ b.response_time_sla }}</div>{% endif %}
+            {% if b.estimated_duration %}<div style="font-size:10px;color:var(--muted);margin-top:4px">Duration: {{ b.estimated_duration }}</div>{% endif %}
+            {% if is_admin and project.status == 'bids_received' and b.status == 'pending' and b.amount %}
+            <button class="btn-award" style="margin-top:8px" onclick="awardBid('{{ project.id }}','{{ b.vendor_id }}')">Award &rarr;</button>
+            {% endif %}
+          </td>
+          {% else %}
+          <td class="mono r" style="color:var(--muted)">&mdash;</td>
+          <td class="mono r">&mdash;</td>
+          {% if project.previous_annual %}<td>&mdash;</td>{% endif %}
+          <td style="color:var(--muted);font-style:italic">Awaiting submission</td>
+          <td>{% if b.insurance_current %}<span class="ins-ok">&#10003;</span>{% else %}<span class="ins-no">&#10007; Not on file</span>{% endif %}</td>
+          <td><span class="bid-status bid-status-invited">Invited</span></td>
+          {% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <div class="ch">
+      <div><div class="ct">Timeline</div></div>
+    </div>
+    <div class="tl">
+      {% for t in project.timeline %}
+      <div class="tl-item">
+        <div class="tl-date">{{ t.date[5:] }}</div>
+        <div class="tl-event">{{ t.event }}</div>
+        <div class="tl-actor">{{ t.actor }}</div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</main>
+<script>
+async function awardBid(projectId, vendorId) {
+  if (!confirm('Award this contract to the selected vendor?')) return;
+  const r = await fetch('/api/bidboard/award', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({project_id:projectId, vendor_id:vendorId, notes:''})
+  });
+  const d = await r.json();
+  if (d.ok) location.reload();
+  else alert('Error: '+(d.error||'Unknown'));
+}
+</script>
+</body></html>"""
+
+
 @app.route("/upload")
 @login_required
 def upload_page():
@@ -2377,7 +3273,9 @@ table.vt tr.click:hover td{background:var(--surface2)}
       {% if benchmarks.above_market_count > 0 %}
       <span class="nav-badge">{{ benchmarks.above_market_count }}</span>{% endif %}
     </div>
-    <div class="nav-item">⊞ &nbsp;BidBoard</div>
+    <a href="/bidboard" class="nav-item" style="text-decoration:none;color:rgba(255,255,255,.5)">⊞ &nbsp;BidBoard
+      {% if bidboard_projects %}<span class="nav-badge" style="background:var(--gold);color:#2c2825">{{ bidboard_projects|length }}</span>{% endif %}
+    </a>
     <div class="nav-label">Compliance</div>
     <div class="nav-item">⚑ &nbsp;Compliance Calendar
       <span class="nav-badge">{{ building.compliance_deadlines|selectattr('urgency','eq','HIGH')|list|length }}</span>
@@ -2570,7 +3468,7 @@ table.vt tr.click:hover td{background:var(--surface2)}
           <div class="comp-desc">Network benchmark based on {{ d.network_comps }} comparable NYC buildings.</div>
           <div class="comp-consequence">⚠ {{ d.consequence }}</div>
           <div class="comp-actions">
-            <button class="btn-bid" onclick="event.stopPropagation()">Start BidBoard →</button>
+            <button class="btn-bid" onclick="event.stopPropagation();location.href='/bidboard'">Start BidBoard →</button>
             <button class="btn-out" onclick="event.stopPropagation()">View Requirements</button>
           </div>
         </div>
@@ -2583,6 +3481,59 @@ table.vt tr.click:hover td{background:var(--surface2)}
       </div>
       {% endfor %}
     </div>
+
+    {# ── BIDBOARD ── #}
+    {% if bidboard_projects %}
+    <div class="card full">
+      <div class="ch">
+        <div><div class="ct">BidBoard — Competitive Bids</div>
+        <div class="csub">Transparent vendor bidding for {{ building.address }}</div></div>
+        <a href="/bidboard" class="ca">View All &rarr;</a>
+      </div>
+      {% for bp in bidboard_projects %}
+      <div class="comp-item" style="cursor:pointer" onclick="location.href='/bidboard/{{ bp.id }}'">
+        <div>
+          <div class="comp-urg" style="color:var(--{% if bp.status == 'awarded' %}green{% elif bp.status == 'bids_received' %}yellow{% else %}muted{% endif %})">
+            <div class="comp-dot" style="background:var(--{% if bp.status == 'awarded' %}green{% elif bp.status == 'bids_received' %}yellow{% else %}muted{% endif %})"></div>
+            {{ bp.status | replace('_',' ') | title }}
+            {% if bp.status == 'bids_received' %} &middot; Due {{ bp.bids_due_date }}{% endif %}
+          </div>
+          <div class="comp-law">{{ bp.title }}</div>
+          <div class="comp-desc" style="margin-top:4px">
+            {{ bp.bids | selectattr('amount') | list | length }} of {{ bp.bids|length }} bids received
+            {% if bp.awarded_vendor_id %} &middot; Awarded to
+              {{ bp.bids | selectattr('vendor_id', 'eq', bp.awarded_vendor_id) | map(attribute='vendor_name') | first }}
+            {% endif %}
+          </div>
+          {% if bp.savings_annual %}
+          <div style="margin-top:6px">
+            <span style="display:inline-block;font-size:11px;font-weight:600;padding:3px 10px;border-radius:12px;background:var(--green-light);color:var(--green);border:1px solid var(--green-border)">Saved ${{ "{:,.0f}".format(bp.savings_annual) }}/yr ({{ bp.savings_pct }}%)</span>
+          </div>
+          {% endif %}
+        </div>
+        <div class="comp-cost-box">
+          {% if bp.awarded_vendor_id %}
+            {% set winner = bp.bids | selectattr('vendor_id', 'eq', bp.awarded_vendor_id) | first %}
+            <div class="comp-cost-lbl">Awarded Amount</div>
+            <div class="comp-cost-range">${{ "{:,.0f}".format(winner.amount) }}/yr</div>
+            {% if bp.previous_annual %}
+            <div class="comp-cost-src">Was ${{ "{:,.0f}".format(bp.previous_annual) }}/yr</div>
+            {% endif %}
+          {% else %}
+            {% set submitted = bp.bids | selectattr('amount') | list %}
+            <div class="comp-cost-lbl">Bid Range</div>
+            {% if submitted %}
+            <div class="comp-cost-range">${{ "{:,.0f}".format(submitted | map(attribute='amount') | min) }}&ndash;${{ "{:,.0f}".format(submitted | map(attribute='amount') | max) }}</div>
+            {% else %}
+            <div class="comp-cost-range">Pending</div>
+            {% endif %}
+            <div class="comp-due">Due {{ bp.bids_due_date }}</div>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
 
     {# ── BUILDING RECORD ── #}
     <div class="card full">
@@ -2669,7 +3620,7 @@ function openPanel(type, idx) {
       <div class="action-box">
         <div class="action-title">Take Action</div>
         <div class="action-desc">Initiate a competitive bid through BidBoard. Your managing agent will be notified and compensated for executing the process.</div>
-        <button class="btn-full">Start BidBoard Rebid Process →</button>
+        <button class="btn-full" onclick="location.href='/bidboard'">Start BidBoard Rebid Process →</button>
         <button class="btn-full-out">Send Analysis to Managing Agent</button>
       </div>` : `
       <div style="background:var(--green-light);border:1px solid var(--green-border);border-radius:6px;padding:14px;margin-top:16px;font-size:13px;color:var(--green)">
@@ -2836,7 +3787,7 @@ function openPanel(type, idx) {
       <div class="action-box">
         <div class="action-title">Get Competitive Bids via BidBoard</div>
         <div class="action-desc">A pre-filled scope of work will be generated based on your building profile. Qualified, pre-vetted vendors from the network will be invited to submit competitive bids. Your managing agent handles coordination.</div>
-        <button class="btn-full">Start BidBoard — ${d.law.split(/[-—]/)[0].trim()} →</button>
+        <button class="btn-full" onclick="location.href='/bidboard'">Start BidBoard — ${d.law.split(/[-—]/)[0].trim()} →</button>
         <button class="btn-full-out">Notify Managing Agent</button>
       </div>`;
   }
@@ -3223,6 +4174,21 @@ def vendor_dashboard():
     total_annual = sum(w["annual_value"] for w in current_work)
     total_units_served = sum(w["units"] for w in current_work)
 
+    # Bid project invitations
+    vendor_bid_projects = get_bidboard_projects_for_vendor(vid)
+    enriched_vendor_bids = []
+    for bp in vendor_bid_projects:
+        bldg = BUILDINGS_DB.get(bp["building_bbl"], {})
+        my_bid = next((b for b in bp["bids"] if b["vendor_id"] == vid), None)
+        enriched_vendor_bids.append({
+            **bp,
+            "building_address": bldg.get("address", "Unknown"),
+            "building_units": bldg.get("units", 0),
+            "my_bid_submitted": my_bid and my_bid.get("amount") is not None,
+            "my_bid_amount": my_bid.get("amount") if my_bid else None,
+            "my_bid_date": my_bid.get("submitted_date") if my_bid else None,
+        })
+
     return render_template_string(VENDOR_DASHBOARD_HTML,
         profile=profile,
         current_work=current_work,
@@ -3233,6 +4199,7 @@ def vendor_dashboard():
         user_name=session.get("user_name"),
         category_labels=CATEGORY_LABELS,
         all_categories=ALL_CATEGORIES,
+        vendor_bid_projects=enriched_vendor_bids,
     )
 
 @app.route("/vendor/save-profile", methods=["POST"])
@@ -3485,6 +4452,13 @@ VENDOR_DASHBOARD_HTML = """<!DOCTYPE html>
       <span style="margin-left:auto;background:var(--green);color:white;font-size:10px;
         font-weight:700;padding:2px 7px;border-radius:10px;">{{ opportunities|length }}</span>
     </a>
+    {% if vendor_bid_projects %}
+    <a class="sidebar-item" href="#" onclick="showTab('bid_requests')">
+      <span class="icon">📋</span> Bid Requests
+      <span style="margin-left:auto;background:#F59E0B;color:#0A2342;font-size:10px;
+        font-weight:700;padding:2px 7px;border-radius:10px;">{{ vendor_bid_projects|length }}</span>
+    </a>
+    {% endif %}
     <a class="sidebar-item" href="#" onclick="showTab('current')">
       <span class="icon">🏢</span> My Buildings
       <span style="margin-left:auto;background:var(--navy-light);color:white;font-size:10px;
@@ -3745,6 +4719,71 @@ VENDOR_DASHBOARD_HTML = """<!DOCTYPE html>
     }
   }
   </script>
+
+  <!-- ── BID REQUESTS TAB ──────────────────────────────────────────── -->
+  <div id="tab-bid_requests" class="tab-section">
+    <h2 style="font-size:20px;font-weight:800;color:#0A2342;margin-bottom:20px;">Bid Requests</h2>
+    {% if vendor_bid_projects %}
+    {% for bp in vendor_bid_projects %}
+    <div class="card" style="padding:20px;border-left:4px solid #F59E0B;margin-bottom:16px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
+        <div>
+          <span style="display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;background:#fffbeb;color:#F59E0B;border:1px solid #fde68a">BID REQUEST</span>
+          <div style="font-size:16px;font-weight:700;color:#0A2342;margin-top:6px;">{{ bp.title }}</div>
+          <div style="font-size:13px;color:#94A3B8;margin-top:2px;">
+            {{ bp.building_address }} &middot; {{ bp.building_units }} units &middot; Due {{ bp.bids_due_date }}
+          </div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:11px;color:#94A3B8;text-transform:uppercase;letter-spacing:1px;">Status</div>
+          <div style="font-size:14px;font-weight:700;color:{% if bp.my_bid_submitted %}#00A550{% else %}#F59E0B{% endif %};">
+            {{ 'Bid Submitted' if bp.my_bid_submitted else 'Awaiting Your Bid' }}
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:12px;font-size:13px;color:#1E293B;line-height:1.6;">{{ bp.description[:250] }}{% if bp.description|length > 250 %}...{% endif %}</div>
+      {% if bp.scope_items %}
+      <ul style="margin-top:10px;padding-left:18px;font-size:12px;color:#64748B;line-height:1.8;">
+        {% for item in bp.scope_items[:4] %}
+        <li>{{ item }}</li>
+        {% endfor %}
+        {% if bp.scope_items|length > 4 %}<li style="color:#94A3B8">+ {{ bp.scope_items|length - 4 }} more items</li>{% endif %}
+      </ul>
+      {% endif %}
+      {% if bp.my_bid_submitted %}
+      <div style="margin-top:14px;background:#f0faf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px;font-size:13px;color:#166534;">
+        &#10003; Your bid of ${{ '{:,.0f}'.format(bp.my_bid_amount) }} was submitted on {{ bp.my_bid_date }}
+      </div>
+      {% else %}
+      <div style="margin-top:14px;background:#F4F6F8;border-radius:8px;padding:16px;">
+        <div style="font-size:13px;font-weight:700;color:#0A2342;margin-bottom:10px;">Submit Your Bid</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div>
+            <label style="font-size:11px;font-weight:600;color:#64748B;text-transform:uppercase;letter-spacing:.5px">Bid Amount ($)</label>
+            <input type="number" id="bid-amt-{{ bp.id }}" style="width:100%;padding:8px 10px;border:1px solid #E8ECF0;border-radius:6px;font-size:13px;margin-top:4px" placeholder="e.g. 54000">
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:600;color:#64748B;text-transform:uppercase;letter-spacing:.5px">Contract Term</label>
+            <input type="text" id="bid-term-{{ bp.id }}" style="width:100%;padding:8px 10px;border:1px solid #E8ECF0;border-radius:6px;font-size:13px;margin-top:4px" placeholder="e.g. 3 years">
+          </div>
+        </div>
+        <div style="margin-top:10px;">
+          <label style="font-size:11px;font-weight:600;color:#64748B;text-transform:uppercase;letter-spacing:.5px">Proposal Summary</label>
+          <textarea id="bid-proposal-{{ bp.id }}" rows="3" style="width:100%;padding:8px 10px;border:1px solid #E8ECF0;border-radius:6px;font-size:13px;margin-top:4px;resize:vertical" placeholder="Describe your approach, qualifications, and SLA..."></textarea>
+        </div>
+        <button onclick="submitBid('{{ bp.id }}')" style="margin-top:12px;background:#00A550;color:white;border:none;padding:9px 20px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer">Submit Bid &rarr;</button>
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="card" style="text-align:center;color:#94A3B8;padding:48px;">
+      <div style="font-size:40px;margin-bottom:12px;">📋</div>
+      <div style="font-size:16px;font-weight:600;">No active bid requests</div>
+      <div style="font-size:13px;margin-top:6px;">When management companies invite you to bid, requests will appear here.</div>
+    </div>
+    {% endif %}
+  </div>
 
   <!-- ── CURRENT BUILDINGS TAB ─────────────────────────────────────── -->
   <div id="tab-current" class="tab-section">
@@ -4065,6 +5104,23 @@ function showTab(name) {
   const section = document.getElementById('tab-' + name);
   if (section) section.classList.add('active');
   event.target.closest('.sidebar-item')?.classList.add('active');
+}
+
+// ── Submit bid ──────────────────────────────────────────────────────────────
+async function submitBid(projectId) {
+  const amount = document.getElementById('bid-amt-' + projectId)?.value;
+  const proposal = document.getElementById('bid-proposal-' + projectId)?.value || '';
+  if (!amount) { alert('Please enter a bid amount.'); return; }
+  try {
+    const r = await fetch('/api/bidboard/submit-bid', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ project_id: projectId, amount: parseFloat(amount), proposal_summary: proposal })
+    });
+    const d = await r.json();
+    if (d.ok) { alert('Bid submitted successfully!'); location.reload(); }
+    else { alert('Error: ' + (d.error || 'Unknown error')); }
+  } catch(e) { alert('Network error: ' + e.message); }
 }
 
 // ── Save profile ──────────────────────────────────────────────────────────
