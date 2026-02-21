@@ -236,6 +236,46 @@ BUILDINGS_DB = {
                 "cost_high": 28000,
                 "network_comps": 23,
             },
+            {
+                "law": "Local Law 97 — Carbon Emissions",
+                "due_date": "Dec 2026",
+                "months_away": 10,
+                "urgency": "HIGH",
+                "consequence": "Est. $42,000/yr penalty at current emissions",
+                "cost_low": 22000,
+                "cost_high": 48000,
+                "network_comps": 31,
+            },
+            {
+                "law": "Local Law 87 — Energy Audit",
+                "due_date": "Dec 2027",
+                "months_away": 22,
+                "urgency": "LOW",
+                "consequence": "$3,000 year one, $5,000/yr thereafter",
+                "cost_low": 8000,
+                "cost_high": 16000,
+                "network_comps": 41,
+            },
+            {
+                "law": "Elevator Annual Inspection",
+                "due_date": "May 2026",
+                "months_away": 3,
+                "urgency": "HIGH",
+                "consequence": "Mandatory shutdown until re-inspected",
+                "cost_low": 800,
+                "cost_high": 1400,
+                "network_comps": 89,
+            },
+            {
+                "law": "Local Law 26 — Fire Safety / Sprinkler",
+                "due_date": "Jul 2027",
+                "months_away": 17,
+                "urgency": "MEDIUM",
+                "consequence": "DOB violations + Class 1 misdemeanor if non-compliant",
+                "cost_low": 45000,
+                "cost_high": 120000,
+                "network_comps": 18,
+            },
         ],
         "vendor_data": [
             {"vendor": "Otis Elevator Company", "category": "ELEVATOR_MAINTENANCE",
@@ -635,14 +675,13 @@ def ensure_building_data(building):
         ll11_month = rng(1, 12)
         ll11_months_out = (ll11_year - now_year) * 12 + (ll11_month - now_month)
         deadlines.append({
-            "law": "Local Law 11",
-            "description": "FISP Facade Inspection",
+            "law": "Local Law 11 — FISP Facade Inspection",
             "due_date": f"{['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][ll11_month-1]} {ll11_year}",
-            "months_out": ll11_months_out,
+            "months_away": max(ll11_months_out, 1),
             "urgency": "HIGH" if ll11_months_out <= 12 else ("MEDIUM" if ll11_months_out <= 24 else "LOW"),
-            "estimated_cost_low": 14000 if floors > 6 else 6000,
-            "estimated_cost_high": 45000 if floors > 6 else 18000,
-            "cost_basis": f"Based on {floors}-story {('pre-war ' if is_prewar else '')}building",
+            "cost_low": 14000 if floors > 6 else 6000,
+            "cost_high": 45000 if floors > 6 else 18000,
+            "network_comps": 23,
             "consequence": "DOB violations + fines from $1,000/month",
         })
 
@@ -651,14 +690,13 @@ def ensure_building_data(building):
             ll97_year = now_year + rng(1, 3)
             ll97_months = (ll97_year - now_year) * 12 + rng(1, 6)
             deadlines.append({
-                "law": "Local Law 97",
-                "description": "Carbon Emissions Compliance",
+                "law": "Local Law 97 — Carbon Emissions",
                 "due_date": f"Dec {ll97_year}",
-                "months_out": ll97_months,
+                "months_away": max(ll97_months, 1),
                 "urgency": "HIGH" if ll97_months <= 12 else "MEDIUM",
-                "estimated_cost_low": 18000,
-                "estimated_cost_high": 55000,
-                "cost_basis": f"Based on {units}-unit building energy profile",
+                "cost_low": 18000,
+                "cost_high": 55000,
+                "network_comps": 31,
                 "consequence": f"Est. ${rng(15,50)*1000:,}/yr penalty at current emissions",
             })
 
@@ -666,14 +704,13 @@ def ensure_building_data(building):
         ll87_year = now_year + rng(0, 9)
         ll87_months = (ll87_year - now_year) * 12 + rng(1, 12)
         deadlines.append({
-            "law": "Local Law 87",
-            "description": "Energy Audit & Retro-Commissioning",
+            "law": "Local Law 87 — Energy Audit",
             "due_date": f"Dec {ll87_year}",
-            "months_out": ll87_months,
+            "months_away": max(ll87_months, 1),
             "urgency": "HIGH" if ll87_months <= 6 else ("MEDIUM" if ll87_months <= 18 else "LOW"),
-            "estimated_cost_low": 8000,
-            "estimated_cost_high": 16000,
-            "cost_basis": "Based on 41 comparable filings",
+            "cost_low": 8000,
+            "cost_high": 16000,
+            "network_comps": 41,
             "consequence": "$3,000 year one, $5,000/yr thereafter",
         })
 
@@ -682,13 +719,12 @@ def ensure_building_data(building):
             elev_months = rng(2, 14)
             deadlines.append({
                 "law": "Elevator Annual Inspection",
-                "description": "DOB Elevator Inspection & Test",
                 "due_date": f"{['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][(now_month + elev_months - 1) % 12]} {now_year + (now_month + elev_months - 1) // 12}",
-                "months_out": elev_months,
+                "months_away": max(elev_months, 1),
                 "urgency": "HIGH" if elev_months <= 3 else "MEDIUM",
-                "estimated_cost_low": 800,
-                "estimated_cost_high": 1400,
-                "cost_basis": "Based on 89 comparable filings",
+                "cost_low": 800,
+                "cost_high": 1400,
+                "network_comps": 89,
                 "consequence": "Mandatory shutdown until re-inspected",
             })
 
