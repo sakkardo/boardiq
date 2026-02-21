@@ -32,6 +32,7 @@ from flask import (Flask, render_template_string, request, jsonify,
                    session, redirect, url_for, flash)
 from invoice_pipeline import InvoiceProcessor, create_sample_csv, CATEGORIES
 from benchmarking_engine import benchmark_building, NETWORK_BENCHMARKS
+import db as boardiq_db
 
 app = Flask(__name__)
 app.secret_key = "boardiq-dev-key-change-in-production"
@@ -53,11 +54,22 @@ def _load_century_buildings():
 
 CENTURY_BUILDINGS = _load_century_buildings()
 
-# ── Vendor data persistence ───────────────────────────────────────────────────
+# ── Vendor data persistence (PostgreSQL with JSON file fallback) ─────────────
 _VENDOR_DATA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "vendor_data.json")
 
 def _load_persisted_vendor_data():
-    """Load committed vendor data from disk and apply to BUILDINGS_DB."""
+    """Load committed vendor data from DB (or JSON fallback) and apply to BUILDINGS_DB."""
+    # Try PostgreSQL first
+    db_data = boardiq_db.load_all_vendor_data()
+    if db_data:
+        count = 0
+        for bbl, vendor_list in db_data.items():
+            if bbl in BUILDINGS_DB:
+                BUILDINGS_DB[bbl]["vendor_data"] = vendor_list
+                count += 1
+        print(f"[BoardIQ] Loaded persisted vendor data for {count} buildings from PostgreSQL")
+        return
+    # Fallback to JSON file
     try:
         if os.path.exists(_VENDOR_DATA_PATH):
             with open(_VENDOR_DATA_PATH, "r") as f:
@@ -67,12 +79,15 @@ def _load_persisted_vendor_data():
                 if bbl in BUILDINGS_DB:
                     BUILDINGS_DB[bbl]["vendor_data"] = vendor_list
                     count += 1
-            print(f"[BoardIQ] Loaded persisted vendor data for {count} buildings")
+            print(f"[BoardIQ] Loaded persisted vendor data for {count} buildings from JSON file")
     except Exception as e:
         print(f"[BoardIQ] Warning: Could not load vendor_data.json: {e}")
 
 def _save_vendor_data():
-    """Persist all building vendor_data to disk."""
+    """Persist all building vendor_data to DB (and JSON fallback)."""
+    # Save to PostgreSQL
+    boardiq_db.save_all_vendor_data(BUILDINGS_DB)
+    # Also save to JSON as fallback
     try:
         to_save = {}
         for bbl, building in BUILDINGS_DB.items():
@@ -80,9 +95,14 @@ def _save_vendor_data():
                 to_save[bbl] = building["vendor_data"]
         with open(_VENDOR_DATA_PATH, "w") as f:
             json.dump(to_save, f)
-        print(f"[BoardIQ] Saved vendor data for {len(to_save)} buildings")
-    except Exception as e:
-        print(f"[BoardIQ] Warning: Could not save vendor_data.json: {e}")
+    except Exception:
+        pass
+
+def _save_building_vendor_data(bbl):
+    """Persist vendor_data for a single building to DB."""
+    building = BUILDINGS_DB.get(bbl)
+    if building:
+        boardiq_db.save_building_vendor_data(bbl, building.get("vendor_data", []))
 
 # ── In-memory database (swap for PostgreSQL in production) ───────────────────
 BUILDINGS_DB = {
@@ -342,7 +362,8 @@ BUILDINGS_DB = {
 # ── Merge Century buildings into main DB ─────────────────────────────────────
 BUILDINGS_DB.update(CENTURY_BUILDINGS)
 
-# ── Load any previously committed vendor data from disk ──────────────────────
+# ── Initialize database and load persisted data ─────────────────────────────
+_db_available = boardiq_db.init_db()
 _load_persisted_vendor_data()
 
 # ── Auth (simple demo auth — swap for real auth in production) ───────────────
@@ -460,6 +481,20 @@ VENDOR_PROFILES = {
         ],
     },
 }
+
+# ── Load vendor profiles from DB (merge over defaults, DB wins) ──────────────
+_db_profiles = boardiq_db.load_all_vendor_profiles()
+if _db_profiles:
+    VENDOR_PROFILES.update(_db_profiles)
+elif _db_available:
+    # First deploy: seed DB with the hardcoded demo profiles
+    boardiq_db.save_all_vendor_profiles(VENDOR_PROFILES)
+    print("[BoardIQ] Seeded vendor profiles into PostgreSQL")
+
+# Also seed vendor_data into DB on first deploy if DB is empty
+if _db_available and not _db_profiles:
+    boardiq_db.save_all_vendor_data(BUILDINGS_DB)
+    print("[BoardIQ] Seeded building vendor data into PostgreSQL")
 
 # Map: management company name → list of building BBLs
 MANAGEMENT_CO_BUILDINGS = {
@@ -3031,6 +3066,7 @@ def vendor_save_profile():
     p["service_areas"] = [x.strip() for x in request.form.get("service_areas", "").split(",") if x.strip()]
     p["categories"] = request.form.getlist("categories")
     p["certifications"] = [x.strip() for x in request.form.get("certifications", "").split("\n") if x.strip()]
+    boardiq_db.save_vendor_profile(vid, VENDOR_PROFILES[vid])
     return jsonify({"ok": True, "message": "Profile saved."})
 
 @app.route("/vendor/save-insurance", methods=["POST"])
@@ -3050,6 +3086,7 @@ def vendor_save_insurance():
         "additional_insured": request.form.get("additional_insured") == "on",
         "certificate_on_file": request.form.get("certificate_on_file") == "on",
     }
+    boardiq_db.save_vendor_profile(vid, VENDOR_PROFILES[vid])
     return jsonify({"ok": True, "message": "Insurance info saved."})
 
 @app.route("/vendor/save-pricing", methods=["POST"])
@@ -3060,6 +3097,7 @@ def vendor_save_pricing():
         VENDOR_PROFILES[vid] = {}
     data = request.get_json()
     VENDOR_PROFILES[vid]["pricing"] = data.get("pricing", [])
+    boardiq_db.save_vendor_profile(vid, VENDOR_PROFILES[vid])
     return jsonify({"ok": True, "message": "Pricing saved."})
 
 
@@ -3955,6 +3993,20 @@ if __name__ == "__main__":
 
 # In-memory vendor registry (keyed by email). In production: database.
 VENDOR_REGISTRY = {}  # email -> {vendor_id, password, profile, subscribed, sub_expires}
+# Load registered vendors from DB
+_db_registry = boardiq_db.load_all_vendor_registry()
+if _db_registry:
+    VENDOR_REGISTRY.update(_db_registry)
+    # Also add to DEMO_USERS so login works for DB-registered vendors
+    for _email, _entry in _db_registry.items():
+        if _email not in DEMO_USERS:
+            DEMO_USERS[_email] = {
+                "password": _entry.get("password", ""),
+                "name": VENDOR_PROFILES.get(_entry.get("vendor_id", ""), {}).get("company_name", _email),
+                "role": "vendor",
+                "vendor_id": _entry.get("vendor_id", ""),
+                "buildings": [],
+            }
 
 VENDOR_ANNUAL_FEE = 250  # USD
 
@@ -4023,6 +4075,8 @@ def vendor_register():
             }
             VENDOR_PROFILES[vid] = profile
             VENDOR_REGISTRY[email] = {"vendor_id": vid, "password": password}
+            boardiq_db.save_vendor_profile(vid, profile)
+            boardiq_db.save_vendor_registry_entry(email, VENDOR_REGISTRY[email])
             # Also add to DEMO_USERS so login works
             DEMO_USERS[email] = {
                 "password": password,
@@ -4053,6 +4107,7 @@ def vendor_subscribe():
         exp = date(today.year + 1, today.month, today.day)
         VENDOR_PROFILES[vid]["subscribed"] = True
         VENDOR_PROFILES[vid]["subscription_expires"] = exp.strftime("%Y-%m-%d")
+        boardiq_db.save_vendor_profile(vid, VENDOR_PROFILES[vid])
         return jsonify({"ok": True, "expires": exp.strftime("%B %d, %Y")})
     return jsonify({"ok": False}), 400
 
