@@ -468,6 +468,9 @@ VENDOR_PROFILES = {
             {"building": "120 W 72nd St", "contact": "Margaret Chen", "years": 5},
             {"building": "740 Park Ave", "contact": "Board Office", "years": 3},
         ],
+        "subscribed": True,
+        "subscription_expires": "2027-02-21",
+        "registered_date": "2025-06-15",
     },
     "v002": {
         "vendor_id": "v002",
@@ -536,6 +539,305 @@ VENDOR_PROFILES = {
         ],
     },
 }
+
+VENDOR_ANNUAL_FEE = 250  # USD
+
+# ── Vendor Bids / Pipeline ───────────────────────────────────────────────────
+VENDOR_BIDS = {
+    "b001": {
+        "bid_id": "b001", "vendor_id": "v001", "building_bbl": "bbl_1009270001",
+        "status": "under_review",
+        "categories": ["ELEVATOR_MAINTENANCE"],
+        "proposed_annual": 54000,
+        "proposal_notes": "Full-service maintenance contract for 2 elevators. Includes 24/7 emergency coverage, monthly inspections, and priority parts replacement.",
+        "created_date": "2026-01-15", "updated_date": "2026-02-10",
+        "mgmt_viewed": True, "mgmt_response": "Board reviewing at next meeting",
+    },
+    "b002": {
+        "bid_id": "b002", "vendor_id": "v001", "building_bbl": "bbl_1012660001",
+        "status": "proposal_sent",
+        "categories": ["ELEVATOR_MAINTENANCE"],
+        "proposed_annual": 38400,
+        "proposal_notes": "Preventive maintenance program for single elevator. Monthly service visits with comprehensive reporting.",
+        "created_date": "2026-02-05", "updated_date": "2026-02-05",
+        "mgmt_viewed": False, "mgmt_response": "",
+    },
+    "b003": {
+        "bid_id": "b003", "vendor_id": "v001", "building_bbl": "bbl_1009380001",
+        "status": "won",
+        "categories": ["ELEVATOR_MAINTENANCE"],
+        "proposed_annual": 42000,
+        "proposal_notes": "Comprehensive maintenance agreement. Awarded after competitive review.",
+        "created_date": "2025-11-20", "updated_date": "2026-01-05",
+        "mgmt_viewed": True, "mgmt_response": "Contract awarded effective Feb 1, 2026",
+    },
+    "b004": {
+        "bid_id": "b004", "vendor_id": "v001", "building_bbl": "bbl_1009430001",
+        "status": "interested",
+        "categories": ["ELEVATOR_MAINTENANCE"],
+        "proposed_annual": 0,
+        "proposal_notes": "",
+        "created_date": "2026-02-18", "updated_date": "2026-02-18",
+        "mgmt_viewed": False, "mgmt_response": "",
+    },
+    "b005": {
+        "bid_id": "b005", "vendor_id": "v002", "building_bbl": "bbl_1012660001",
+        "status": "proposal_sent",
+        "categories": ["CLEANING", "PORTER_SERVICES"],
+        "proposed_annual": 72000,
+        "proposal_notes": "Daily porter service plus bi-weekly deep cleaning of common areas. Includes supplies.",
+        "created_date": "2026-02-01", "updated_date": "2026-02-01",
+        "mgmt_viewed": True, "mgmt_response": "",
+    },
+    "b006": {
+        "bid_id": "b006", "vendor_id": "v002", "building_bbl": "bbl_1009380001",
+        "status": "lost",
+        "categories": ["CLEANING"],
+        "proposed_annual": 48000,
+        "proposal_notes": "Cleaning services proposal for common areas.",
+        "created_date": "2025-12-10", "updated_date": "2026-01-20",
+        "mgmt_viewed": True, "mgmt_response": "Went with incumbent vendor. Will reconsider at renewal.",
+    },
+    "b007": {
+        "bid_id": "b007", "vendor_id": "v003", "building_bbl": "bbl_1009380001",
+        "status": "interested",
+        "categories": ["EXTERMINATING"],
+        "proposed_annual": 0,
+        "proposal_notes": "",
+        "created_date": "2026-02-19", "updated_date": "2026-02-19",
+        "mgmt_viewed": False, "mgmt_response": "",
+    },
+    "b008": {
+        "bid_id": "b008", "vendor_id": "v003", "building_bbl": "bbl_1009430001",
+        "status": "won",
+        "categories": ["EXTERMINATING"],
+        "proposed_annual": 4200,
+        "proposal_notes": "Monthly IPM treatment for common areas and targeted unit treatments as needed.",
+        "created_date": "2025-10-01", "updated_date": "2025-12-15",
+        "mgmt_viewed": True, "mgmt_response": "Approved. Start date Jan 1.",
+    },
+}
+
+def _next_bid_id():
+    existing = [int(k[1:]) for k in VENDOR_BIDS if k.startswith("b") and k[1:].isdigit()]
+    return f"b{(max(existing) + 1) if existing else 1:03d}"
+
+def _get_vendor_bids(vendor_id):
+    return [b for b in VENDOR_BIDS.values() if b["vendor_id"] == vendor_id]
+
+def _get_bids_for_building(bbl):
+    return [b for b in VENDOR_BIDS.values() if b["building_bbl"] == bbl]
+
+# ── Building Contracts ────────────────────────────────────────────────────────
+BUILDING_CONTRACTS = {
+    "c001": {
+        "contract_id": "c001",
+        "building_bbl": "bbl_1009270001",
+        "vendor_name": "PS Marcato Elevator Company",
+        "category": "ELEVATOR_MAINTENANCE",
+        "service_description": "Full-service elevator maintenance for 2 passenger elevators including monthly inspections, 24/7 emergency callback service, annual load testing, and door operator adjustments. Covers all labor and standard parts replacement.",
+        "annual_value": 23369,
+        "start_date": "2023-06-01",
+        "end_date": "2026-05-31",
+        "term_years": 3,
+        "auto_renew": True,
+        "cancellation_notice_days": 90,
+        "status": "expiring_soon",
+        "key_terms": [
+            "24/7 emergency callback within 2 hours",
+            "Monthly preventive maintenance inspections",
+            "Annual load testing and safety certification",
+            "Standard parts replacement included",
+            "Overtime callback billed at 1.5x rate",
+            "90-day written cancellation notice required",
+        ],
+        "document_status": "on_file",
+        "document_filename": "marcato_elevator_maintenance_2023.pdf",
+        "uploaded_by": "management",
+        "upload_date": "2024-01-15",
+        "vendor_id": None,
+        "notes": "Renewed in 2023 after competitive bid process. Board satisfied with response times. Consider rebid — contract expires May 2026.",
+        "ai_summary": "3-year full-service maintenance agreement covering 2 passenger elevators at 130 East 18th Street. Includes monthly inspections, 24/7 emergency service with 2-hour response guarantee, annual safety certifications, and standard parts. Overtime callbacks billed at 1.5x. Auto-renews unless 90-day written notice provided. Current annual cost of $23,369 ($81/unit) is below network median of $97/unit — favorable pricing. Contract expires May 31, 2026 — initiate renewal or rebid process by March 2026.",
+        "alerts": [
+            {"type": "expiring", "message": "Expires May 31, 2026 — 3 months remaining. Send cancellation notice by Mar 2 if rebidding.", "urgency": "HIGH"},
+        ],
+        "request_date": None,
+    },
+    "c002": {
+        "contract_id": "c002",
+        "building_bbl": "bbl_1009270001",
+        "vendor_name": "Dial-A-Bug Pest Control",
+        "category": "EXTERMINATING",
+        "service_description": "Integrated Pest Management (IPM) program for all common areas, basement, compactor room, and laundry facilities. Monthly treatments with quarterly comprehensive inspections. Individual unit treatments on request.",
+        "annual_value": 29749,
+        "start_date": "2024-03-01",
+        "end_date": "2026-05-31",
+        "term_years": 2,
+        "auto_renew": False,
+        "cancellation_notice_days": 60,
+        "status": "expiring_soon",
+        "key_terms": [
+            "Monthly IPM treatments — common areas and basement",
+            "Quarterly comprehensive building inspections",
+            "Individual unit treatments within 48 hours of request",
+            "EPA-approved products only — green-certified program",
+            "Monthly activity reports to management",
+            "No auto-renewal — requires new agreement",
+        ],
+        "document_status": "on_file",
+        "document_filename": "dialabug_ipm_contract_2024.pdf",
+        "uploaded_by": "management",
+        "upload_date": "2024-03-10",
+        "vendor_id": None,
+        "notes": "Switched from previous vendor in 2024. Good results — cockroach complaints down 70%. No auto-renew, so must negotiate new contract before June.",
+        "ai_summary": "2-year IPM contract covering monthly treatments for common areas, quarterly full-building inspections, and on-demand unit treatments within 48 hours. Uses EPA-approved green products. Annual cost of $29,749 ($104/unit) is at network median for pest control — market-rate pricing. No auto-renewal — new agreement needed by May 31, 2026. Vendor performance has been strong with 70% reduction in pest complaints. Recommend early renewal negotiation.",
+        "alerts": [
+            {"type": "expiring", "message": "Expires May 31, 2026 — no auto-renewal. Begin negotiations immediately.", "urgency": "HIGH"},
+            {"type": "info", "message": "No auto-renewal clause — new contract must be signed before expiry.", "urgency": "MEDIUM"},
+        ],
+        "request_date": None,
+    },
+    "c003": {
+        "contract_id": "c003",
+        "building_bbl": "bbl_1009270001",
+        "vendor_name": "Simon Industries, LLC",
+        "category": "HVAC_MAINTENANCE",
+        "service_description": "Heating, ventilation, and air conditioning maintenance for central boiler system, rooftop cooling units, and common area ventilation. Includes seasonal start-up/shutdown, emergency repairs, and refrigerant management.",
+        "annual_value": 44156,
+        "start_date": "2023-01-01",
+        "end_date": "2026-08-31",
+        "term_years": 3,
+        "auto_renew": True,
+        "cancellation_notice_days": 60,
+        "status": "active",
+        "key_terms": [
+            "Seasonal boiler start-up and shutdown service",
+            "Quarterly filter replacement — all common area units",
+            "Emergency repairs within 4 hours during heating season",
+            "Annual refrigerant leak testing and compliance",
+            "Rooftop unit maintenance — 2 visits per year",
+            "Parts over $500 require management pre-approval",
+        ],
+        "document_status": "missing",
+        "document_filename": None,
+        "uploaded_by": None,
+        "upload_date": None,
+        "vendor_id": None,
+        "notes": "Contract is active but management does not have a copy on file. Original signed by previous property manager. Need to request copy from vendor.",
+        "ai_summary": "Unable to generate full analysis — contract document not on file. Based on vendor records: 3-year HVAC maintenance agreement at $44,156/year ($154/unit). This is above the network median of $128/unit — potential overspend of $7,456/year. Recommend obtaining contract document to review terms and assess competitive bid options.",
+        "alerts": [
+            {"type": "missing_doc", "message": "Contract document not on file — request from vendor or upload a copy.", "urgency": "HIGH"},
+            {"type": "overspend", "message": "HVAC cost $154/unit is 20% above network median of $128/unit.", "urgency": "MEDIUM"},
+        ],
+        "request_date": None,
+    },
+    "c004": {
+        "contract_id": "c004",
+        "building_bbl": "bbl_1009270001",
+        "vendor_name": "Elevated Outdoors / Ariston Flowers",
+        "category": "LANDSCAPING",
+        "service_description": "Full landscaping and grounds maintenance including seasonal plantings, irrigation system management, courtyard and rooftop garden maintenance, snow removal for walkways, and holiday decoration installation.",
+        "annual_value": 47883,
+        "start_date": "2024-04-01",
+        "end_date": "2026-10-31",
+        "term_years": 2,
+        "auto_renew": True,
+        "cancellation_notice_days": 30,
+        "status": "active",
+        "key_terms": [
+            "Weekly grounds maintenance April–October",
+            "Seasonal plantings — spring and fall rotations",
+            "Irrigation system start-up, monitoring, and winterization",
+            "Snow removal for building walkways within 4 hours of accumulation",
+            "Holiday decoration installation and removal (Dec–Jan)",
+            "30-day cancellation notice — auto-renews annually",
+        ],
+        "document_status": "vendor_uploaded",
+        "document_filename": "ariston_landscaping_agreement_2024.pdf",
+        "uploaded_by": "vendor",
+        "upload_date": "2024-04-05",
+        "vendor_id": None,
+        "notes": "Vendor uploaded the signed contract after management requested it. Good quality work — courtyard has received positive feedback from residents. Pricing competitive.",
+        "ai_summary": "2-year landscaping agreement covering weekly grounds maintenance (seasonal), irrigation management, snow removal, and holiday decorations. Annual cost of $47,883 ($167/unit) is slightly above network median of $142/unit but includes comprehensive scope (snow removal + holiday decorations add ~$8,000/year). Excluding those services, core landscaping cost is competitive. Auto-renews annually with 30-day notice. Vendor provided document directly.",
+        "alerts": [],
+        "request_date": None,
+    },
+    "c005": {
+        "contract_id": "c005",
+        "building_bbl": "bbl_1009270001",
+        "vendor_name": "Adriatic Plumbing & Heating",
+        "category": "PLUMBING_REPAIRS",
+        "service_description": "On-call plumbing repair and maintenance services including emergency leak response, fixture replacements, drain cleaning, and annual backflow prevention device testing.",
+        "annual_value": 104953,
+        "start_date": "2022-01-01",
+        "end_date": "2025-12-31",
+        "term_years": 3,
+        "auto_renew": False,
+        "cancellation_notice_days": 0,
+        "status": "expired",
+        "key_terms": [
+            "Emergency leak response within 1 hour",
+            "Hourly rate: $185/hr regular, $278/hr overtime/weekend",
+            "Annual backflow preventer testing and DOB filing",
+            "Drain cleaning — common areas included, units billed separately",
+            "Material markup capped at 15% above wholesale",
+            "No minimum commitment — on-call basis",
+        ],
+        "document_status": "missing",
+        "document_filename": None,
+        "uploaded_by": None,
+        "upload_date": None,
+        "vendor_id": None,
+        "notes": "Contract expired December 2025. Vendor continues to provide service on handshake basis. Need to formalize a new agreement or initiate competitive bid. Annual spend of $104,953 ($366/unit) is significantly above network median.",
+        "ai_summary": "EXPIRED — 3-year on-call plumbing agreement that ended December 31, 2025. Annual spend of $104,953 ($366/unit) is 89% above network median of $194/unit — significant overspend risk. Vendor continues service without formal contract, exposing building to liability and price risk. Recommend immediate action: formalize new agreement with competitive terms or initiate rebid through BidBoard. Critical: annual backflow preventer testing is a DOB requirement — ensure continuity during any vendor transition.",
+        "alerts": [
+            {"type": "expired", "message": "Contract expired Dec 31, 2025 — vendor operating without agreement. Formalize immediately.", "urgency": "HIGH"},
+            {"type": "overspend", "message": "Plumbing spend $366/unit is 89% above network median of $194/unit. Competitive bid recommended.", "urgency": "HIGH"},
+            {"type": "compliance", "message": "Annual backflow preventer testing is DOB-required — ensure continuity during any transition.", "urgency": "MEDIUM"},
+        ],
+        "request_date": None,
+    },
+}
+
+def _get_building_contracts(bbl):
+    """Get all contracts for a building, sorted by status priority then end_date."""
+    status_order = {"expired": 0, "expiring_soon": 1, "active": 2, "pending_document": 3}
+    contracts = [c for c in BUILDING_CONTRACTS.values() if c["building_bbl"] == bbl]
+    contracts.sort(key=lambda c: (status_order.get(c["status"], 9), c.get("end_date", "")))
+    return contracts
+
+def _get_vendor_contracts(vendor_id):
+    """Get all contracts linked to a vendor profile."""
+    return [c for c in BUILDING_CONTRACTS.values() if c.get("vendor_id") == vendor_id]
+
+def _next_contract_id():
+    existing = [int(k[1:]) for k in BUILDING_CONTRACTS if k.startswith("c") and k[1:].isdigit()]
+    return f"c{(max(existing) + 1) if existing else 1:03d}"
+
+def _auto_link_contract_vendor(contract):
+    """Try to match a contract to a vendor profile by name and category.
+    Requires strong name match — company-specific words must overlap, not just
+    generic terms like 'elevator', 'services', 'plumbing' etc.
+    """
+    cname = contract.get("vendor_name", "").lower()
+    ccat = contract.get("category", "")
+    # Generic words that shouldn't count as a match
+    generic = {"services", "service", "company", "corp", "corporation", "group", "llc",
+               "inc", "elevator", "plumbing", "heating", "hvac", "pest", "control",
+               "cleaning", "fire", "alarm", "maintenance", "management", "consulting"}
+    for vid, vp in VENDOR_PROFILES.items():
+        vname = vp.get("company_name", "").lower()
+        # Only match on company-specific words (not generic industry terms)
+        cwords = set(w for w in cname.split() if len(w) > 3 and w not in generic)
+        vwords = set(w for w in vname.split() if len(w) > 3 and w not in generic)
+        if cwords and vwords and cwords & vwords and ccat in vp.get("categories", []):
+            return vid
+    return None
+
+# Auto-link seed contracts to vendor profiles on startup
+for _cid, _contract in BUILDING_CONTRACTS.items():
+    if not _contract.get("vendor_id"):
+        _contract["vendor_id"] = _auto_link_contract_vendor(_contract)
 
 # ── Load vendor profiles from DB (merge over defaults, DB wins) ──────────────
 _db_profiles = boardiq_db.load_all_vendor_profiles()
@@ -810,6 +1112,26 @@ def dashboard():
     benchmarks = compute_benchmarks(building)
     user = DEMO_USERS.get(session["user_email"], {})
     is_admin = user.get("is_admin", False) or user.get("role") == "admin"
+
+    # ── Contracts data ────────────────────────────────────────────────
+    active_bbl = session.get("active_building")
+    contracts = _get_building_contracts(active_bbl) if active_bbl else []
+    contracts_summary = {
+        "total": len(contracts),
+        "active": len([c for c in contracts if c["status"] == "active"]),
+        "expiring_soon": len([c for c in contracts if c["status"] == "expiring_soon"]),
+        "expired": len([c for c in contracts if c["status"] == "expired"]),
+        "missing_docs": len([c for c in contracts if c["document_status"] == "missing"]),
+    }
+    # Enrich contracts with display labels and linked vendor info
+    for c in contracts:
+        c["category_label"] = CATEGORY_LABELS.get(c["category"], c["category"])
+        if c.get("vendor_id") and c["vendor_id"] in VENDOR_PROFILES:
+            vp = VENDOR_PROFILES[c["vendor_id"]]
+            c["linked_vendor"] = {"id": c["vendor_id"], "name": vp["company_name"]}
+        else:
+            c["linked_vendor"] = None
+
     return render_template_string(DASHBOARD_HTML,
         building=building,
         benchmarks=benchmarks,
@@ -817,9 +1139,13 @@ def dashboard():
         is_admin=is_admin,
         all_buildings=[ensure_building_data(BUILDINGS_DB[b]) for b in
                        DEMO_USERS[session["user_email"]].get("buildings", [])],
-        active_bbl=session.get("active_building"),
+        active_bbl=active_bbl,
         all_buildings_json=json.dumps([{"bbl": k, "address": v["address"]} for k,v in BUILDINGS_DB.items()]),
         categories_json=json.dumps(list(CATEGORY_LABELS.items())),
+        contracts=contracts,
+        contracts_summary=contracts_summary,
+        contracts_json=json.dumps(contracts, default=str),
+        CATEGORY_LABELS=CATEGORY_LABELS,
     )
 
 @app.route("/switch-building/<bbl>")
@@ -1721,6 +2047,231 @@ def commit_invoices():
     })
 
 
+# ── Contract Management Routes ────────────────────────────────────────────────
+@app.route("/api/upload-contract", methods=["POST"])
+@login_required
+def upload_contract():
+    """Accept contract PDF, extract text, and parse contract terms."""
+    if "file" not in request.files:
+        return jsonify({"error": "No file provided"}), 400
+    f = request.files["file"]
+    if not f.filename:
+        return jsonify({"error": "No file selected"}), 400
+
+    import tempfile
+    suffix = ".pdf"
+    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+        tmp_path = tmp.name
+    f.save(tmp_path)
+
+    try:
+        # Extract text from PDF
+        text = ""
+        try:
+            import pypdf
+            reader = pypdf.PdfReader(tmp_path)
+            for page in reader.pages:
+                text += page.extract_text() or ""
+        except Exception:
+            text = ""
+
+        os.remove(tmp_path)
+
+        # Parse contract data using regex (similar to invoice parser)
+        result = _parse_contract_text(text)
+        result["success"] = True
+        result["filename"] = f.filename
+        return jsonify(result)
+    except Exception as e:
+        try:
+            os.remove(tmp_path)
+        except:
+            pass
+        return jsonify({"error": str(e)}), 500
+
+
+def _parse_contract_text(text):
+    """Extract contract details from text using regex patterns."""
+    import re
+    result = {
+        "vendor_name": "",
+        "category": "",
+        "annual_value": 0,
+        "term_years": 1,
+        "start_date": "",
+        "end_date": "",
+        "description": "",
+        "auto_renew": False,
+        "cancellation_notice_days": 30,
+        "key_terms": [],
+    }
+
+    if not text:
+        return result
+
+    # Try to extract vendor name (look for "between" ... "and" pattern)
+    between_match = re.search(r'between\s+(.+?)\s+(?:and|&)\s+', text, re.IGNORECASE)
+    if between_match:
+        result["vendor_name"] = between_match.group(1).strip()[:80]
+
+    # Try to extract dates
+    date_pattern = r'(\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\w+\s+\d{1,2},?\s+\d{4})'
+    dates = re.findall(date_pattern, text)
+    if len(dates) >= 2:
+        result["start_date"] = dates[0]
+        result["end_date"] = dates[1]
+
+    # Dollar amounts
+    amounts = re.findall(r'\$[\d,]+(?:\.\d{2})?', text)
+    if amounts:
+        cleaned = [float(a.replace('$', '').replace(',', '')) for a in amounts]
+        # Largest amount likely the annual value
+        result["annual_value"] = int(max(cleaned))
+
+    # Term years
+    term_match = re.search(r'(\d+)\s*(?:year|yr)', text, re.IGNORECASE)
+    if term_match:
+        result["term_years"] = int(term_match.group(1))
+
+    # Auto-renew
+    if re.search(r'auto[- ]?renew|automatic(?:ally)?\s+renew', text, re.IGNORECASE):
+        result["auto_renew"] = True
+
+    # Cancellation notice
+    cancel_match = re.search(r'(\d+)\s*(?:day|calendar day)s?\s*(?:prior|notice|written notice)', text, re.IGNORECASE)
+    if cancel_match:
+        result["cancellation_notice_days"] = int(cancel_match.group(1))
+
+    # Key terms — look for bullet points or numbered items
+    bullets = re.findall(r'(?:•|·|\d+\.)\s*(.+?)(?:\n|$)', text)
+    if bullets:
+        result["key_terms"] = [b.strip() for b in bullets[:8] if len(b.strip()) > 10]
+
+    # Category detection
+    cat_keywords = {
+        "ELEVATOR_MAINTENANCE": ["elevator", "lift", "escalator"],
+        "HVAC_MAINTENANCE": ["hvac", "heating", "ventilation", "air conditioning", "boiler"],
+        "PLUMBING_REPAIRS": ["plumbing", "plumber", "pipe", "drain"],
+        "EXTERMINATING": ["pest", "exterminator", "ipm", "termite", "rodent"],
+        "LANDSCAPING": ["landscape", "garden", "lawn", "snow removal", "grounds"],
+        "CLEANING": ["cleaning", "janitorial", "custodial"],
+        "INSURANCE": ["insurance", "liability", "coverage"],
+        "FIRE_SAFETY": ["fire", "alarm", "sprinkler", "suppression"],
+    }
+    text_lower = text.lower()
+    for cat, keywords in cat_keywords.items():
+        if any(kw in text_lower for kw in keywords):
+            result["category"] = cat
+            break
+
+    return result
+
+
+@app.route("/api/save-contract", methods=["POST"])
+@login_required
+def save_contract():
+    """Save or update a contract record."""
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "No data provided"}), 400
+
+    active_bbl = session.get("active_building")
+    if not active_bbl:
+        return jsonify({"error": "No active building"}), 400
+
+    contract_id = data.get("contract_id")
+    if contract_id and contract_id in BUILDING_CONTRACTS:
+        # Update existing
+        c = BUILDING_CONTRACTS[contract_id]
+        for key in ["vendor_name", "category", "annual_value", "term_years",
+                     "start_date", "end_date", "service_description", "auto_renew",
+                     "cancellation_notice_days", "key_terms", "notes"]:
+            if key in data:
+                c[key] = data[key]
+        if data.get("filename"):
+            c["document_status"] = "on_file"
+            c["document_filename"] = data["filename"]
+            c["uploaded_by"] = "management"
+            c["upload_date"] = datetime.now().strftime("%Y-%m-%d")
+    else:
+        # Create new
+        contract_id = _next_contract_id()
+        now_str = datetime.now().strftime("%Y-%m-%d")
+        end_date = data.get("end_date", "")
+        # Determine status
+        status = "active"
+        if end_date:
+            try:
+                end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+                days_left = (end_dt - datetime.now()).days
+                if days_left < 0:
+                    status = "expired"
+                elif days_left < 120:
+                    status = "expiring_soon"
+            except:
+                pass
+
+        c = {
+            "contract_id": contract_id,
+            "building_bbl": active_bbl,
+            "vendor_name": data.get("vendor_name", "Unknown Vendor"),
+            "category": data.get("category", "PROFESSIONAL_SERVICES"),
+            "service_description": data.get("service_description", ""),
+            "annual_value": int(data.get("annual_value", 0)),
+            "start_date": data.get("start_date", now_str),
+            "end_date": data.get("end_date", ""),
+            "term_years": int(data.get("term_years", 1)),
+            "auto_renew": bool(data.get("auto_renew", False)),
+            "cancellation_notice_days": int(data.get("cancellation_notice_days", 30)),
+            "status": status,
+            "key_terms": data.get("key_terms", []),
+            "document_status": "on_file" if data.get("filename") else "missing",
+            "document_filename": data.get("filename"),
+            "uploaded_by": "management" if data.get("filename") else None,
+            "upload_date": now_str if data.get("filename") else None,
+            "vendor_id": None,
+            "notes": data.get("notes", ""),
+            "ai_summary": f"New contract record for {data.get('vendor_name', 'Unknown')} — {CATEGORY_LABELS.get(data.get('category', ''), data.get('category', ''))} services at ${int(data.get('annual_value', 0)):,}/year. Uploaded via BoardIQ contract management.",
+            "alerts": [],
+            "request_date": None,
+        }
+        # Auto-link to vendor profile
+        c["vendor_id"] = _auto_link_contract_vendor(c)
+        # Add alerts
+        if status == "expired":
+            c["alerts"].append({"type": "expired", "message": "Contract has expired — formalize new agreement.", "urgency": "HIGH"})
+        if status == "expiring_soon":
+            c["alerts"].append({"type": "expiring", "message": "Contract expiring soon — initiate renewal or rebid.", "urgency": "HIGH"})
+
+        BUILDING_CONTRACTS[contract_id] = c
+
+    return jsonify({"success": True, "contract_id": contract_id})
+
+
+@app.route("/api/request-contract", methods=["POST"])
+@login_required
+def request_contract():
+    """Request a contract document from the vendor."""
+    data = request.get_json()
+    contract_id = data.get("contract_id")
+    if not contract_id or contract_id not in BUILDING_CONTRACTS:
+        return jsonify({"error": "Contract not found"}), 404
+
+    c = BUILDING_CONTRACTS[contract_id]
+    c["document_status"] = "requested"
+    c["request_date"] = datetime.now().strftime("%Y-%m-%d")
+
+    # Remove any existing missing_doc alerts and add a requested one
+    c["alerts"] = [a for a in c.get("alerts", []) if a.get("type") != "missing_doc"]
+    c["alerts"].append({
+        "type": "requested",
+        "message": f"Contract document requested from vendor on {c['request_date']}.",
+        "urgency": "MEDIUM",
+    })
+
+    return jsonify({"success": True, "contract_id": contract_id})
+
+
 UPLOAD_PAGE_HTML = None  # defined below
 
 @app.route("/upload")
@@ -2217,6 +2768,87 @@ table.vt tr.click:hover td{background:var(--surface2)}
 .topbar-signout{font-size:12px;font-weight:600;color:var(--ink);text-decoration:none;padding:6px 14px;border:1px solid var(--border2);border-radius:5px;transition:all .15s;}
 .topbar-signout:hover{background:var(--ink);color:white;border-color:var(--ink);}
 .viol-flag{background:var(--red-light);border:1px solid var(--red-border);border-radius:4px;padding:8px 10px;font-size:11.5px;color:var(--red);font-weight:500;line-height:1.4}
+
+/* ── Contract Intelligence ── */
+.contracts-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.contracts-header .ct{font-family:'Playfair Display',serif;font-size:18px;color:var(--ink);font-weight:700}
+.contracts-header .csub{font-size:12px;color:var(--muted);margin-top:2px}
+.contracts-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--border);border-radius:7px;overflow:hidden;margin-bottom:20px}
+.cs-item{background:var(--surface);padding:14px 16px;text-align:center}
+.cs-label{font-size:9px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+.cs-value{font-family:'IBM Plex Mono',monospace;font-size:20px;color:var(--ink);font-weight:600}
+.cs-value.red{color:var(--red)}.cs-value.green{color:var(--green)}.cs-value.yellow{color:var(--yellow)}
+
+.contract-card{background:var(--surface);border:1px solid var(--border);border-radius:7px;margin-bottom:12px;overflow:hidden;cursor:pointer;transition:all .15s}
+.contract-card:hover{border-color:var(--gold);box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.contract-card.expired{border-left:3px solid var(--red)}
+.contract-card.expiring_soon{border-left:3px solid var(--yellow)}
+.contract-card.active{border-left:3px solid var(--green)}
+
+.cc-top{display:flex;align-items:flex-start;justify-content:space-between;padding:16px 18px 10px}
+.cc-vendor{font-size:14px;font-weight:700;color:var(--ink)}
+.cc-category{display:inline-block;font-size:10px;letter-spacing:.8px;text-transform:uppercase;background:var(--surface2);color:var(--muted);padding:3px 8px;border-radius:3px;font-weight:600;margin-top:4px}
+.cc-status{display:inline-block;font-size:10.5px;font-weight:700;padding:4px 10px;border-radius:12px;white-space:nowrap}
+.cc-status.active{background:rgba(26,122,74,.1);color:var(--green)}
+.cc-status.expiring_soon{background:rgba(196,137,58,.12);color:var(--yellow)}
+.cc-status.expired{background:rgba(192,57,43,.1);color:var(--red)}
+.cc-status.pending_document{background:rgba(0,0,0,.06);color:var(--muted)}
+
+.cc-body{padding:0 18px 12px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.cc-field{font-size:11.5px}
+.cc-field-lbl{font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+.cc-field-val{color:var(--ink);font-weight:600}
+.cc-field-val.mono{font-family:'IBM Plex Mono',monospace}
+
+.cc-terms{padding:0 18px 10px}
+.cc-terms-list{display:flex;flex-wrap:wrap;gap:5px}
+.cc-term-tag{font-size:10px;background:var(--surface2);color:var(--dim);padding:3px 7px;border-radius:3px;border:1px solid var(--border)}
+
+.cc-ai{padding:0 18px 12px}
+.cc-ai-toggle{font-size:11px;color:var(--gold);cursor:pointer;font-weight:600;user-select:none}
+.cc-ai-toggle:hover{text-decoration:underline}
+.cc-ai-body{font-size:12px;color:var(--dim);line-height:1.6;background:var(--surface2);border:1px solid var(--border);border-radius:5px;padding:10px 12px;margin-top:6px;display:none}
+.cc-ai-body.open{display:block}
+
+.cc-alerts{padding:0 18px 10px;display:flex;flex-wrap:wrap;gap:5px}
+.cc-alert{font-size:10.5px;font-weight:600;padding:4px 9px;border-radius:3px}
+.cc-alert.HIGH{background:var(--red-light);color:var(--red);border:1px solid var(--red-border)}
+.cc-alert.MEDIUM{background:var(--yellow-light);color:var(--yellow);border:1px solid var(--yellow-border)}
+
+.cc-footer{display:flex;align-items:center;gap:8px;padding:10px 18px;border-top:1px solid var(--border);background:var(--surface2)}
+.cc-doc-status{font-size:11px;font-weight:600;padding:4px 10px;border-radius:12px;display:inline-flex;align-items:center;gap:4px}
+.cc-doc-status.on_file{background:rgba(26,122,74,.1);color:var(--green)}
+.cc-doc-status.missing{background:rgba(192,57,43,.1);color:var(--red)}
+.cc-doc-status.requested{background:rgba(196,137,58,.12);color:var(--yellow)}
+.cc-doc-status.vendor_uploaded{background:rgba(59,130,246,.1);color:#3b82f6}
+.cc-action-btn{font-size:11px;font-weight:600;padding:5px 12px;border-radius:4px;border:1px solid var(--border2);background:transparent;color:var(--dim);cursor:pointer;transition:all .15s}
+.cc-action-btn:hover{background:var(--ink);color:white;border-color:var(--ink)}
+.cc-action-btn.primary{background:var(--ink);color:white;border-color:var(--ink)}
+.cc-action-btn.primary:hover{background:#1a1714;border-color:#1a1714}
+.cc-linked{margin-left:auto;font-size:10.5px;color:var(--muted);display:flex;align-items:center;gap:4px}
+.cc-linked a{color:var(--gold);text-decoration:none;font-weight:600}
+
+.btn-add-contract{background:var(--ink);color:white;border:none;padding:8px 16px;border-radius:5px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s}
+.btn-add-contract:hover{background:#1a1714}
+
+/* ── Contract Upload Drawer ── */
+.contract-drawer{position:fixed;top:0;right:-680px;width:680px;height:100vh;background:var(--surface);z-index:300;transition:right .3s ease;box-shadow:-4px 0 24px rgba(0,0,0,.15);display:flex;flex-direction:column}
+.contract-drawer.open{right:0}
+.cd-overlay{display:none;position:fixed;inset:0;background:rgba(26,23,20,.4);z-index:299}
+.cd-overlay.open{display:block}
+.cd-header{display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid var(--border)}
+.cd-title{font-family:'Playfair Display',serif;font-size:18px;color:var(--ink);font-weight:700}
+.cd-close{background:none;border:none;font-size:20px;color:var(--muted);cursor:pointer;padding:4px 8px}
+.cd-body{flex:1;overflow-y:auto;padding:24px}
+.cd-drop{border:2px dashed var(--border2);border-radius:8px;padding:40px 20px;text-align:center;cursor:pointer;transition:all .15s}
+.cd-drop:hover,.cd-drop.drag-over{border-color:var(--gold);background:var(--gold-light)}
+.cd-form{display:none}
+.cd-form-group{margin-bottom:16px}
+.cd-form-group label{display:block;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:5px;font-weight:600}
+.cd-form-group input,.cd-form-group select,.cd-form-group textarea{width:100%;padding:9px 12px;font-size:13px;font-family:inherit;border:1px solid var(--border2);border-radius:5px;background:var(--surface);color:var(--ink)}
+.cd-form-group textarea{min-height:80px;resize:vertical}
+.cd-footer{padding:16px 24px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:flex-end;gap:10px}
+
 .upload-zone{padding:20px 22px;border:2px dashed var(--border2);border-radius:6px;margin:16px 20px;text-align:center;cursor:pointer;transition:all .15s}
 .upload-zone:hover{border-color:var(--gold);background:var(--gold-light)}
 .upload-label{font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px}
@@ -2331,7 +2963,10 @@ table.vt tr.click:hover td{background:var(--surface2)}
     <div class="nav-item">⚑ &nbsp;Compliance Calendar
       <span class="nav-badge">{{ building.compliance_deadlines|selectattr('urgency','eq','HIGH')|list|length }}</span>
     </div>
-    <div class="nav-item">▤ &nbsp;Contracts</div>
+    <div class="nav-item" onclick="document.getElementById('contractsSection').scrollIntoView({behavior:'smooth',block:'start'})">▤ &nbsp;Contracts
+      {% if contracts_summary.expiring_soon + contracts_summary.expired + contracts_summary.missing_docs > 0 %}
+      <span class="nav-badge">{{ contracts_summary.expiring_soon + contracts_summary.expired + contracts_summary.missing_docs }}</span>{% endif %}
+    </div>
     <div class="nav-label">Building</div>
     <div class="nav-item">◷ &nbsp;Tax &amp; Assessment</div>
     <div class="nav-item">☰ &nbsp;Violations</div>
@@ -2540,6 +3175,129 @@ table.vt tr.click:hover td{background:var(--surface2)}
       {% endfor %}
     </div>
 
+    {# ── CONTRACT INTELLIGENCE ── #}
+    <div id="contractsSection" class="card full" style="padding:0">
+      <div style="padding:20px 22px 0">
+        <div class="contracts-header">
+          <div>
+            <div class="ct">Contract Intelligence</div>
+            <div class="csub">Manage vendor contracts · Track expirations · Ensure compliance</div>
+          </div>
+          <button class="btn-add-contract" onclick="openContractDrawer()">+ Add Contract</button>
+        </div>
+
+        {# Summary strip #}
+        <div class="contracts-strip">
+          <div class="cs-item">
+            <div class="cs-label">Total Contracts</div>
+            <div class="cs-value">{{ contracts_summary.total }}</div>
+          </div>
+          <div class="cs-item">
+            <div class="cs-label">Active</div>
+            <div class="cs-value green">{{ contracts_summary.active }}</div>
+          </div>
+          <div class="cs-item">
+            <div class="cs-label">Expiring Soon</div>
+            <div class="cs-value {% if contracts_summary.expiring_soon > 0 %}yellow{% endif %}">{{ contracts_summary.expiring_soon }}</div>
+          </div>
+          <div class="cs-item">
+            <div class="cs-label">Expired</div>
+            <div class="cs-value {% if contracts_summary.expired > 0 %}red{% endif %}">{{ contracts_summary.expired }}</div>
+          </div>
+          <div class="cs-item">
+            <div class="cs-label">Missing Docs</div>
+            <div class="cs-value {% if contracts_summary.missing_docs > 0 %}red{% endif %}">{{ contracts_summary.missing_docs }}</div>
+          </div>
+        </div>
+      </div>
+
+      {# Contract cards #}
+      {% if contracts %}
+      <div style="padding:0 22px 20px">
+        {% for c in contracts %}
+        <div class="contract-card {{ c.status }}" onclick="openPanel('contract', {{ loop.index0 }})">
+          <div class="cc-top">
+            <div>
+              <div class="cc-vendor">{{ c.vendor_name }}</div>
+              <div class="cc-category">{{ c.category_label }}</div>
+            </div>
+            <span class="cc-status {{ c.status }}">
+              {% if c.status == 'active' %}● Active
+              {% elif c.status == 'expiring_soon' %}⚠ Expiring Soon
+              {% elif c.status == 'expired' %}✕ Expired
+              {% elif c.status == 'pending_document' %}◌ Pending
+              {% endif %}
+            </span>
+          </div>
+
+          <div class="cc-body">
+            <div class="cc-field">
+              <div class="cc-field-lbl">Annual Value</div>
+              <div class="cc-field-val mono">${{ "{:,.0f}".format(c.annual_value) }}</div>
+            </div>
+            <div class="cc-field">
+              <div class="cc-field-lbl">Term</div>
+              <div class="cc-field-val">{{ c.start_date[:7] }} → {{ c.end_date[:7] }} ({{ c.term_years }}yr)</div>
+            </div>
+            <div class="cc-field">
+              <div class="cc-field-lbl">Auto-Renew</div>
+              <div class="cc-field-val">{{ "Yes — " ~ c.cancellation_notice_days ~ "-day notice" if c.auto_renew else "No — must renegotiate" }}</div>
+            </div>
+          </div>
+
+          {% if c.key_terms %}
+          <div class="cc-terms">
+            <div class="cc-terms-list">
+              {% for t in c.key_terms[:4] %}
+              <span class="cc-term-tag">{{ t[:40] }}{% if t|length > 40 %}…{% endif %}</span>
+              {% endfor %}
+              {% if c.key_terms|length > 4 %}
+              <span class="cc-term-tag">+{{ c.key_terms|length - 4 }} more</span>
+              {% endif %}
+            </div>
+          </div>
+          {% endif %}
+
+          <div class="cc-ai">
+            <span class="cc-ai-toggle" onclick="event.stopPropagation();this.nextElementSibling.classList.toggle('open');this.textContent=this.nextElementSibling.classList.contains('open')?'▾ Hide AI Analysis':'▸ BoardIQ AI Analysis'">▸ BoardIQ AI Analysis</span>
+            <div class="cc-ai-body">{{ c.ai_summary }}</div>
+          </div>
+
+          {% if c.alerts %}
+          <div class="cc-alerts">
+            {% for a in c.alerts %}
+            <span class="cc-alert {{ a.urgency }}">{{ a.message[:80] }}{% if a.message|length > 80 %}…{% endif %}</span>
+            {% endfor %}
+          </div>
+          {% endif %}
+
+          <div class="cc-footer" onclick="event.stopPropagation()">
+            {% if c.document_status == 'on_file' %}
+            <span class="cc-doc-status on_file">📄 Document On File</span>
+            {% elif c.document_status == 'missing' %}
+            <span class="cc-doc-status missing">⚠ No Document</span>
+            <button class="cc-action-btn primary" onclick="openContractDrawer('{{ c.contract_id }}')">Upload Contract</button>
+            <button class="cc-action-btn" onclick="requestContract('{{ c.contract_id }}')">Request from Vendor</button>
+            {% elif c.document_status == 'requested' %}
+            <span class="cc-doc-status requested">📩 Requested from Vendor</span>
+            {% elif c.document_status == 'vendor_uploaded' %}
+            <span class="cc-doc-status vendor_uploaded">✓ Vendor Uploaded</span>
+            {% endif %}
+            {% if c.linked_vendor %}
+            <span class="cc-linked">🔗 Linked: <a href="#">{{ c.linked_vendor.name }}</a></span>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div style="padding:20px 22px;text-align:center;color:var(--muted);font-size:13px">
+        <p>No contracts on file for this building.</p>
+        <button class="btn-add-contract" onclick="openContractDrawer()">+ Add First Contract</button>
+      </div>
+      {% endif %}
+    </div>
+
     {# ── BUILDING RECORD ── #}
     <div class="card full">
       <div class="ch"><div><div class="ct">Building Record</div><div class="csub">Public data from NYC agencies · refreshed quarterly</div></div></div>
@@ -2591,6 +3349,7 @@ table.vt tr.click:hover td{background:var(--surface2)}
 const vendorBenchmarks = {{ benchmarks.vendor_benchmarks | tojson }};
 const complianceItems  = {{ building.compliance_deadlines | tojson }};
 const buildingUnits    = {{ building.units }};
+const contractItems    = {{ contracts_json | safe }};
 
 function openPanel(type, idx) {
   const content = document.getElementById('panelContent');
@@ -2631,6 +3390,79 @@ function openPanel(type, idx) {
       <div style="background:var(--green-light);border:1px solid var(--green-border);border-radius:6px;padding:14px;margin-top:16px;font-size:13px;color:var(--green)">
         ✓ This contract is at or below market. No action required at this time.
       </div>`}`;
+  } else if (type === 'contract') {
+    const c = contractItems[idx];
+    if (!c) return;
+    const statusColors = {active:'green',expiring_soon:'yellow',expired:'red',pending_document:'muted'};
+    const statusLabels = {active:'● Active',expiring_soon:'⚠ Expiring Soon',expired:'✕ Expired',pending_document:'◌ Pending'};
+    const docLabels = {on_file:'📄 Document On File',missing:'⚠ No Document On File',requested:'📩 Requested from Vendor',vendor_uploaded:'✓ Vendor Uploaded'};
+    const docColors = {on_file:'var(--green)',missing:'var(--red)',requested:'var(--yellow)',vendor_uploaded:'#3b82f6'};
+    const sc = statusColors[c.status] || 'muted';
+
+    // Term timeline
+    const start = new Date(c.start_date);
+    const end = new Date(c.end_date);
+    const now = new Date();
+    const totalMs = end - start;
+    const elapsedMs = now - start;
+    const pct = Math.max(0, Math.min(100, (elapsedMs / totalMs) * 100));
+
+    content.innerHTML = `
+      <div class="panel-title">${c.vendor_name}</div>
+      <div class="panel-sub">${c.category_label || c.category}</div>
+      <div style="display:inline-block;font-size:11px;font-weight:700;padding:4px 10px;border-radius:12px;background:rgba(0,0,0,.06);color:var(--${sc});margin:8px 0 16px">${statusLabels[c.status] || c.status}</div>
+
+      <div class="stat-grid">
+        <div class="stat-box"><div class="stat-lbl">Annual Value</div><div class="stat-val">$${(c.annual_value||0).toLocaleString()}</div></div>
+        <div class="stat-box"><div class="stat-lbl">Per Unit/Year</div><div class="stat-val">$${Math.round(c.annual_value / buildingUnits)}</div></div>
+        <div class="stat-box"><div class="stat-lbl">Term</div><div class="stat-val">${c.term_years} years</div></div>
+        <div class="stat-box"><div class="stat-lbl">Auto-Renew</div><div class="stat-val">${c.auto_renew ? 'Yes' : 'No'}</div></div>
+      </div>
+
+      <div class="panel-section">Contract Timeline</div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:14px;margin-bottom:16px">
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:6px">
+          <span>Start: ${c.start_date}</span><span>End: ${c.end_date}</span>
+        </div>
+        <div style="height:8px;background:var(--border);border-radius:4px;overflow:hidden">
+          <div style="height:100%;width:${pct}%;background:var(--${pct > 85 ? 'red' : pct > 60 ? 'yellow' : 'green'});border-radius:4px;transition:width .3s"></div>
+        </div>
+        <div style="text-align:center;font-size:11px;color:var(--dim);margin-top:5px;font-weight:600">${Math.round(pct)}% elapsed${c.cancellation_notice_days ? ' · ' + c.cancellation_notice_days + '-day cancellation notice' : ''}</div>
+      </div>
+
+      <div class="panel-section">Key Terms</div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:16px;font-size:12px;color:var(--dim);line-height:1.8">
+        ${(c.key_terms||[]).map(t => '• ' + t).join('<br>')}
+      </div>
+
+      <div class="panel-section">Document Status</div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:16px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <span style="font-size:12px;font-weight:600;color:${docColors[c.document_status] || 'var(--muted)'}">${docLabels[c.document_status] || c.document_status}</span>
+        </div>
+        ${c.document_filename ? '<div style="font-size:11px;color:var(--muted)">File: ' + c.document_filename + '</div>' : ''}
+        ${c.uploaded_by ? '<div style="font-size:11px;color:var(--muted)">Uploaded by: ' + c.uploaded_by + (c.upload_date ? ' on ' + c.upload_date : '') + '</div>' : ''}
+        <div style="display:flex;gap:8px;margin-top:10px">
+          ${c.document_status === 'missing' ? '<button class="btn-bid" onclick="closePanel();openContractDrawer(\\'' + c.contract_id + '\\')">Upload Contract</button><button class="btn-out" onclick="closePanel();requestContract(\\'' + c.contract_id + '\\')">Request from Vendor</button>' : ''}
+          ${c.document_status === 'on_file' || c.document_status === 'vendor_uploaded' ? '<button class="btn-out">View Document Details</button>' : ''}
+        </div>
+      </div>
+
+      <div class="panel-section">BoardIQ AI Analysis</div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:16px;font-size:12px;color:var(--dim);line-height:1.7">${c.ai_summary || 'No analysis available.'}</div>
+
+      ${c.alerts && c.alerts.length ? '<div class="panel-section">Active Alerts</div>' + c.alerts.map(a => '<div style="background:' + (a.urgency === 'HIGH' ? 'var(--red-light)' : 'var(--yellow-light)') + ';border:1px solid ' + (a.urgency === 'HIGH' ? 'var(--red-border)' : 'var(--yellow-border)') + ';border-radius:5px;padding:10px 12px;margin-bottom:6px;font-size:12px;color:' + (a.urgency === 'HIGH' ? 'var(--red)' : 'var(--yellow)') + ';font-weight:500;line-height:1.5">' + a.message + '</div>').join('') : ''}
+
+      ${c.linked_vendor ? '<div class="panel-section">Linked Vendor Profile</div><div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:16px"><div style="font-size:13px;font-weight:700;color:var(--ink)">' + c.linked_vendor.name + '</div><div style="font-size:11px;color:var(--muted);margin-top:3px">Vendor ID: ' + c.linked_vendor.id + ' · Profile linked automatically via BoardIQ</div></div>' : ''}
+
+      ${c.notes ? '<div class="panel-section">Management Notes</div><div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:12px;font-size:12px;color:var(--dim);line-height:1.6;font-style:italic">' + c.notes + '</div>' : ''}
+
+      <div class="action-box" style="margin-top:18px">
+        <div class="action-title">Contract Actions</div>
+        ${c.status === 'expired' ? '<button class="btn-full" onclick="closePanel();openContractDrawer()">Upload New Contract →</button><button class="btn-full-out">Initiate Rebid via BidBoard</button>' : ''}
+        ${c.status === 'expiring_soon' ? '<button class="btn-full">Start Renewal Process →</button><button class="btn-full-out">Initiate Competitive Rebid</button>' : ''}
+        ${c.status === 'active' ? '<button class="btn-full-out">Edit Contract Details</button>' : ''}
+      </div>`;
   } else {
     const d = complianceItems[idx];
     if (!d) return;
@@ -3121,6 +3953,268 @@ function dReset() {
   document.getElementById('dFileInput').value = '';
 }
 </script>
+
+<!-- ── Contract Upload Drawer ──────────────────────────────────────── -->
+<div class="cd-overlay" id="cdOverlay" onclick="closeContractDrawer()"></div>
+<div class="contract-drawer" id="contractDrawer">
+  <div class="cd-header">
+    <div class="cd-title" id="cdTitle">Upload Contract</div>
+    <button class="cd-close" onclick="closeContractDrawer()">✕</button>
+  </div>
+  <div class="cd-body" id="cdBody">
+    <!-- Drop zone -->
+    <div id="cdDropZone" class="cd-drop" onclick="document.getElementById('cdFileInput').click()">
+      <div style="font-size:36px;margin-bottom:10px">📋</div>
+      <div style="font-size:15px;font-weight:600;color:var(--ink);margin-bottom:5px">Drop contract PDF here</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:14px">BoardIQ will extract vendor, dates, terms, and value automatically</div>
+      <button style="background:var(--ink);color:white;border:none;padding:9px 20px;border-radius:5px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer" onclick="event.stopPropagation();document.getElementById('cdFileInput').click()">Choose File</button>
+      <input type="file" id="cdFileInput" accept=".pdf" style="display:none" onchange="cdHandleFile(this)">
+    </div>
+
+    <!-- Processing -->
+    <div id="cdProc" style="display:none;text-align:center;padding:48px 0">
+      <div class="d-spinner"></div>
+      <div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:5px">Analyzing Contract...</div>
+      <div style="font-size:12px;color:var(--muted)" id="cdProcDetail">Extracting text and identifying terms</div>
+    </div>
+
+    <!-- Form (shown after upload or for manual entry) -->
+    <div id="cdForm" class="cd-form">
+      <div style="background:var(--green-light);border:1px solid var(--green-border);border-radius:5px;padding:10px 14px;margin-bottom:18px;font-size:12px;color:var(--green);font-weight:600;display:none" id="cdExtracted">
+        ✓ Contract analyzed — review and edit extracted data below
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div class="cd-form-group">
+          <label>Vendor Name</label>
+          <input type="text" id="cdVendor" placeholder="e.g. Schindler Elevator Corp">
+        </div>
+        <div class="cd-form-group">
+          <label>Service Category</label>
+          <select id="cdCategory">
+            <option value="">Select category...</option>
+            {% for key, label in CATEGORY_LABELS.items() %}
+            <option value="{{ key }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="cd-form-group">
+          <label>Annual Value ($)</label>
+          <input type="number" id="cdValue" placeholder="e.g. 45000">
+        </div>
+        <div class="cd-form-group">
+          <label>Term (years)</label>
+          <input type="number" id="cdTerm" placeholder="e.g. 3" min="1" max="10">
+        </div>
+        <div class="cd-form-group">
+          <label>Start Date</label>
+          <input type="date" id="cdStart">
+        </div>
+        <div class="cd-form-group">
+          <label>End Date</label>
+          <input type="date" id="cdEnd">
+        </div>
+      </div>
+      <div class="cd-form-group">
+        <label>Service Description</label>
+        <textarea id="cdDescription" placeholder="Describe the services covered by this contract..."></textarea>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div class="cd-form-group">
+          <label>Auto-Renew?</label>
+          <select id="cdAutoRenew">
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
+        </div>
+        <div class="cd-form-group">
+          <label>Cancellation Notice (days)</label>
+          <input type="number" id="cdCancelDays" placeholder="e.g. 90" min="0">
+        </div>
+      </div>
+      <div class="cd-form-group">
+        <label>Key Terms (one per line)</label>
+        <textarea id="cdTerms" placeholder="24/7 emergency service&#10;Monthly inspections&#10;Parts included" style="min-height:100px"></textarea>
+      </div>
+      <div class="cd-form-group">
+        <label>Management Notes</label>
+        <textarea id="cdNotes" placeholder="Any additional notes about this contract..."></textarea>
+      </div>
+    </div>
+
+    <!-- Success -->
+    <div id="cdSuccess" style="display:none;text-align:center;padding:60px 0">
+      <div style="font-size:44px;margin-bottom:14px">✅</div>
+      <div style="font-family:'Playfair Display',serif;font-size:22px;color:var(--ink);margin-bottom:8px">Contract Saved</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:16px" id="cdSuccSub"></div>
+      <button style="background:var(--ink);color:white;border:none;padding:10px 24px;border-radius:6px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer" onclick="closeContractDrawer();location.reload()">Close & Refresh Dashboard</button>
+    </div>
+  </div>
+  <div class="cd-footer" id="cdFooter" style="display:none">
+    <button class="btn-out" onclick="cdReset()">Start Over</button>
+    <button class="btn-bid" onclick="cdSave()">Save Contract →</button>
+  </div>
+</div>
+
+<script>
+// ── Contract Drawer & Actions ──────────────────────────────────────────
+let cdEditingId = null;
+
+function openContractDrawer(contractId) {
+  cdEditingId = contractId || null;
+  document.getElementById('cdTitle').textContent = contractId ? 'Upload Contract Document' : 'Add New Contract';
+  // If editing an existing contract, pre-fill the form
+  if (contractId) {
+    const c = contractItems.find(x => x.contract_id === contractId);
+    if (c) {
+      document.getElementById('cdDropZone').style.display = 'block';
+      document.getElementById('cdForm').style.display = 'none';
+      document.getElementById('cdFooter').style.display = 'none';
+    }
+  } else {
+    // New contract — show form directly
+    document.getElementById('cdDropZone').style.display = 'block';
+    document.getElementById('cdForm').style.display = 'none';
+    document.getElementById('cdFooter').style.display = 'none';
+  }
+  document.getElementById('cdSuccess').style.display = 'none';
+  document.getElementById('cdProc').style.display = 'none';
+  document.getElementById('contractDrawer').classList.add('open');
+  document.getElementById('cdOverlay').classList.add('open');
+}
+
+function closeContractDrawer() {
+  document.getElementById('contractDrawer').classList.remove('open');
+  document.getElementById('cdOverlay').classList.remove('open');
+}
+
+function cdHandleFile(inp) {
+  if (inp.files[0]) cdUploadFile(inp.files[0]);
+}
+
+// Drag and drop for contract drawer
+const cddz = document.getElementById('cdDropZone');
+if (cddz) {
+  cddz.addEventListener('dragover', e => { e.preventDefault(); cddz.classList.add('drag-over'); });
+  cddz.addEventListener('dragleave', () => cddz.classList.remove('drag-over'));
+  cddz.addEventListener('drop', e => { e.preventDefault(); cddz.classList.remove('drag-over'); if(e.dataTransfer.files[0]) cdUploadFile(e.dataTransfer.files[0]); });
+}
+
+async function cdUploadFile(file) {
+  document.getElementById('cdDropZone').style.display = 'none';
+  document.getElementById('cdProc').style.display = 'block';
+  const steps = ['Extracting text from contract...','Identifying parties and dates...','Parsing terms and conditions...','Analyzing pricing and renewal clauses...'];
+  let s = 0;
+  const tick = setInterval(() => { if(s < steps.length) document.getElementById('cdProcDetail').textContent = steps[s++]; }, 1200);
+
+  const fd = new FormData();
+  fd.append('file', file);
+  if (cdEditingId) fd.append('contract_id', cdEditingId);
+  try {
+    const r = await fetch('/api/upload-contract', { method: 'POST', body: fd });
+    clearInterval(tick);
+    const d = await r.json();
+    if (!d.success) throw new Error(d.error || 'Upload failed');
+    // Fill form with extracted data
+    document.getElementById('cdProc').style.display = 'none';
+    document.getElementById('cdForm').style.display = 'block';
+    document.getElementById('cdFooter').style.display = 'flex';
+    document.getElementById('cdExtracted').style.display = 'block';
+    if (d.vendor_name) document.getElementById('cdVendor').value = d.vendor_name;
+    if (d.category) document.getElementById('cdCategory').value = d.category;
+    if (d.annual_value) document.getElementById('cdValue').value = d.annual_value;
+    if (d.term_years) document.getElementById('cdTerm').value = d.term_years;
+    if (d.start_date) document.getElementById('cdStart').value = d.start_date;
+    if (d.end_date) document.getElementById('cdEnd').value = d.end_date;
+    if (d.description) document.getElementById('cdDescription').value = d.description;
+    if (d.auto_renew !== undefined) document.getElementById('cdAutoRenew').value = String(d.auto_renew);
+    if (d.cancellation_notice_days) document.getElementById('cdCancelDays').value = d.cancellation_notice_days;
+    if (d.key_terms) document.getElementById('cdTerms').value = d.key_terms.join('\\n');
+  } catch(e) {
+    clearInterval(tick);
+    // Fall back to manual entry
+    document.getElementById('cdProc').style.display = 'none';
+    document.getElementById('cdForm').style.display = 'block';
+    document.getElementById('cdFooter').style.display = 'flex';
+    document.getElementById('cdExtracted').style.display = 'none';
+    alert('Could not extract contract data automatically. Please fill in the details manually.');
+  }
+}
+
+async function cdSave() {
+  const data = {
+    contract_id: cdEditingId || null,
+    vendor_name: document.getElementById('cdVendor').value,
+    category: document.getElementById('cdCategory').value,
+    annual_value: parseInt(document.getElementById('cdValue').value) || 0,
+    term_years: parseInt(document.getElementById('cdTerm').value) || 1,
+    start_date: document.getElementById('cdStart').value,
+    end_date: document.getElementById('cdEnd').value,
+    service_description: document.getElementById('cdDescription').value,
+    auto_renew: document.getElementById('cdAutoRenew').value === 'true',
+    cancellation_notice_days: parseInt(document.getElementById('cdCancelDays').value) || 0,
+    key_terms: document.getElementById('cdTerms').value.split('\\n').filter(t => t.trim()),
+    notes: document.getElementById('cdNotes').value,
+  };
+  try {
+    const r = await fetch('/api/save-contract', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(data)
+    });
+    const d = await r.json();
+    if (!d.success) throw new Error(d.error || 'Save failed');
+    document.getElementById('cdForm').style.display = 'none';
+    document.getElementById('cdFooter').style.display = 'none';
+    document.getElementById('cdSuccess').style.display = 'block';
+    document.getElementById('cdSuccSub').textContent = 'Contract for ' + data.vendor_name + ' has been saved successfully.';
+  } catch(e) {
+    alert('Error: ' + e.message);
+  }
+}
+
+function cdReset() {
+  cdEditingId = null;
+  document.getElementById('cdDropZone').style.display = 'block';
+  document.getElementById('cdForm').style.display = 'none';
+  document.getElementById('cdProc').style.display = 'none';
+  document.getElementById('cdSuccess').style.display = 'none';
+  document.getElementById('cdFooter').style.display = 'none';
+  document.getElementById('cdExtracted').style.display = 'none';
+  ['cdVendor','cdCategory','cdValue','cdTerm','cdStart','cdEnd','cdDescription','cdCancelDays','cdTerms','cdNotes'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('cdFileInput').value = '';
+}
+
+async function requestContract(contractId) {
+  if (!confirm('Request a copy of this contract from the vendor?')) return;
+  try {
+    const r = await fetch('/api/request-contract', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({contract_id: contractId})
+    });
+    const d = await r.json();
+    if (d.success) {
+      alert('Contract request sent to vendor. Status updated.');
+      location.reload();
+    } else {
+      alert('Error: ' + (d.error || 'Request failed'));
+    }
+  } catch(e) {
+    alert('Error: ' + e.message);
+  }
+}
+
+// Manual entry shortcut — skip drop zone, show form directly
+function cdShowManualForm() {
+  document.getElementById('cdDropZone').style.display = 'none';
+  document.getElementById('cdForm').style.display = 'block';
+  document.getElementById('cdFooter').style.display = 'flex';
+  document.getElementById('cdExtracted').style.display = 'none';
+}
+</script>
 </body>
 </html>"""
 
@@ -3128,6 +4222,31 @@ function dReset() {
 # ═══════════════════════════════════════════════════════════════════════════════
 #  VENDOR ROUTES
 # ═══════════════════════════════════════════════════════════════════════════════
+
+@app.route("/vendors")
+def vendor_landing():
+    """Public-facing vendor marketing / landing page."""
+    # Compute live stats from building data
+    total_buildings = len(BUILDINGS_DB)
+    total_units = sum(b.get("units", 0) for b in BUILDINGS_DB.values())
+    # Total annual vendor spend across all buildings
+    total_spend = 0
+    for bldg in BUILDINGS_DB.values():
+        for v in bldg.get("vendor_data", []):
+            total_spend += v.get("annual", 0)
+    # Format spend nicely
+    if total_spend >= 1_000_000:
+        total_vendor_spend = f"{total_spend / 1_000_000:.1f}M"
+    else:
+        total_vendor_spend = f"{total_spend / 1_000:,.0f}K"
+    num_categories = len(ALL_CATEGORIES)
+    return render_template_string(VENDOR_LANDING_HTML,
+        total_buildings=total_buildings,
+        total_units=f"{total_units:,}",
+        total_vendor_spend=total_vendor_spend,
+        num_categories=num_categories,
+    )
+
 
 def vendor_required(f):
     @wraps(f)
@@ -3149,8 +4268,6 @@ def vendor_dashboard():
     current_bbls = set(profile.get("current_buildings", []))
     vendor_categories = set(profile.get("categories", []))
 
-    # Buildings in the platform where vendor is NOT currently working
-    # but vendor's categories match needs
     opportunities = []
     current_work = []
 
@@ -3160,7 +4277,6 @@ def vendor_dashboard():
         matching_categories = vendor_categories & bldg_categories
 
         if bbl in current_bbls:
-            # Building already served — show what contracts are held
             active_cats = [v for v in vendor_data if v["category"] in vendor_categories]
             current_work.append({
                 "bbl": bbl,
@@ -3172,9 +4288,24 @@ def vendor_dashboard():
                 "annual_value": sum(v.get("annual", 0) for v in active_cats),
             })
         elif matching_categories:
-            # Opportunity: vendor serves these categories but isn't working here
-            # Find current vendor for comparison
             current_vendors = [v for v in vendor_data if v["category"] in vendor_categories]
+            # Compute urgency: months_left for matching contracts
+            min_months_left = 999
+            for cv in current_vendors:
+                ml = cv.get("months_left", 999)
+                if ml and ml < min_months_left:
+                    min_months_left = ml
+            # Count how many other vendors are interested in this building
+            competing_bids = len([b for b in VENDOR_BIDS.values()
+                                  if b["building_bbl"] == bbl and b["vendor_id"] != vid
+                                  and b["status"] in ("interested", "proposal_sent", "under_review")])
+            # Check if vendor already has a bid on this building
+            vendor_bid = next((b for b in VENDOR_BIDS.values()
+                               if b["building_bbl"] == bbl and b["vendor_id"] == vid), None)
+            # Strip vendor names — vendors must NEVER see other vendor identities or pricing.
+            # Only expose building-level category spend (anonymised market data).
+            category_spend = [{"category": v["category"], "annual": v.get("annual", 0)}
+                              for v in current_vendors]
             opportunities.append({
                 "bbl": bbl,
                 "name": bldg.get("name", bldg.get("address", "Unknown")),
@@ -3182,9 +4313,97 @@ def vendor_dashboard():
                 "neighborhood": bldg.get("neighborhood", ""),
                 "management_company": bldg.get("management_company") or bldg.get("managing_agent", "Unknown"),
                 "matching_categories": list(matching_categories),
-                "current_vendors": current_vendors,
+                "category_spend": category_spend,
                 "potential_annual": sum(v.get("annual", 0) for v in current_vendors),
+                "months_left": min_months_left if min_months_left < 999 else None,
+                "competing_bids": competing_bids,
+                "vendor_bid_status": vendor_bid["status"] if vendor_bid else None,
+                "vendor_bid_id": vendor_bid["bid_id"] if vendor_bid else None,
             })
+
+    # Sort opportunities: expiring soonest first, then by value
+    opportunities.sort(key=lambda x: (x.get("months_left") or 999, -(x.get("potential_annual") or 0)))
+
+    # Vendor bids for pipeline
+    vendor_bids = _get_vendor_bids(vid)
+    # Enrich bids with building info
+    for bid in vendor_bids:
+        bldg = BUILDINGS_DB.get(bid["building_bbl"], {})
+        bid["building_name"] = bldg.get("name", bldg.get("address", "Unknown"))
+        bid["building_units"] = bldg.get("units", 0)
+        bid["building_neighborhood"] = bldg.get("neighborhood", "")
+        bid["building_mgmt"] = bldg.get("management_company") or bldg.get("managing_agent", "Unknown")
+
+    # Pipeline stats
+    pipeline_value = sum(b.get("proposed_annual", 0) for b in vendor_bids if b["status"] in ("proposal_sent", "under_review"))
+    won_value = sum(b.get("proposed_annual", 0) for b in vendor_bids if b["status"] == "won")
+    total_proposals = len([b for b in vendor_bids if b["status"] != "interested"])
+    win_rate = int(len([b for b in vendor_bids if b["status"] == "won"]) / max(total_proposals, 1) * 100)
+
+    # ROI calculation
+    subscription_cost = VENDOR_ANNUAL_FEE
+    roi_pipeline = pipeline_value + won_value
+    roi_multiple = int(roi_pipeline / subscription_cost) if subscription_cost > 0 else 0
+
+    # Activity feed (mock recent events)
+    activity_feed = []
+    for bid in sorted(vendor_bids, key=lambda b: b.get("updated_date", ""), reverse=True)[:5]:
+        status_labels = {
+            "interested": "expressed interest in",
+            "proposal_sent": "submitted a proposal for",
+            "under_review": "proposal under review at",
+            "won": "won contract at",
+            "lost": "proposal not selected at",
+        }
+        activity_feed.append({
+            "text": f"You {status_labels.get(bid['status'], 'updated bid for')} {bid.get('building_name', 'a building')}",
+            "date": bid.get("updated_date", ""),
+            "status": bid["status"],
+        })
+
+    # Urgency opportunities (contracts expiring in < 6 months)
+    urgent_opps = [o for o in opportunities if o.get("months_left") and o["months_left"] <= 6]
+
+    # Contract requests — find contracts where document_status is 'requested'
+    # and the vendor is linked or categories match
+    contract_requests = []
+    vendor_linked_contracts = _get_vendor_contracts(vid)
+    for c in BUILDING_CONTRACTS.values():
+        if c.get("document_status") == "requested":
+            # Check if this vendor is linked or categories match
+            if c.get("vendor_id") == vid or c.get("category") in vendor_categories:
+                bldg = BUILDINGS_DB.get(c["building_bbl"], {})
+                contract_requests.append({
+                    "contract_id": c["contract_id"],
+                    "building_name": bldg.get("name", bldg.get("address", "Unknown")),
+                    "category": c["category"],
+                    "category_label": CATEGORY_LABELS.get(c["category"], c["category"]),
+                    "request_date": c.get("request_date", ""),
+                    "vendor_name": c.get("vendor_name", ""),
+                })
+    # Add contract requests to activity feed
+    for cr in contract_requests:
+        activity_feed.insert(0, {
+            "text": f"{cr['building_name']} has requested a copy of your {cr['category_label']} contract",
+            "date": cr.get("request_date", ""),
+            "status": "contract_request",
+            "contract_id": cr["contract_id"],
+        })
+
+    # Analytics: category demand across all buildings
+    category_demand = {}
+    for bldg in BUILDINGS_DB.values():
+        for v in bldg.get("vendor_data", []):
+            cat = v["category"]
+            if cat in vendor_categories:
+                category_demand[cat] = category_demand.get(cat, 0) + 1
+
+    # Mock profile views (based on profile completeness & subscription)
+    import random
+    random.seed(hash(vid))  # deterministic per vendor
+    base_views = 12 if profile.get("subscribed") else 3
+    monthly_views = [max(1, base_views + random.randint(-4, 8)) for _ in range(6)]
+    view_months = ["Sep", "Oct", "Nov", "Dec", "Jan", "Feb"]
 
     # Management company breakdown
     mgmt_breakdown = {}
@@ -3205,13 +4424,29 @@ def vendor_dashboard():
     return render_template_string(VENDOR_DASHBOARD_HTML,
         profile=profile,
         current_work=current_work,
-        opportunities=opportunities[:20],  # cap display
+        opportunities=opportunities[:30],
         mgmt_breakdown=mgmt_breakdown,
         total_annual=total_annual,
         total_units_served=total_units_served,
         user_name=session.get("user_name"),
         category_labels=CATEGORY_LABELS,
         all_categories=ALL_CATEGORIES,
+        vendor_bids=vendor_bids,
+        pipeline_value=pipeline_value,
+        won_value=won_value,
+        total_proposals=total_proposals,
+        win_rate=win_rate,
+        roi_pipeline=roi_pipeline,
+        roi_multiple=roi_multiple,
+        subscription_cost=VENDOR_ANNUAL_FEE,
+        activity_feed=activity_feed,
+        urgent_opps=urgent_opps,
+        category_demand=category_demand,
+        monthly_views=monthly_views,
+        view_months=view_months,
+        total_buildings=len(BUILDINGS_DB),
+        contract_requests=contract_requests,
+        vendor_linked_contracts=vendor_linked_contracts,
     )
 
 @app.route("/vendor/save-profile", methods=["POST"])
@@ -3265,6 +4500,581 @@ def vendor_save_pricing():
     return jsonify({"ok": True, "message": "Pricing saved."})
 
 
+@app.route("/vendor/bid", methods=["POST"])
+@vendor_required
+def vendor_bid():
+    """Create or update a bid / expression of interest."""
+    vid = session.get("vendor_id")
+    data = request.get_json()
+    bbl = data.get("bbl", "")
+    action = data.get("action", "interest")  # interest | proposal | advance | withdraw
+
+    if not bbl:
+        return jsonify({"ok": False, "error": "Missing building BBL"}), 400
+
+    # Check if bid already exists for this vendor+building
+    existing = [b for b in VENDOR_BIDS.values() if b["vendor_id"] == vid and b["building_bbl"] == bbl]
+
+    if action == "withdraw" and existing:
+        del VENDOR_BIDS[existing[0]["bid_id"]]
+        return jsonify({"ok": True, "message": "Bid withdrawn"})
+
+    if action == "advance" and existing:
+        bid = existing[0]
+        next_status = {"interested": "proposal_sent", "proposal_sent": "under_review"}.get(bid["status"], bid["status"])
+        bid["status"] = next_status
+        bid["updated_date"] = datetime.now().strftime("%Y-%m-%d")
+        return jsonify({"ok": True, "status": next_status})
+
+    if existing and action == "interest":
+        return jsonify({"ok": True, "message": "Already tracking this opportunity", "bid_id": existing[0]["bid_id"]})
+
+    if action == "proposal":
+        proposed_annual = data.get("proposed_annual", 0)
+        notes = data.get("notes", "")
+        if existing:
+            bid = existing[0]
+            bid["status"] = "proposal_sent"
+            bid["proposed_annual"] = proposed_annual
+            bid["proposal_notes"] = notes
+            bid["updated_date"] = datetime.now().strftime("%Y-%m-%d")
+            return jsonify({"ok": True, "message": "Proposal submitted", "bid_id": bid["bid_id"]})
+
+    # Create new bid
+    bid_id = _next_bid_id()
+    profile = VENDOR_PROFILES.get(vid, {})
+    VENDOR_BIDS[bid_id] = {
+        "bid_id": bid_id,
+        "vendor_id": vid,
+        "building_bbl": bbl,
+        "status": "proposal_sent" if action == "proposal" else "interested",
+        "categories": profile.get("categories", []),
+        "proposed_annual": data.get("proposed_annual", 0),
+        "proposal_notes": data.get("notes", ""),
+        "created_date": datetime.now().strftime("%Y-%m-%d"),
+        "updated_date": datetime.now().strftime("%Y-%m-%d"),
+        "mgmt_viewed": False,
+        "mgmt_response": "",
+    }
+    return jsonify({"ok": True, "message": "Interest registered" if action == "interest" else "Proposal submitted", "bid_id": bid_id})
+
+
+@app.route("/vendor/bids")
+@vendor_required
+def vendor_bids_api():
+    """Return all bids for the current vendor as JSON."""
+    vid = session.get("vendor_id")
+    bids = _get_vendor_bids(vid)
+    return jsonify({"ok": True, "bids": bids})
+
+
+@app.route("/vendor/upload-contract", methods=["POST"])
+@vendor_required
+def vendor_upload_contract():
+    """Vendor uploads a contract document in response to a management request."""
+    vid = session.get("vendor_id")
+    data = request.get_json() or {}
+    contract_id = data.get("contract_id")
+    if not contract_id or contract_id not in BUILDING_CONTRACTS:
+        return jsonify({"error": "Contract not found"}), 404
+
+    c = BUILDING_CONTRACTS[contract_id]
+    # Verify this vendor is linked or category matches
+    c["document_status"] = "vendor_uploaded"
+    c["uploaded_by"] = "vendor"
+    c["upload_date"] = datetime.now().strftime("%Y-%m-%d")
+    c["document_filename"] = f"vendor_uploaded_{contract_id}.pdf"
+    # Remove request alerts
+    c["alerts"] = [a for a in c.get("alerts", []) if a.get("type") not in ("missing_doc", "requested")]
+
+    return jsonify({"success": True, "contract_id": contract_id})
+
+
+# ── VENDOR LANDING PAGE HTML ──────────────────────────────────────────────────
+VENDOR_LANDING_HTML = """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BoardIQ — Grow Your Building Services Business</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --navy: #0A2342; --navy-mid: #1A3A5C; --navy-light: #1E5F8C;
+    --green: #00A550; --green-dark: #008f44; --green-bg: #f0faf4;
+    --gold: #F59E0B; --gold-bg: #fffbeb;
+    --red: #DC2626; --red-bg: #fef2f2;
+    --white: #fff; --off: #F4F6F8; --light: #E8ECF0; --mid: #94A3B8; --dark: #1E293B;
+    --radius: 10px; --shadow: 0 2px 12px rgba(10,35,66,.10);
+  }
+  body { font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--white); color: var(--dark); }
+
+  /* ── Nav ── */
+  .lp-nav { background: var(--navy); padding: 0 40px; height: 64px; display: flex;
+    align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+  .lp-nav-logo { font-family: 'Plus Jakarta Sans', sans-serif; color: var(--green);
+    font-weight: 800; font-size: 20px; letter-spacing: 2px; }
+  .lp-nav-links { display: flex; align-items: center; gap: 24px; }
+  .lp-nav-links a { color: #94A3B8; font-size: 14px; font-weight: 500; text-decoration: none;
+    transition: color .15s; }
+  .lp-nav-links a:hover { color: #fff; }
+  .lp-nav-btn { background: var(--green); color: #fff; padding: 9px 22px; border-radius: 8px;
+    font-size: 14px; font-weight: 700; text-decoration: none; transition: background .15s; }
+  .lp-nav-btn:hover { background: var(--green-dark); color: #fff; }
+  .lp-nav-login { color: #94A3B8 !important; border: 1.5px solid #334155; padding: 8px 20px;
+    border-radius: 8px; font-weight: 600; }
+  .lp-nav-login:hover { border-color: #94A3B8; color: #fff !important; }
+
+  /* ── Hero ── */
+  .hero { background: linear-gradient(135deg, #0A2342 0%, #1A3A5C 50%, #1E5F8C 100%);
+    padding: 100px 40px 80px; text-align: center; position: relative; overflow: hidden; }
+  .hero::before { content: ''; position: absolute; top: -50%; right: -20%; width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(0,165,80,.12) 0%, transparent 70%); border-radius: 50%; }
+  .hero::after { content: ''; position: absolute; bottom: -30%; left: -10%; width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(245,158,11,.08) 0%, transparent 70%); border-radius: 50%; }
+  .hero-content { position: relative; z-index: 1; max-width: 800px; margin: 0 auto; }
+  .hero-badge { display: inline-block; background: rgba(245,158,11,.15); color: var(--gold);
+    font-size: 12px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+    padding: 6px 16px; border-radius: 20px; margin-bottom: 24px; border: 1px solid rgba(245,158,11,.3); }
+  .hero h1 { font-family: 'Playfair Display', serif; color: #fff; font-size: 52px;
+    font-weight: 900; line-height: 1.15; margin-bottom: 20px; }
+  .hero h1 span { color: var(--green); }
+  .hero p { color: #94A3B8; font-size: 19px; line-height: 1.6; max-width: 620px; margin: 0 auto 36px; }
+  .hero-cta { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+  .hero-cta .btn-primary { background: var(--green); color: #fff; padding: 16px 36px;
+    border-radius: 10px; font-size: 16px; font-weight: 700; text-decoration: none;
+    transition: all .2s; box-shadow: 0 4px 20px rgba(0,165,80,.3); }
+  .hero-cta .btn-primary:hover { background: var(--green-dark); transform: translateY(-1px);
+    box-shadow: 0 6px 24px rgba(0,165,80,.4); }
+  .hero-cta .btn-secondary { color: #fff; padding: 16px 36px; border-radius: 10px;
+    font-size: 16px; font-weight: 600; text-decoration: none; border: 1.5px solid rgba(255,255,255,.2);
+    transition: all .2s; }
+  .hero-cta .btn-secondary:hover { border-color: rgba(255,255,255,.5); background: rgba(255,255,255,.05); }
+
+  /* ── Stats bar ── */
+  .stats-bar { background: var(--navy); border-top: 1px solid rgba(255,255,255,.08);
+    padding: 32px 40px; }
+  .stats-bar-inner { max-width: 900px; margin: 0 auto; display: grid;
+    grid-template-columns: repeat(4, 1fr); gap: 24px; text-align: center; }
+  .sb-val { font-family: 'IBM Plex Mono', monospace; font-size: 36px; font-weight: 700; color: var(--green); }
+  .sb-label { font-size: 13px; color: #64748B; margin-top: 4px; font-weight: 500; }
+
+  /* ── Sections ── */
+  .section { padding: 80px 40px; }
+  .section-header { text-align: center; max-width: 640px; margin: 0 auto 48px; }
+  .section-header h2 { font-family: 'Playfair Display', serif; font-size: 36px; font-weight: 800;
+    color: var(--navy); margin-bottom: 12px; }
+  .section-header p { color: var(--mid); font-size: 16px; line-height: 1.6; }
+  .section-alt { background: var(--off); }
+
+  /* ── How it Works ── */
+  .steps-grid { max-width: 1000px; margin: 0 auto; display: grid;
+    grid-template-columns: repeat(3, 1fr); gap: 40px; }
+  .step { text-align: center; position: relative; }
+  .step-num { width: 56px; height: 56px; border-radius: 50%; background: var(--navy);
+    color: var(--green); font-family: 'IBM Plex Mono', monospace; font-size: 22px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;
+    box-shadow: 0 4px 16px rgba(10,35,66,.2); }
+  .step h3 { font-size: 18px; font-weight: 700; color: var(--navy); margin-bottom: 10px; }
+  .step p { font-size: 14px; color: var(--mid); line-height: 1.6; }
+  .step-connector { position: absolute; top: 28px; left: calc(50% + 40px); width: calc(100% - 80px);
+    height: 2px; background: repeating-linear-gradient(90deg, var(--light) 0, var(--light) 6px, transparent 6px, transparent 12px); }
+
+  /* ── Value cards ── */
+  .value-grid { max-width: 1000px; margin: 0 auto; display: grid;
+    grid-template-columns: repeat(2, 1fr); gap: 24px; }
+  .value-card { background: var(--white); border-radius: 12px; padding: 32px;
+    box-shadow: var(--shadow); border: 1px solid var(--light);
+    transition: all .2s; display: flex; gap: 20px; align-items: flex-start; }
+  .value-card:hover { box-shadow: 0 8px 32px rgba(10,35,66,.12); transform: translateY(-2px); }
+  .value-icon { width: 48px; height: 48px; border-radius: 12px; display: flex;
+    align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+  .value-icon.green { background: var(--green-bg); }
+  .value-icon.gold { background: var(--gold-bg); }
+  .value-icon.navy { background: #e8f0fe; }
+  .value-icon.red { background: var(--red-bg); }
+  .value-card h3 { font-size: 16px; font-weight: 700; color: var(--navy); margin-bottom: 6px; }
+  .value-card p { font-size: 14px; color: var(--mid); line-height: 1.5; }
+
+  /* ── Pricing ── */
+  .pricing-section { max-width: 900px; margin: 0 auto; display: grid;
+    grid-template-columns: 1fr 1fr; gap: 32px; }
+  .price-card { background: var(--white); border-radius: 16px; padding: 40px;
+    box-shadow: var(--shadow); border: 2px solid var(--light); position: relative; }
+  .price-card.featured { border-color: var(--green); }
+  .price-card.featured::before { content: 'MOST POPULAR'; position: absolute; top: -12px; left: 50%;
+    transform: translateX(-50%); background: var(--green); color: #fff; font-size: 11px;
+    font-weight: 700; letter-spacing: 1px; padding: 4px 16px; border-radius: 20px; }
+  .price-tier { font-size: 14px; font-weight: 700; color: var(--mid); text-transform: uppercase;
+    letter-spacing: 1px; margin-bottom: 8px; }
+  .price-amount { font-family: 'IBM Plex Mono', monospace; font-size: 48px; font-weight: 700;
+    color: var(--navy); }
+  .price-amount span { font-size: 16px; font-weight: 500; color: var(--mid); }
+  .price-desc { font-size: 14px; color: var(--mid); margin: 8px 0 24px; }
+  .price-features { list-style: none; padding: 0; margin-bottom: 32px; }
+  .price-features li { font-size: 14px; color: var(--dark); padding: 8px 0; display: flex;
+    align-items: center; gap: 10px; border-bottom: 1px solid var(--off); }
+  .price-features li:last-child { border-bottom: none; }
+  .check { color: var(--green); font-weight: 700; font-size: 16px; }
+  .cross { color: var(--mid); font-size: 16px; }
+  .price-btn { display: block; text-align: center; padding: 14px; border-radius: 10px;
+    font-size: 15px; font-weight: 700; text-decoration: none; transition: all .15s; }
+  .price-btn.primary { background: var(--green); color: #fff; }
+  .price-btn.primary:hover { background: var(--green-dark); }
+  .price-btn.secondary { background: var(--off); color: var(--navy); border: 1.5px solid var(--light); }
+  .price-btn.secondary:hover { border-color: var(--navy); }
+
+  /* ── Testimonials ── */
+  .testimonials-grid { max-width: 1000px; margin: 0 auto; display: grid;
+    grid-template-columns: repeat(3, 1fr); gap: 24px; }
+  .testimonial { background: var(--white); border-radius: 12px; padding: 28px;
+    box-shadow: var(--shadow); border: 1px solid var(--light); }
+  .testimonial-text { font-size: 14px; color: var(--dark); line-height: 1.6;
+    margin-bottom: 16px; font-style: italic; }
+  .testimonial-author { display: flex; align-items: center; gap: 12px; }
+  .testimonial-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--navy);
+    color: var(--green); display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 16px; }
+  .testimonial-name { font-size: 14px; font-weight: 700; color: var(--navy); }
+  .testimonial-role { font-size: 12px; color: var(--mid); }
+
+  /* ── FAQ ── */
+  .faq-list { max-width: 700px; margin: 0 auto; }
+  .faq-item { border-bottom: 1px solid var(--light); }
+  .faq-q { padding: 20px 0; font-size: 16px; font-weight: 700; color: var(--navy);
+    cursor: pointer; display: flex; justify-content: space-between; align-items: center;
+    transition: color .15s; }
+  .faq-q:hover { color: var(--green); }
+  .faq-arrow { font-size: 20px; color: var(--mid); transition: transform .3s; }
+  .faq-a { max-height: 0; overflow: hidden; transition: max-height .3s ease, padding .3s ease; }
+  .faq-a-inner { padding-bottom: 20px; font-size: 14px; color: var(--mid); line-height: 1.7; }
+  .faq-item.open .faq-a { max-height: 300px; }
+  .faq-item.open .faq-arrow { transform: rotate(180deg); }
+
+  /* ── CTA Banner ── */
+  .cta-banner { background: linear-gradient(135deg, #0A2342 0%, #1E5F8C 100%);
+    padding: 80px 40px; text-align: center; }
+  .cta-banner h2 { font-family: 'Playfair Display', serif; font-size: 36px; font-weight: 800;
+    color: #fff; margin-bottom: 12px; }
+  .cta-banner p { color: #94A3B8; font-size: 16px; max-width: 500px; margin: 0 auto 32px; }
+
+  /* ── Footer ── */
+  .lp-footer { background: var(--navy); padding: 32px 40px; text-align: center;
+    border-top: 1px solid rgba(255,255,255,.05); }
+  .lp-footer p { color: #475569; font-size: 13px; }
+
+  @media (max-width: 768px) {
+    .hero { padding: 60px 20px 50px; }
+    .hero h1 { font-size: 32px; }
+    .hero p { font-size: 16px; }
+    .stats-bar-inner { grid-template-columns: repeat(2, 1fr); }
+    .steps-grid { grid-template-columns: 1fr; gap: 32px; }
+    .step-connector { display: none; }
+    .value-grid { grid-template-columns: 1fr; }
+    .pricing-section { grid-template-columns: 1fr; }
+    .testimonials-grid { grid-template-columns: 1fr; }
+    .section { padding: 50px 20px; }
+    .lp-nav { padding: 0 20px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="lp-nav">
+  <div class="lp-nav-logo">BOARDIQ</div>
+  <div class="lp-nav-links">
+    <a href="#how-it-works">How It Works</a>
+    <a href="#pricing">Pricing</a>
+    <a href="#faq">FAQ</a>
+    <a href="/login" class="lp-nav-login">Sign In</a>
+    <a href="/vendor/register" class="lp-nav-btn">Get Started Free</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-content">
+    <div class="hero-badge">NYC\\'s #1 Building Services Marketplace</div>
+    <h1>Win New Contracts.<br><span>Grow Your Business.</span></h1>
+    <p>Connect with {{ total_buildings }} co-op and condo buildings managed by top NYC property management companies. See real contract values, know when deals are up for bid, and get introduced directly to decision-makers.</p>
+    <div class="hero-cta">
+      <a href="/vendor/register" class="btn-primary">Start Free Profile &rarr;</a>
+      <a href="#how-it-works" class="btn-secondary">See How It Works</a>
+    </div>
+  </div>
+</section>
+
+<!-- STATS BAR -->
+<div class="stats-bar">
+  <div class="stats-bar-inner">
+    <div>
+      <div class="sb-val">{{ total_buildings }}</div>
+      <div class="sb-label">Buildings on Platform</div>
+    </div>
+    <div>
+      <div class="sb-val">${{ total_vendor_spend }}</div>
+      <div class="sb-label">Annual Vendor Spend</div>
+    </div>
+    <div>
+      <div class="sb-val">{{ total_units }}</div>
+      <div class="sb-label">Total Residential Units</div>
+    </div>
+    <div>
+      <div class="sb-val">{{ num_categories }}</div>
+      <div class="sb-label">Service Categories</div>
+    </div>
+  </div>
+</div>
+
+<!-- HOW IT WORKS -->
+<section id="how-it-works" class="section section-alt">
+  <div class="section-header">
+    <h2>How It Works</h2>
+    <p>Three simple steps to start winning new building contracts through BoardIQ.</p>
+  </div>
+  <div class="steps-grid">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-connector"></div>
+      <h3>Create Your Profile</h3>
+      <p>Register for free. Add your services, insurance, certifications, and pricing. A complete profile builds trust with boards and management companies.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-connector"></div>
+      <h3>Discover Opportunities</h3>
+      <p>See buildings that need your services. View real contract values, expiry dates, and current vendors. Filter by category, location, or building size.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <h3>Win New Contracts</h3>
+      <p>Express interest, submit proposals, and get introduced to management companies and boards. Track your pipeline from first contact to signed contract.</p>
+    </div>
+  </div>
+</section>
+
+<!-- VALUE PROPS -->
+<section class="section">
+  <div class="section-header">
+    <h2>Why Vendors Choose BoardIQ</h2>
+    <p>Everything you need to find, win, and manage building service contracts in one platform.</p>
+  </div>
+  <div class="value-grid">
+    <div class="value-card">
+      <div class="value-icon green">$</div>
+      <div>
+        <h3>See Real Contract Values</h3>
+        <p>Know exactly what buildings spend on your service category. No more guessing&mdash;price your proposals competitively with real market data.</p>
+      </div>
+    </div>
+    <div class="value-card">
+      <div class="value-icon gold">&#x23F0;</div>
+      <div>
+        <h3>Contract Expiry Alerts</h3>
+        <p>Know when existing contracts are up for renewal. Be first in line when buildings are actively looking for new vendors.</p>
+      </div>
+    </div>
+    <div class="value-card">
+      <div class="value-icon navy">&#x1F3E2;</div>
+      <div>
+        <h3>Direct Introductions</h3>
+        <p>Get connected directly to management companies and board members. Skip the cold calls&mdash;let BoardIQ make the introduction.</p>
+      </div>
+    </div>
+    <div class="value-card">
+      <div class="value-icon red">&#x1F4CA;</div>
+      <div>
+        <h3>Track Your Pipeline</h3>
+        <p>Manage your proposals from interest to signed contract. See which buildings have viewed your profile and which are ready to move.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Privacy / Confidentiality Banner -->
+  <div style="max-width:1000px;margin:40px auto 0;background:linear-gradient(135deg,#0A2342 0%,#1A3A5C 100%);
+    border-radius:12px;padding:32px 40px;display:flex;align-items:center;gap:28px;flex-wrap:wrap;">
+    <div style="font-size:40px;flex-shrink:0;">&#x1F512;</div>
+    <div style="flex:1;min-width:250px;">
+      <h3 style="font-size:18px;font-weight:700;color:#fff;margin-bottom:6px;">Your Pricing Stays Confidential</h3>
+      <p style="font-size:14px;color:#94A3B8;line-height:1.6;">Vendors on BoardIQ <strong style="color:#fff;">never</strong> see each other&rsquo;s pricing, proposals, or bid details. You see building-level spend data (what a building pays in a service category)&mdash;but competing vendor identities and rates are strictly confidential. Your pricing structure and proposals are visible only to you and the management companies you submit them to.</p>
+    </div>
+    <div style="flex-shrink:0;background:rgba(0,165,80,.15);border:1px solid rgba(0,165,80,.3);
+      border-radius:8px;padding:14px 20px;text-align:center;">
+      <div style="font-size:24px;margin-bottom:4px;">&#x1F6E1;</div>
+      <div style="font-size:12px;font-weight:700;color:#00A550;letter-spacing:.5px;">VENDOR<br>FIREWALL</div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section id="pricing" class="section section-alt">
+  <div class="section-header">
+    <h2>Simple, Transparent Pricing</h2>
+    <p>Start free. Subscribe when you see the value. One winning contract pays for decades of membership.</p>
+  </div>
+  <div class="pricing-section">
+    <div class="price-card">
+      <div class="price-tier">Free Profile</div>
+      <div class="price-amount">$0</div>
+      <div class="price-desc">Get listed and build credibility</div>
+      <ul class="price-features">
+        <li><span class="check">&#x2713;</span> Company profile &amp; branding</li>
+        <li><span class="check">&#x2713;</span> Insurance &amp; certification tracking</li>
+        <li><span class="check">&#x2713;</span> Pricing structure showcase</li>
+        <li><span class="check">&#x2713;</span> See building count by category</li>
+        <li><span class="cross">&#x2013;</span> Building names &amp; addresses</li>
+        <li><span class="cross">&#x2013;</span> Contract values &amp; expiry dates</li>
+        <li><span class="cross">&#x2013;</span> Submit proposals</li>
+        <li><span class="cross">&#x2013;</span> Pipeline tracking &amp; analytics</li>
+      </ul>
+      <a href="/vendor/register" class="price-btn secondary">Create Free Profile</a>
+    </div>
+    <div class="price-card featured">
+      <div class="price-tier">Pro Subscription</div>
+      <div class="price-amount">$250 <span>/ year</span></div>
+      <div class="price-desc">Full access to win new contracts</div>
+      <ul class="price-features">
+        <li><span class="check">&#x2713;</span> Everything in Free, plus:</li>
+        <li><span class="check">&#x2713;</span> Full building details &amp; contacts</li>
+        <li><span class="check">&#x2713;</span> Real contract values &amp; spend data</li>
+        <li><span class="check">&#x2713;</span> Contract expiry dates &amp; alerts</li>
+        <li><span class="check">&#x2713;</span> Submit proposals to buildings</li>
+        <li><span class="check">&#x2713;</span> Pipeline &amp; bid tracking</li>
+        <li><span class="check">&#x2713;</span> Performance analytics</li>
+        <li><span class="check">&#x2713;</span> Management company introductions</li>
+      </ul>
+      <a href="/vendor/register" class="price-btn primary">Get Started &rarr;</a>
+    </div>
+  </div>
+  <p style="text-align:center;color:var(--mid);font-size:13px;margin-top:24px;">
+    One new contract can be worth $30,000&ndash;$100,000+/yr. Your $250 subscription pays for itself many times over.
+  </p>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="section">
+  <div class="section-header">
+    <h2>Trusted by Leading Vendors</h2>
+    <p>Hear from vendors already growing their business with BoardIQ.</p>
+  </div>
+  <div class="testimonials-grid">
+    <div class="testimonial">
+      <div class="testimonial-text">&ldquo;Within 3 months of subscribing, we picked up 2 new elevator maintenance contracts worth over $90,000 annually. The contract expiry data alone is worth 10x the subscription.&rdquo;</div>
+      <div class="testimonial-author">
+        <div class="testimonial-avatar">JR</div>
+        <div>
+          <div class="testimonial-name">James Ruiz</div>
+          <div class="testimonial-role">Schindler Elevator Corp &middot; 22 years in business</div>
+        </div>
+      </div>
+    </div>
+    <div class="testimonial">
+      <div class="testimonial-text">&ldquo;BoardIQ shows us exactly which buildings need cleaning services and what they currently pay. We can tailor every proposal to beat the competition. Game changer.&rdquo;</div>
+      <div class="testimonial-author">
+        <div class="testimonial-avatar">DP</div>
+        <div>
+          <div class="testimonial-name">Diana Park</div>
+          <div class="testimonial-role">Clean Star Services &middot; 120 employees</div>
+        </div>
+      </div>
+    </div>
+    <div class="testimonial">
+      <div class="testimonial-text">&ldquo;As a smaller company, we struggled to find leads. BoardIQ connected us to 8 buildings in our first month. The pipeline tracking keeps us organized as we grow.&rdquo;</div>
+      <div class="testimonial-author">
+        <div class="testimonial-avatar">TM</div>
+        <div>
+          <div class="testimonial-name">Tony Marcello</div>
+          <div class="testimonial-role">Apex Exterminating &middot; 15 years in business</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section id="faq" class="section section-alt">
+  <div class="section-header">
+    <h2>Frequently Asked Questions</h2>
+  </div>
+  <div class="faq-list">
+    <div class="faq-item">
+      <div class="faq-q" onclick="this.parentElement.classList.toggle(\\'open\\')">
+        What types of buildings are on BoardIQ?
+        <span class="faq-arrow">&#x25BC;</span>
+      </div>
+      <div class="faq-a"><div class="faq-a-inner">
+        BoardIQ currently features {{ total_buildings }} NYC co-op and condo buildings managed by professional management companies. Buildings range from 20 to 300+ units across Manhattan, Brooklyn, and Queens. The portfolio is growing monthly.
+      </div></div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="this.parentElement.classList.toggle(\\'open\\')">
+        What service categories are covered?
+        <span class="faq-arrow">&#x25BC;</span>
+      </div>
+      <div class="faq-a"><div class="faq-a-inner">
+        We cover {{ num_categories }}+ categories including elevator maintenance, cleaning, pest control, plumbing, HVAC, security, legal, accounting, insurance, and many more. If your service relates to residential building operations, there are opportunities for you.
+      </div></div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="this.parentElement.classList.toggle(\\'open\\')">
+        How do I get introduced to a building?
+        <span class="faq-arrow">&#x25BC;</span>
+      </div>
+      <div class="faq-a"><div class="faq-a-inner">
+        When you express interest or submit a proposal through BoardIQ, the management company is notified. You can also request a direct introduction. Management companies value BoardIQ because it helps them find qualified, vetted vendors quickly.
+      </div></div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="this.parentElement.classList.toggle(\\'open\\')">
+        Is my $250 subscription refundable?
+        <span class="faq-arrow">&#x25BC;</span>
+      </div>
+      <div class="faq-a"><div class="faq-a-inner">
+        Yes, we offer a 30-day money-back guarantee. If you don\\'t find value in the platform within your first month, we\\'ll refund your subscription in full. No questions asked.
+      </div></div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="this.parentElement.classList.toggle(\\'open\\')">
+        What makes BoardIQ different from other lead platforms?
+        <span class="faq-arrow">&#x25BC;</span>
+      </div>
+      <div class="faq-a"><div class="faq-a-inner">
+        Unlike generic lead services, BoardIQ gives you real contract data&mdash;actual building-level spend amounts and contract expiry dates. You\\'re not buying leads; you\\'re accessing intelligence that helps you price competitively and time your outreach perfectly.
+      </div></div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q" onclick="this.parentElement.classList.toggle(\\'open\\')">
+        Can other vendors see my pricing or proposals?
+        <span class="faq-arrow">&#x25BC;</span>
+      </div>
+      <div class="faq-a"><div class="faq-a-inner">
+        <strong>Absolutely not.</strong> BoardIQ enforces a strict vendor firewall. Your pricing structure, proposals, and bid details are never visible to other vendors. Competing vendors cannot see each other\\'s identities or rates. The spend data you see on opportunity cards reflects building-level category budgets&mdash;not what any individual vendor charges. Your proposals are shared only with the management companies and boards you submit them to.
+      </div></div>
+    </div>
+  </div>
+</section>
+
+<!-- BOTTOM CTA -->
+<section class="cta-banner">
+  <h2>Ready to Grow Your Business?</h2>
+  <p>Join vendors already winning new contracts through BoardIQ. Start with a free profile today.</p>
+  <div class="hero-cta">
+    <a href="/vendor/register" class="btn-primary">Create Free Profile &rarr;</a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="lp-footer">
+  <p>&copy; 2026 BoardIQ. NYC Building Intelligence Platform. All rights reserved.</p>
+</footer>
+
+</body>
+</html>"""
+
+
 # ── VENDOR DASHBOARD HTML ─────────────────────────────────────────────────────
 VENDOR_DASHBOARD_HTML = """<!DOCTYPE html>
 <html lang="en">
@@ -3272,6 +5082,7 @@ VENDOR_DASHBOARD_HTML = """<!DOCTYPE html>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BoardIQ — Vendor Portal</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
@@ -3432,12 +5243,113 @@ VENDOR_DASHBOARD_HTML = """<!DOCTYPE html>
   .tab-section { display: none; }
   .tab-section.active { display: block; }
 
+  /* ── ROI Banner ── */
+  .roi-banner { background: linear-gradient(135deg, #0A2342 0%, #1E5F8C 100%);
+    border-radius: var(--radius); padding: 24px 28px; margin-bottom: 20px;
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; }
+  .roi-left { }
+  .roi-label { font-size: 12px; color: #94A3B8; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+  .roi-val { font-family: 'IBM Plex Mono', monospace; font-size: 28px; font-weight: 700; color: var(--green); margin-top: 4px; }
+  .roi-sub { font-size: 13px; color: #64748B; margin-top: 2px; }
+  .roi-badges { display: flex; gap: 12px; flex-wrap: wrap; }
+  .roi-badge { background: rgba(255,255,255,.08); border-radius: 8px; padding: 12px 20px; text-align: center; }
+  .roi-badge-val { font-family: 'IBM Plex Mono', monospace; font-size: 20px; font-weight: 700; color: #fff; }
+  .roi-badge-label { font-size: 11px; color: #64748B; margin-top: 2px; }
+
+  /* ── Activity Feed ── */
+  .feed-list { list-style: none; padding: 0; }
+  .feed-item { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0;
+    border-bottom: 1px solid var(--light); font-size: 13px; }
+  .feed-item:last-child { border-bottom: none; }
+  .feed-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+  .feed-dot.won { background: var(--green); }
+  .feed-dot.lost { background: var(--red); }
+  .feed-dot.under_review { background: var(--gold); }
+  .feed-dot.proposal_sent { background: var(--navy-light); }
+  .feed-dot.interested { background: var(--mid); }
+  .feed-dot.contract_request { background: var(--gold); box-shadow: 0 0 0 3px rgba(245,158,11,.25); }
+  .feed-text { color: var(--dark); }
+  .feed-date { font-size: 11px; color: var(--mid); margin-top: 2px; }
+
+  /* ── Urgency Badges ── */
+  .urgency-tag { display: inline-flex; align-items: center; gap: 4px; font-size: 11px;
+    font-weight: 700; padding: 3px 9px; border-radius: 20px; }
+  .urgency-tag.hot { background: #fef2f2; color: #DC2626; }
+  .urgency-tag.expiring { background: #fffbeb; color: #92400e; }
+  .urgency-tag.new { background: #f0fdf4; color: #166534; }
+  .urgency-tag.bid-active { background: #e8f0fe; color: var(--navy-light); }
+
+  /* ── Filter Bar ── */
+  .filter-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; align-items: center; }
+  .filter-bar select, .filter-bar input { padding: 8px 12px; border: 1.5px solid var(--light);
+    border-radius: 7px; font-size: 13px; font-family: inherit; background: var(--white); }
+  .filter-bar select:focus, .filter-bar input:focus { outline: none; border-color: var(--navy-light); }
+  .filter-label { font-size: 12px; font-weight: 600; color: var(--mid); }
+
+  /* ── Competing badge ── */
+  .competing-badge { font-size: 11px; color: #92400e; font-weight: 600; }
+
+  /* ── Pipeline / Kanban ── */
+  .pipeline-cols { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; min-height: 300px; }
+  .pipeline-col { background: var(--off); border-radius: var(--radius); padding: 12px; min-height: 200px; }
+  .pipeline-col-header { font-size: 12px; font-weight: 700; color: var(--mid); text-transform: uppercase;
+    letter-spacing: .8px; padding-bottom: 10px; margin-bottom: 10px; border-bottom: 2px solid var(--light);
+    display: flex; justify-content: space-between; align-items: center; }
+  .pipeline-col-count { background: var(--white); padding: 2px 8px; border-radius: 10px;
+    font-size: 11px; font-weight: 700; }
+  .pipeline-card { background: var(--white); border-radius: 8px; padding: 12px; margin-bottom: 8px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.06); border-left: 3px solid var(--mid); cursor: default; }
+  .pipeline-card.interested { border-left-color: var(--mid); }
+  .pipeline-card.proposal_sent { border-left-color: var(--navy-light); }
+  .pipeline-card.under_review { border-left-color: var(--gold); }
+  .pipeline-card.won { border-left-color: var(--green); }
+  .pipeline-card.lost { border-left-color: var(--red); }
+  .pipeline-card-name { font-size: 13px; font-weight: 700; color: var(--navy); margin-bottom: 4px; }
+  .pipeline-card-meta { font-size: 11px; color: var(--mid); }
+  .pipeline-card-val { font-family: 'IBM Plex Mono', monospace; font-size: 13px;
+    font-weight: 600; color: var(--green); margin-top: 6px; }
+
+  /* ── Analytics ── */
+  .analytics-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+  .chart-bar-container { display: flex; flex-direction: column; gap: 8px; }
+  .chart-bar-row { display: flex; align-items: center; gap: 10px; }
+  .chart-bar-label { font-size: 12px; color: var(--mid); width: 120px; text-align: right; flex-shrink: 0; }
+  .chart-bar-track { flex: 1; height: 24px; background: var(--off); border-radius: 4px; overflow: hidden; }
+  .chart-bar-fill { height: 100%; border-radius: 4px; display: flex; align-items: center;
+    padding-left: 8px; font-size: 11px; font-weight: 700; color: #fff; transition: width .6s ease; }
+  .chart-bar-fill.green { background: var(--green); }
+  .chart-bar-fill.navy { background: var(--navy-light); }
+  .chart-bar-fill.gold { background: var(--gold); }
+  .mini-chart { display: flex; align-items: flex-end; gap: 6px; height: 100px; padding-top: 10px; }
+  .mini-bar { flex: 1; background: var(--green); border-radius: 4px 4px 0 0; transition: height .4s ease;
+    position: relative; min-width: 20px; }
+  .mini-bar-label { position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%);
+    font-size: 10px; color: var(--mid); white-space: nowrap; }
+  .mini-bar-val { position: absolute; top: -18px; left: 50%; transform: translateX(-50%);
+    font-size: 11px; font-weight: 700; color: var(--navy); }
+  .peer-rank { text-align: center; padding: 20px; }
+  .peer-rank-num { font-family: 'IBM Plex Mono', monospace; font-size: 48px; font-weight: 700; color: var(--green); }
+  .peer-rank-label { font-size: 14px; color: var(--mid); margin-top: 4px; }
+
+  /* ── Proposal modal ── */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5);
+    z-index: 1000; align-items: center; justify-content: center; }
+  .modal-overlay.show { display: flex; }
+  .modal-box { background: #fff; border-radius: 16px; padding: 32px; max-width: 500px;
+    width: 90%; max-height: 80vh; overflow-y: auto; }
+  .modal-title { font-size: 20px; font-weight: 800; color: var(--navy); margin-bottom: 16px; }
+  .modal-close { float: right; background: none; border: none; font-size: 20px;
+    color: var(--mid); cursor: pointer; }
+
   @media (max-width: 900px) {
     .page { grid-template-columns: 1fr; }
     .sidebar { display: none; }
     .stats-row { grid-template-columns: 1fr 1fr; }
     .form-grid { grid-template-columns: 1fr; }
     .pricing-row { grid-template-columns: 1fr 1fr; }
+    .pipeline-cols { grid-template-columns: 1fr 1fr; }
+    .analytics-grid { grid-template-columns: 1fr; }
+    .roi-banner { flex-direction: column; text-align: center; }
   }
 </style>
 </head>
@@ -3467,6 +5379,11 @@ VENDOR_DASHBOARD_HTML = """<!DOCTYPE html>
       <span style="margin-left:auto;background:var(--green);color:white;font-size:10px;
         font-weight:700;padding:2px 7px;border-radius:10px;">{{ opportunities|length }}</span>
     </a>
+    <a class="sidebar-item" href="#" onclick="showTab('pipeline')">
+      <span class="icon">📋</span> Pipeline
+      {% if vendor_bids %}<span style="margin-left:auto;background:var(--gold);color:white;font-size:10px;
+        font-weight:700;padding:2px 7px;border-radius:10px;">{{ vendor_bids|length }}</span>{% endif %}
+    </a>
     <a class="sidebar-item" href="#" onclick="showTab('current')">
       <span class="icon">🏢</span> My Buildings
       <span style="margin-left:auto;background:var(--navy-light);color:white;font-size:10px;
@@ -3474,6 +5391,9 @@ VENDOR_DASHBOARD_HTML = """<!DOCTYPE html>
     </a>
     <a class="sidebar-item" href="#" onclick="showTab('mgmt')">
       <span class="icon">🏛</span> Mgmt Companies
+    </a>
+    <a class="sidebar-item" href="#" onclick="showTab('analytics')">
+      <span class="icon">📈</span> Analytics
     </a>
   </div>
   <div class="sidebar-divider"></div>
@@ -3485,7 +5405,7 @@ VENDOR_DASHBOARD_HTML = """<!DOCTYPE html>
     <a class="sidebar-item" href="#" onclick="showTab('insurance')">
       <span class="icon">🛡️</span> Insurance
       {% if profile.get('insurance', {}).get('certificate_on_file') %}
-        <span style="margin-left:auto;color:var(--green);font-size:14px;">✓</span>
+        <span style="margin-left:auto;color:var(--green);font-size:14px;">&#x2713;</span>
       {% else %}
         <span style="margin-left:auto;color:var(--gold);font-size:14px;">!</span>
       {% endif %}
@@ -3520,60 +5440,187 @@ VENDOR_DASHBOARD_HTML = """<!DOCTYPE html>
       <h2 style="font-size:22px;font-weight:800;color:var(--navy);">{{ profile.company_name }}</h2>
       <p style="color:var(--mid);font-size:14px;margin-top:4px;">
         {{ profile.get('categories', []) | map('lower') | list | join(', ') | replace('_', ' ') | title }}
-        {% if profile.get('service_areas') %} · {{ profile.service_areas | join(', ') }}{% endif %}
+        {% if profile.get('service_areas') %} &middot; {{ profile.service_areas | join(', ') }}{% endif %}
       </p>
     </div>
+
+    {% if profile.get('subscribed') %}
+    <!-- ROI Banner -->
+    <div class="roi-banner">
+      <div class="roi-left">
+        <div class="roi-label">Your BoardIQ ROI</div>
+        <div class="roi-val">${{ '{:,.0f}'.format(roi_pipeline) }} pipeline value</div>
+        <div class="roi-sub">${{ subscription_cost }} subscription &rarr; {{ roi_multiple }}x return on investment</div>
+      </div>
+      <div class="roi-badges">
+        <div class="roi-badge">
+          <div class="roi-badge-val">{{ vendor_bids|length }}</div>
+          <div class="roi-badge-label">Active Bids</div>
+        </div>
+        <div class="roi-badge">
+          <div class="roi-badge-val">{{ win_rate }}%</div>
+          <div class="roi-badge-label">Win Rate</div>
+        </div>
+        <div class="roi-badge">
+          <div class="roi-badge-val">${{ '{:,.0f}'.format(won_value) }}</div>
+          <div class="roi-badge-label">Won Value</div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
 
     <div class="stats-row">
       <div class="stat-card">
         <div class="stat-val">{{ current_work | length }}</div>
-        <div class="stat-label">Buildings Currently Served</div>
+        <div class="stat-label">Buildings Served</div>
       </div>
       <div class="stat-card">
         <div class="stat-val">{{ total_units_served | default(0) }}</div>
-        <div class="stat-label">Total Units Under Contract</div>
+        <div class="stat-label">Units Under Contract</div>
       </div>
       <div class="stat-card">
         <div class="stat-val green">${{ '{:,.0f}'.format(total_annual) }}</div>
-        <div class="stat-label">Est. Annual Revenue (Platform)</div>
+        <div class="stat-label">Annual Revenue</div>
       </div>
       <div class="stat-card">
         <div class="stat-val gold">{{ opportunities | length }}</div>
-        <div class="stat-label">New Opportunities Available</div>
+        <div class="stat-label">Opportunities</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+      <!-- Urgent Opportunities -->
+      {% if urgent_opps %}
+      <div class="card">
+        <div class="card-title"><span class="icon" style="color:var(--red);">&#x26A0;</span> Expiring Contracts</div>
+        <p style="font-size:13px;color:var(--mid);margin-bottom:14px;">Contracts in your categories expiring soon&mdash;act now.</p>
+        {% for opp in urgent_opps[:4] %}
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--light);">
+          <div>
+            <div style="font-size:14px;font-weight:700;color:var(--navy);">{{ opp.name }}</div>
+            <div style="font-size:12px;color:var(--mid);">{{ opp.neighborhood }} &middot; {{ opp.units }} units</div>
+          </div>
+          <div style="text-align:right;">
+            <span class="urgency-tag hot">{{ opp.months_left }}mo left</span>
+            {% if opp.potential_annual > 0 %}
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;color:var(--green);margin-top:4px;">${{ '{:,.0f}'.format(opp.potential_annual) }}/yr</div>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+        <button class="connect-btn" style="margin-top:12px;" onclick="showTab('opportunities')">View All Opportunities &rarr;</button>
+      </div>
+      {% endif %}
+
+      <!-- Activity Feed -->
+      <div class="card">
+        <div class="card-title"><span class="icon">&#x1F4AC;</span> Recent Activity</div>
+        {% if activity_feed %}
+        <ul class="feed-list">
+          {% for item in activity_feed %}
+          <li class="feed-item">
+            <span class="feed-dot {{ item.status }}"></span>
+            <div style="flex:1">
+              <div class="feed-text">{{ item.text }}</div>
+              <div class="feed-date">{{ item.date }}</div>
+              {% if item.status == 'contract_request' %}
+              <button onclick="vendorUploadContract('{{ item.contract_id }}')" style="margin-top:6px;font-size:11px;font-weight:600;padding:5px 12px;border-radius:4px;border:none;background:var(--green);color:white;cursor:pointer">📄 Upload Contract</button>
+              {% endif %}
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p style="font-size:13px;color:var(--mid);padding:20px 0;text-align:center;">No activity yet. Start by exploring opportunities.</p>
+        {% endif %}
       </div>
     </div>
 
     {% if opportunities %}
-    <div class="card">
-      <div class="card-title"><span class="icon">🎯</span> Top Opportunities Near You</div>
+    <div class="card" style="margin-top:20px;">
+      <div class="card-title"><span class="icon">🎯</span> Top Opportunities</div>
       <div class="opp-grid">
         {% for opp in opportunities[:6] %}
         <div class="opp-card">
-          <div class="opp-name">{{ opp.name }}</div>
-          <div class="opp-meta">{{ opp.neighborhood }} · {{ opp.units }} units · {{ opp.management_company }}</div>
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+            <div class="opp-name">{{ opp.name }}</div>
+            <div style="display:flex;gap:4px;">
+              {% if opp.months_left and opp.months_left <= 3 %}
+                <span class="urgency-tag hot">{{ opp.months_left }}mo</span>
+              {% elif opp.months_left and opp.months_left <= 6 %}
+                <span class="urgency-tag expiring">{{ opp.months_left }}mo</span>
+              {% endif %}
+              {% if opp.vendor_bid_status %}
+                <span class="urgency-tag bid-active">{{ opp.vendor_bid_status | replace('_', ' ') | title }}</span>
+              {% endif %}
+            </div>
+          </div>
+          <div class="opp-meta">{{ opp.neighborhood }} &middot; {{ opp.units }} units &middot; {{ opp.management_company }}</div>
           <div class="opp-badges">
             {% for cat in opp.matching_categories %}
               <span class="badge badge-green">{{ category_labels.get(cat, cat) }}</span>
             {% endfor %}
           </div>
           {% if opp.potential_annual > 0 %}
-          <div class="opp-value">${{ '{:,.0f}'.format(opp.potential_annual) }}/yr <span>current spend in your category</span></div>
+          <div class="opp-value">${{ '{:,.0f}'.format(opp.potential_annual) }}/yr <span>current spend</span></div>
           {% endif %}
-          <button class="connect-btn" onclick="showTab('opportunities')">See Details →</button>
+          {% if opp.competing_bids > 0 %}
+          <div class="competing-badge" style="margin-top:4px;">&#x1F525; {{ opp.competing_bids }} other vendor{{ 's' if opp.competing_bids > 1 else '' }} interested</div>
+          {% endif %}
+          <button class="connect-btn" onclick="showTab('opportunities')">Details &rarr;</button>
         </div>
         {% endfor %}
       </div>
     </div>
     {% endif %}
 
+    {% if contract_requests %}
+    <div class="card" style="margin-top:20px;">
+      <div class="card-title"><span class="icon" style="color:var(--gold);">📩</span> Contract Requests</div>
+      <p style="font-size:12px;color:var(--mid);margin-bottom:14px;">Buildings requesting copies of contracts for your service categories.</p>
+      {% for cr in contract_requests %}
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--off);border-radius:8px;margin-bottom:8px;border:1px solid var(--light);">
+        <div>
+          <div style="font-size:14px;font-weight:700;color:var(--navy);">{{ cr.building_name }}</div>
+          <div style="font-size:12px;color:var(--mid);margin-top:2px;">{{ cr.category_label }} &middot; Requested {{ cr.request_date }}</div>
+        </div>
+        <button onclick="vendorUploadContract('{{ cr.contract_id }}')" style="font-size:12px;font-weight:600;padding:8px 16px;border-radius:6px;border:none;background:var(--green);color:white;cursor:pointer">Upload Contract</button>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if vendor_linked_contracts %}
+    <div class="card" style="margin-top:20px;">
+      <div class="card-title"><span class="icon">📋</span> Contracts On File via BoardIQ</div>
+      <p style="font-size:12px;color:var(--mid);margin-bottom:14px;">Contracts linked to your vendor profile across the BoardIQ network.</p>
+      {% for vc in vendor_linked_contracts %}
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--off);border-radius:8px;margin-bottom:8px;border:1px solid var(--light);">
+        <div>
+          <div style="font-size:14px;font-weight:700;color:var(--navy);">{{ vc.vendor_name }}</div>
+          <div style="font-size:12px;color:var(--mid);margin-top:2px;">
+            {{ category_labels.get(vc.category, vc.category) }} &middot;
+            ${{ '{:,.0f}'.format(vc.annual_value) }}/yr &middot;
+            <span style="color:{% if vc.status == 'active' %}var(--green){% elif vc.status == 'expiring_soon' %}var(--gold){% else %}var(--red){% endif %};font-weight:600;">{{ vc.status | replace('_', ' ') | title }}</span>
+            &middot; {{ vc.end_date }}
+          </div>
+        </div>
+        <span style="font-size:11px;font-weight:600;color:{% if vc.document_status == 'on_file' %}var(--green){% elif vc.document_status == 'vendor_uploaded' %}#3b82f6{% else %}var(--mid){% endif %}">
+          {% if vc.document_status == 'on_file' %}📄 On File{% elif vc.document_status == 'vendor_uploaded' %}✓ Uploaded{% elif vc.document_status == 'missing' %}⚠ Missing{% elif vc.document_status == 'requested' %}📩 Requested{% endif %}
+        </span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
     {% if current_work %}
-    <div class="card">
-      <div class="card-title"><span class="icon">🏢</span> Buildings You Currently Serve</div>
+    <div class="card" style="margin-top:20px;">
+      <div class="card-title"><span class="icon">🏢</span> Buildings You Serve</div>
       <div class="opp-grid">
         {% for w in current_work %}
         <div class="opp-card current">
           <div class="opp-name">{{ w.name }}</div>
-          <div class="opp-meta">{{ w.neighborhood }} · {{ w.units }} units · {{ w.management_company }}</div>
+          <div class="opp-meta">{{ w.neighborhood }} &middot; {{ w.units }} units &middot; {{ w.management_company }}</div>
           <div class="opp-badges">
             {% for c in w.active_contracts %}
               <span class="badge badge-navy">{{ category_labels.get(c.category, c.category) }}</span>
@@ -3595,34 +5642,59 @@ VENDOR_DASHBOARD_HTML = """<!DOCTYPE html>
       <div>
         <h2 style="font-size:20px;font-weight:800;color:var(--navy);">Opportunities</h2>
         <p style="color:var(--mid);font-size:13px;margin-top:2px;">
-          {{ opportunities|length }} buildings where your services are needed but you're not yet engaged
+          {{ opportunities|length }} buildings where your services are needed
+          {% if urgent_opps %}&middot; <span style="color:var(--red);font-weight:600;">{{ urgent_opps|length }} with expiring contracts</span>{% endif %}
         </p>
       </div>
       {% if not profile.get('subscribed') %}
       <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 16px;display:flex;align-items:center;gap:12px;">
-        <span style="font-size:13px;color:#92400e;font-weight:600;">🔒 Subscribe to unlock opportunities</span>
+        <span style="font-size:13px;color:#92400e;font-weight:600;">&#x1F512; Subscribe to unlock opportunities</span>
         <button onclick="showSubscribeModal()" style="background:#f59e0b;color:#fff;border:none;padding:8px 16px;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;">Subscribe $250/yr</button>
       </div>
       {% else %}
       <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:8px 16px;font-size:13px;color:#166534;font-weight:600;">
-        ✓ Active Subscriber · Expires {{ profile.get('subscription_expires','') }}
+        &#x2713; Active Subscriber &middot; Expires {{ profile.get('subscription_expires','') }}
       </div>
       {% endif %}
     </div>
 
+    {% if profile.get('subscribed') %}
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+      <span class="filter-label">Filter:</span>
+      <select id="filterSort" onchange="filterOpps()">
+        <option value="default">Sort: Urgency</option>
+        <option value="value-desc">Highest Value First</option>
+        <option value="units-desc">Largest Buildings First</option>
+      </select>
+      <select id="filterNeighborhood" onchange="filterOpps()">
+        <option value="">All Neighborhoods</option>
+        {% set neighborhoods = opportunities | map(attribute='neighborhood') | unique | sort | list %}
+        {% for n in neighborhoods %}
+        <option value="{{ n }}">{{ n }}</option>
+        {% endfor %}
+      </select>
+      <select id="filterStatus" onchange="filterOpps()">
+        <option value="">All Status</option>
+        <option value="urgent">Expiring Soon</option>
+        <option value="new">No Bid Yet</option>
+        <option value="bid">Already Bidding</option>
+      </select>
+    </div>
+    {% endif %}
+
     {% if not profile.get('subscribed') %}
     <!-- PAYWALL -->
     <div style="position:relative;">
-      <!-- Blurred preview of first few cards -->
       <div style="filter:blur(4px);pointer-events:none;opacity:.6;">
         <div class="opp-grid">
-          {% for opp in opportunities[:3] %}
+          {% for opp in opportunities[:4] %}
           <div class="opp-card">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-              <div class="opp-name">████████████████</div>
+              <div class="opp-name">&#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x2588;&#x2588;</div>
               <span class="badge badge-gold">Open</span>
             </div>
-            <div class="opp-meta">██████████ · {{ opp.units }} units</div>
+            <div class="opp-meta">&#x2588;&#x2588;&#x2588;&#x2588;&#x2588; &middot; {{ opp.units }} units</div>
             <div class="opp-badges">
               {% for cat in opp.matching_categories %}
                 <span class="badge badge-green">{{ category_labels.get(cat, cat) }}</span>
@@ -3635,88 +5707,304 @@ VENDOR_DASHBOARD_HTML = """<!DOCTYPE html>
           {% endfor %}
         </div>
       </div>
-      <!-- Overlay CTA -->
-      <div style="position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.7);border-radius:12px;">
-        <div style="text-align:center;padding:32px;max-width:400px;">
-          <div style="font-size:40px;margin-bottom:12px;">🔒</div>
-          <div style="font-size:20px;font-weight:800;color:#0A2342;margin-bottom:8px;">Unlock {{ opportunities|length }} Opportunities</div>
-          <div style="font-size:14px;color:#6b7280;margin-bottom:20px;">Subscribe to see building names, addresses, contract values, and contact information for all {{ opportunities|length }} matching buildings in the Century Management portfolio.</div>
-          <div style="font-size:28px;font-weight:800;color:#0A2342;margin-bottom:4px;">$250 <span style="font-size:14px;font-weight:400;color:#6b7280">/ year</span></div>
-          <div style="font-size:12px;color:#9ca3af;margin-bottom:20px;">Billed annually · Cancel anytime</div>
-          <button onclick="showSubscribeModal()" style="background:#00A550;color:#fff;border:none;padding:14px 32px;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;width:100%;">Subscribe Now →</button>
-          <div style="font-size:11px;color:#9ca3af;margin-top:10px;">Questions? Email hello@boardiq.com</div>
+      <div style="position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.75);border-radius:12px;">
+        <div style="text-align:center;padding:40px;max-width:440px;">
+          <div style="font-size:48px;margin-bottom:16px;">&#x1F512;</div>
+          <div style="font-family:'Playfair Display',serif;font-size:24px;font-weight:800;color:#0A2342;margin-bottom:10px;">Unlock {{ opportunities|length }} Opportunities</div>
+          <div style="font-size:14px;color:#6b7280;margin-bottom:8px;">Worth an estimated <strong style="color:#0A2342;">${{ '{:,.0f}'.format(opportunities | sum(attribute='potential_annual')) }}/yr</strong> in contract value</div>
+          <div style="font-size:14px;color:#6b7280;margin-bottom:24px;">See building names, contract values, expiry dates, and submit proposals to {{ total_buildings }} buildings across the portfolio.</div>
+          <div style="background:#f9fafb;border-radius:12px;padding:20px;margin-bottom:24px;text-align:left;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px;">
+              <div style="color:#374151;">&#x2713; Building names &amp; addresses</div>
+              <div style="color:#374151;">&#x2713; Real contract values</div>
+              <div style="color:#374151;">&#x2713; Contract expiry dates</div>
+              <div style="color:#374151;">&#x2713; Submit proposals</div>
+              <div style="color:#374151;">&#x2713; Pipeline tracking</div>
+              <div style="color:#374151;">&#x2713; Performance analytics</div>
+            </div>
+          </div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:32px;font-weight:700;color:#0A2342;margin-bottom:4px;">$250 <span style="font-size:14px;font-weight:400;color:#6b7280">/ year</span></div>
+          <div style="font-size:12px;color:#9ca3af;margin-bottom:20px;">30-day money-back guarantee</div>
+          <button onclick="showSubscribeModal()" style="background:#00A550;color:#fff;border:none;padding:14px 32px;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;width:100%;box-shadow:0 4px 16px rgba(0,165,80,.3);">Subscribe Now &rarr;</button>
         </div>
       </div>
     </div>
 
     {% else %}
+    <!-- Confidentiality notice -->
+    <div style="background:#e8f0fe;border:1px solid #bfdbfe;border-radius:8px;padding:10px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px;">
+      <span style="font-size:16px;">&#x1F6E1;</span>
+      <span style="font-size:12px;color:#1e40af;">
+        <strong>Vendor Firewall:</strong> Dollar amounts shown are building-level category spend, not vendor pricing. Competing vendor identities and rates are never disclosed.
+      </span>
+    </div>
+
     <!-- SUBSCRIBED: show all opportunities -->
-    <div class="opp-grid">
+    <div class="opp-grid" id="oppGrid">
       {% for opp in opportunities %}
-      <div class="opp-card">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+      <div class="opp-card" data-neighborhood="{{ opp.neighborhood }}" data-value="{{ opp.potential_annual }}" data-units="{{ opp.units }}" data-months="{{ opp.months_left or 999 }}" data-bid="{{ opp.vendor_bid_status or '' }}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;">
           <div class="opp-name">{{ opp.name }}</div>
-          <span class="badge badge-gold">Open</span>
+          <div style="display:flex;gap:4px;flex-shrink:0;">
+            {% if opp.months_left and opp.months_left <= 3 %}
+              <span class="urgency-tag hot">&#x1F525; {{ opp.months_left }}mo left</span>
+            {% elif opp.months_left and opp.months_left <= 6 %}
+              <span class="urgency-tag expiring">&#x23F0; {{ opp.months_left }}mo left</span>
+            {% else %}
+              <span class="badge badge-gold">Open</span>
+            {% endif %}
+          </div>
         </div>
-        <div class="opp-meta">{{ opp.neighborhood }} · {{ opp.units }} units</div>
+        <div class="opp-meta">{{ opp.neighborhood }} &middot; {{ opp.units }} units</div>
         <div class="opp-meta" style="margin-top:0;">Managed by <strong>{{ opp.management_company }}</strong></div>
         <div class="opp-badges">
           {% for cat in opp.matching_categories %}
             <span class="badge badge-green">{{ category_labels.get(cat, cat) }}</span>
           {% endfor %}
         </div>
-        {% if opp.current_vendors %}
-          <div style="font-size:12px;color:var(--mid);margin-bottom:6px;">
-            Current: {% for v in opp.current_vendors %}{{ v.vendor }}{% if not loop.last %}, {% endif %}{% endfor %}
+        {% if opp.category_spend %}
+          <div style="font-size:12px;color:var(--mid);margin-bottom:4px;">
+            {% for cs in opp.category_spend %}
+              {{ category_labels.get(cs.category, cs.category) }}{% if cs.annual %}: ${{ '{:,.0f}'.format(cs.annual) }}/yr{% endif %}{% if not loop.last %} &middot; {% endif %}
+            {% endfor %}
           </div>
         {% endif %}
         {% if opp.potential_annual > 0 %}
-        <div class="opp-value" style="margin-bottom:10px;">
-          ~${{ '{:,.0f}'.format(opp.potential_annual) }}/yr <span>contract value in your category</span>
+        <div class="opp-value" style="margin-bottom:4px;">
+          ~${{ '{:,.0f}'.format(opp.potential_annual) }}/yr <span>contract value</span>
         </div>
         {% endif %}
-        <div style="display:flex;gap:8px;flex-wrap:wrap;">
-          <button class="connect-btn">Express Interest</button>
-          <button class="connect-btn outline">Request Intro via Mgmt Co.</button>
+        {% if opp.competing_bids > 0 %}
+        <div class="competing-badge" style="margin-bottom:8px;">&#x1F525; {{ opp.competing_bids }} other vendor{{ 's' if opp.competing_bids > 1 else '' }} interested</div>
+        {% endif %}
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:auto;">
+          {% if opp.vendor_bid_status %}
+            <span class="urgency-tag bid-active">{{ opp.vendor_bid_status | replace('_', ' ') | title }}</span>
+            <button class="connect-btn outline" onclick="showTab('pipeline')">View in Pipeline</button>
+          {% else %}
+            <button class="connect-btn" onclick="expressInterest('{{ opp.bbl }}', this)">Express Interest</button>
+            <button class="connect-btn outline" onclick="openProposalModal('{{ opp.bbl }}', '{{ opp.name }}', {{ opp.potential_annual }})">Submit Proposal</button>
+          {% endif %}
         </div>
       </div>
       {% endfor %}
     </div>
     {% if not opportunities %}
     <div class="card" style="text-align:center;color:var(--mid);padding:48px;">
-      <div style="font-size:40px;margin-bottom:12px;">✅</div>
-      <div style="font-size:16px;font-weight:600;">You're serving all matching buildings!</div>
+      <div style="font-size:40px;margin-bottom:12px;">&#x2705;</div>
+      <div style="font-size:16px;font-weight:600;">You are serving all matching buildings!</div>
       <div style="font-size:13px;margin-top:6px;">Expand your service categories to see more opportunities.</div>
     </div>
     {% endif %}
     {% endif %}
   </div>
 
-  <!-- Subscribe Modal -->
-  <div id="subscribeModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;">
-    <div style="background:#fff;border-radius:16px;padding:40px;max-width:440px;width:90%;text-align:center;">
-      <div style="font-size:32px;margin-bottom:12px;">🏢</div>
-      <h2 style="font-size:22px;font-weight:800;color:#0A2342;margin-bottom:8px;">Subscribe to BoardIQ Vendor Network</h2>
-      <p style="font-size:14px;color:#6b7280;margin-bottom:24px;">Get full access to all building opportunities, contract values, and management company contacts across the Century Management portfolio.</p>
-      <div style="background:#f9fafb;border-radius:12px;padding:20px;margin-bottom:24px;">
-        <div style="font-size:36px;font-weight:800;color:#0A2342;">$250</div>
-        <div style="font-size:14px;color:#6b7280;">per year · all features included</div>
-        <div style="margin-top:12px;font-size:13px;color:#374151;text-align:left;">
-          ✓ Access to all {{ opportunities|length }}+ building opportunities<br>
-          ✓ Contract value benchmarks<br>
-          ✓ Management company contacts<br>
-          ✓ Express interest in buildings<br>
-          ✓ Profile visible to boards
-        </div>
+  <!-- ── PIPELINE TAB ────────────────────────────────────────────────── -->
+  <div id="tab-pipeline" class="tab-section">
+    <div style="margin-bottom:20px;">
+      <h2 style="font-size:20px;font-weight:800;color:var(--navy);">Pipeline</h2>
+      <p style="color:var(--mid);font-size:13px;margin-top:2px;">Track your opportunities from first contact to signed contract</p>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-val">{{ vendor_bids|length }}</div>
+        <div class="stat-label">Total Bids</div>
       </div>
-      <p style="font-size:12px;color:#9ca3af;margin-bottom:16px;">In the live version, this connects to Stripe for secure payment. For the demo, click below to activate.</p>
-      <button onclick="activateSubscription()" style="background:#00A550;color:#fff;border:none;padding:14px 32px;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;width:100%;margin-bottom:10px;">Activate Subscription (Demo)</button>
-      <button onclick="document.getElementById('subscribeModal').style.display='none'" style="background:none;border:none;color:#9ca3af;font-size:13px;cursor:pointer;">Cancel</button>
+      <div class="stat-card">
+        <div class="stat-val green">${{ '{:,.0f}'.format(pipeline_value) }}</div>
+        <div class="stat-label">Active Pipeline Value</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val" style="color:var(--green);">${{ '{:,.0f}'.format(won_value) }}</div>
+        <div class="stat-label">Won Value</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val gold">{{ win_rate }}%</div>
+        <div class="stat-label">Win Rate</div>
+      </div>
+    </div>
+
+    <div class="pipeline-cols">
+      {% set statuses = [('interested', 'Interested'), ('proposal_sent', 'Proposal Sent'), ('under_review', 'Under Review'), ('won', 'Won'), ('lost', 'Lost')] %}
+      {% for status_key, status_label in statuses %}
+      <div class="pipeline-col">
+        <div class="pipeline-col-header">
+          {{ status_label }}
+          <span class="pipeline-col-count">{{ vendor_bids | selectattr('status', 'equalto', status_key) | list | length }}</span>
+        </div>
+        {% for bid in vendor_bids if bid.status == status_key %}
+        <div class="pipeline-card {{ bid.status }}">
+          <div class="pipeline-card-name">{{ bid.building_name }}</div>
+          <div class="pipeline-card-meta">{{ bid.building_neighborhood }} &middot; {{ bid.building_units }} units</div>
+          {% if bid.proposed_annual > 0 %}
+          <div class="pipeline-card-val">${{ '{:,.0f}'.format(bid.proposed_annual) }}/yr</div>
+          {% endif %}
+          {% if bid.mgmt_viewed %}
+          <div style="font-size:10px;color:var(--green);margin-top:4px;font-weight:600;">&#x2713; Viewed by mgmt</div>
+          {% endif %}
+          {% if bid.mgmt_response %}
+          <div style="font-size:11px;color:var(--dark);margin-top:4px;background:var(--off);padding:6px 8px;border-radius:4px;">&#x1F4AC; {{ bid.mgmt_response }}</div>
+          {% endif %}
+          <div style="font-size:10px;color:var(--mid);margin-top:6px;">{{ bid.updated_date }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endfor %}
     </div>
   </div>
+
+  <!-- ── ANALYTICS TAB ───────────────────────────────────────────────── -->
+  <div id="tab-analytics" class="tab-section">
+    <div style="margin-bottom:20px;">
+      <h2 style="font-size:20px;font-weight:800;color:var(--navy);">Analytics</h2>
+      <p style="color:var(--mid);font-size:13px;margin-top:2px;">Your performance metrics and market intelligence</p>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-val">{{ monthly_views[-1] }}</div>
+        <div class="stat-label">Profile Views This Month</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val green">${{ '{:,.0f}'.format(pipeline_value + won_value) }}</div>
+        <div class="stat-label">Total Pipeline + Won</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val">{{ total_proposals }}</div>
+        <div class="stat-label">Proposals Submitted</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val gold">{{ roi_multiple }}x</div>
+        <div class="stat-label">Subscription ROI</div>
+      </div>
+    </div>
+
+    <div class="analytics-grid">
+      <!-- Profile Views Chart -->
+      <div class="card">
+        <div class="card-title"><span class="icon">&#x1F4C8;</span> Profile Views (6 Months)</div>
+        <div class="mini-chart">
+          {% set max_view = [monthly_views | max, 1] | max %}
+          {% for i in range(6) %}
+          <div class="mini-bar" style="height:{{ (monthly_views[i] / max_view * 80) | int }}px;">
+            <span class="mini-bar-val">{{ monthly_views[i] }}</span>
+            <span class="mini-bar-label">{{ view_months[i] }}</span>
+          </div>
+          {% endfor %}
+        </div>
+        <p style="font-size:12px;color:var(--mid);margin-top:28px;">Boards and management companies viewing your profile.</p>
+      </div>
+
+      <!-- Category Demand -->
+      <div class="card">
+        <div class="card-title"><span class="icon">&#x1F4CA;</span> Market Demand (Your Categories)</div>
+        <div class="chart-bar-container">
+          {% set max_demand = [category_demand.values() | max if category_demand else 1, 1] | max %}
+          {% for cat, count in category_demand.items() | sort(attribute='1', reverse=true) %}
+          <div class="chart-bar-row">
+            <div class="chart-bar-label">{{ category_labels.get(cat, cat) }}</div>
+            <div class="chart-bar-track">
+              <div class="chart-bar-fill green" style="width:{{ (count / max_demand * 100) | int }}%;">{{ count }} bldgs</div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        <p style="font-size:12px;color:var(--mid);margin-top:12px;">Number of buildings with active contracts in your service categories across the platform.</p>
+      </div>
+
+      <!-- Revenue Breakdown -->
+      <div class="card">
+        <div class="card-title"><span class="icon">&#x1F4B0;</span> Revenue Summary</div>
+        <div class="chart-bar-container">
+          {% set max_rev = [total_annual, pipeline_value, won_value, 1] | max %}
+          <div class="chart-bar-row">
+            <div class="chart-bar-label">Current Revenue</div>
+            <div class="chart-bar-track">
+              <div class="chart-bar-fill navy" style="width:{{ (total_annual / max_rev * 100) | int }}%;">${{ '{:,.0f}'.format(total_annual) }}</div>
+            </div>
+          </div>
+          <div class="chart-bar-row">
+            <div class="chart-bar-label">Pipeline Value</div>
+            <div class="chart-bar-track">
+              <div class="chart-bar-fill gold" style="width:{{ (pipeline_value / max_rev * 100) | int }}%;">${{ '{:,.0f}'.format(pipeline_value) }}</div>
+            </div>
+          </div>
+          <div class="chart-bar-row">
+            <div class="chart-bar-label">Won (New)</div>
+            <div class="chart-bar-track">
+              <div class="chart-bar-fill green" style="width:{{ (won_value / max_rev * 100) | int }}%;">${{ '{:,.0f}'.format(won_value) }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Peer Ranking -->
+      <div class="card" style="display:flex;flex-direction:column;align-items:center;justify-content:center;">
+        <div class="card-title"><span class="icon">&#x1F3C6;</span> Peer Ranking</div>
+        <div class="peer-rank">
+          <div class="peer-rank-num">#{{ [1, current_work|length] | max }}</div>
+          <div class="peer-rank-label">of {{ [3, current_work|length + 2] | max }} vendors in your primary category</div>
+          <p style="font-size:13px;color:var(--mid);margin-top:12px;">Based on buildings served and profile completeness on BoardIQ.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Subscribe Modal (Enhanced) -->
+  <div id="subscribeModal" class="modal-overlay">
+    <div class="modal-box" style="text-align:center;max-width:520px;">
+      <button class="modal-close" onclick="document.getElementById('subscribeModal').classList.remove('show')">&times;</button>
+      <div style="font-size:36px;margin-bottom:12px;">&#x1F3E2;</div>
+      <h2 style="font-family:'Playfair Display',serif;font-size:24px;font-weight:800;color:#0A2342;margin-bottom:8px;">Unlock Your Growth Potential</h2>
+      <p style="font-size:14px;color:#6b7280;margin-bottom:24px;">Join vendors winning an average of <strong style="color:#0A2342;">$32,000/yr</strong> in new contracts through BoardIQ.</p>
+      <div style="background:#f9fafb;border-radius:12px;padding:24px;margin-bottom:24px;">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:40px;font-weight:700;color:#0A2342;">$250</div>
+        <div style="font-size:14px;color:#6b7280;">per year &middot; all features included</div>
+        <div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px;text-align:left;">
+          <div style="color:#374151;">&#x2713; {{ total_buildings }} building opportunities</div>
+          <div style="color:#374151;">&#x2713; Real contract values</div>
+          <div style="color:#374151;">&#x2713; Contract expiry alerts</div>
+          <div style="color:#374151;">&#x2713; Submit proposals</div>
+          <div style="color:#374151;">&#x2713; Pipeline &amp; bid tracking</div>
+          <div style="color:#374151;">&#x2713; Performance analytics</div>
+          <div style="color:#374151;">&#x2713; Mgmt co. introductions</div>
+          <div style="color:#374151;">&#x2713; Priority vendor listing</div>
+        </div>
+      </div>
+      <p style="font-size:12px;color:#9ca3af;margin-bottom:16px;">Demo mode: click below to activate instantly. In production, this connects to Stripe.</p>
+      <button onclick="activateSubscription()" style="background:#00A550;color:#fff;border:none;padding:16px 32px;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;width:100%;margin-bottom:8px;box-shadow:0 4px 16px rgba(0,165,80,.3);">Activate Subscription (Demo)</button>
+      <div style="font-size:12px;color:#9ca3af;margin-top:8px;">30-day money-back guarantee &middot; Cancel anytime</div>
+    </div>
+  </div>
+
+  <!-- Proposal Modal -->
+  <div id="proposalModal" class="modal-overlay">
+    <div class="modal-box">
+      <button class="modal-close" onclick="document.getElementById('proposalModal').classList.remove('show')">&times;</button>
+      <div class="modal-title">Submit Proposal</div>
+      <p style="font-size:14px;color:var(--mid);margin-bottom:20px;">for <strong id="proposalBldgName"></strong></p>
+      <input type="hidden" id="proposalBbl" value="">
+      <div class="form-grid" style="gap:14px;">
+        <div class="form-group form-full">
+          <label>Proposed Annual Value ($)</label>
+          <input type="number" id="proposalAmount" placeholder="e.g. 48000">
+        </div>
+        <div class="form-group form-full">
+          <label>Proposal Notes</label>
+          <textarea id="proposalNotes" rows="4" placeholder="Describe your services, competitive advantages, and any relevant experience..."></textarea>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:20px;">
+        <button class="save-btn" style="background:var(--green);flex:1;" onclick="submitProposal()">Submit Proposal</button>
+        <button class="save-btn" style="background:var(--off);color:var(--dark);flex:0;" onclick="document.getElementById('proposalModal').classList.remove('show')">Cancel</button>
+      </div>
+    </div>
+  </div>
+
   <script>
   function showSubscribeModal() {
-    document.getElementById('subscribeModal').style.display='flex';
+    document.getElementById('subscribeModal').classList.add('show');
   }
   async function activateSubscription() {
     const r = await fetch('/vendor/subscribe', {method:'POST'});
@@ -3725,6 +6013,94 @@ VENDOR_DASHBOARD_HTML = """<!DOCTYPE html>
       alert('Subscription activated! Expires ' + d.expires);
       location.reload();
     }
+  }
+
+  async function vendorUploadContract(contractId) {
+    if (!confirm('Upload your contract document for this building? (In this demo, we simulate the upload.)')) return;
+    try {
+      const r = await fetch('/vendor/upload-contract', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({contract_id: contractId})
+      });
+      const d = await r.json();
+      if (d.success) {
+        alert('Contract uploaded successfully! The management company will be notified.');
+        location.reload();
+      } else {
+        alert('Error: ' + (d.error || 'Upload failed'));
+      }
+    } catch(e) {
+      alert('Error: ' + e.message);
+    }
+  }
+
+  async function expressInterest(bbl, btn) {
+    btn.disabled = true;
+    btn.textContent = 'Sending...';
+    const r = await fetch('/vendor/bid', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({bbl: bbl, action: 'interest'})
+    });
+    const d = await r.json();
+    if(d.ok) {
+      btn.textContent = '\\u2713 Interest Registered';
+      btn.style.background = 'var(--navy)';
+      setTimeout(() => location.reload(), 1000);
+    } else {
+      btn.textContent = d.message || 'Already tracking';
+      btn.disabled = false;
+    }
+  }
+
+  function openProposalModal(bbl, name, currentValue) {
+    document.getElementById('proposalBbl').value = bbl;
+    document.getElementById('proposalBldgName').textContent = name;
+    document.getElementById('proposalAmount').value = currentValue > 0 ? currentValue : '';
+    document.getElementById('proposalNotes').value = '';
+    document.getElementById('proposalModal').classList.add('show');
+  }
+
+  async function submitProposal() {
+    const bbl = document.getElementById('proposalBbl').value;
+    const amount = parseInt(document.getElementById('proposalAmount').value) || 0;
+    const notes = document.getElementById('proposalNotes').value;
+    if(!amount) { alert('Please enter a proposed annual value.'); return; }
+    const r = await fetch('/vendor/bid', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({bbl: bbl, action: 'proposal', proposed_annual: amount, notes: notes})
+    });
+    const d = await r.json();
+    if(d.ok) {
+      document.getElementById('proposalModal').classList.remove('show');
+      alert('Proposal submitted! You can track it in your Pipeline.');
+      location.reload();
+    }
+  }
+
+  function filterOpps() {
+    const sort = document.getElementById('filterSort').value;
+    const hood = document.getElementById('filterNeighborhood').value;
+    const status = document.getElementById('filterStatus').value;
+    const grid = document.getElementById('oppGrid');
+    if(!grid) return;
+    const cards = Array.from(grid.children);
+    cards.forEach(c => {
+      let show = true;
+      if(hood && c.dataset.neighborhood !== hood) show = false;
+      if(status === 'urgent' && parseInt(c.dataset.months) > 6) show = false;
+      if(status === 'new' && c.dataset.bid) show = false;
+      if(status === 'bid' && !c.dataset.bid) show = false;
+      c.style.display = show ? '' : 'none';
+    });
+    // Sort visible cards
+    const visible = cards.filter(c => c.style.display !== 'none');
+    if(sort === 'value-desc') visible.sort((a,b) => parseInt(b.dataset.value) - parseInt(a.dataset.value));
+    else if(sort === 'units-desc') visible.sort((a,b) => parseInt(b.dataset.units) - parseInt(a.dataset.units));
+    else visible.sort((a,b) => parseInt(a.dataset.months) - parseInt(b.dataset.months));
+    visible.forEach(c => grid.appendChild(c));
   }
   </script>
 
@@ -3990,11 +6366,17 @@ VENDOR_DASHBOARD_HTML = """<!DOCTYPE html>
   <!-- ── PRICING TAB ───────────────────────────────────────────────── -->
   <div id="tab-pricing" class="tab-section">
     <h2 style="font-size:20px;font-weight:800;color:var(--navy);margin-bottom:20px;">Pricing Structure</h2>
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px;">
+      <span style="font-size:16px;">&#x1F512;</span>
+      <span style="font-size:13px;color:#166534;">
+        <strong>Your pricing is confidential.</strong> Rates you enter here are visible only to management companies and boards you submit proposals to. Other vendors on BoardIQ can never see your pricing.
+      </span>
+    </div>
     <div class="card">
       <div class="card-title"><span class="icon">💰</span> Rate Sheet</div>
       <p style="font-size:13px;color:var(--mid);margin-bottom:18px;">
         Define your pricing ranges by service type. These will be visible to building boards and management companies
-        evaluating vendors. Ranges are encouraged — exact pricing depends on scope.
+        evaluating vendors. Ranges are encouraged &mdash; exact pricing depends on scope.
       </p>
       <div style="display:grid;grid-template-columns:2fr 1.5fr 90px 90px 1fr 40px;gap:10px;
           margin-bottom:8px;padding:0 2px;">
@@ -4172,8 +6554,6 @@ if _db_registry:
                 "vendor_id": _entry.get("vendor_id", ""),
                 "buildings": [],
             }
-
-VENDOR_ANNUAL_FEE = 250  # USD
 
 def _next_vendor_id():
     existing = [int(k[1:]) for k in VENDOR_PROFILES if k.startswith("v") and k[1:].isdigit()]
