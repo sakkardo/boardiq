@@ -437,6 +437,14 @@ def normalize_bbl(bbl):
     """If a Century key has a demo equivalent, return the demo BBL."""
     return BBL_NORMALIZE.get(bbl, bbl)
 
+def _sort_address_key(addr):
+    """Extract leading street number for numeric sort, e.g. '130 East 18th' → (130, 'east 18th')."""
+    import re as _re
+    m = _re.match(r'(\d+)\s*(.*)', addr.strip())
+    if m:
+        return (int(m.group(1)), m.group(2).lower())
+    return (99999, addr.lower())
+
 print(f"[BoardIQ] Merged Century buildings ({len(CENTURY_BUILDINGS)} total, {len(BBL_NORMALIZE)} mapped to demo BBLs)")
 if BBL_NORMALIZE:
     for _c, _d in BBL_NORMALIZE.items():
@@ -1224,7 +1232,7 @@ def dashboard():
         all_buildings=[ensure_building_data(BUILDINGS_DB[b]) for b in
                        DEMO_USERS[session["user_email"]].get("buildings", [])],
         active_bbl=active_bbl,
-        all_buildings_json=json.dumps([{"bbl": k, "address": v["address"]} for k,v in BUILDINGS_DB.items()]),
+        all_buildings_json=json.dumps(sorted([{"bbl": k, "address": v["address"]} for k,v in BUILDINGS_DB.items()], key=lambda b: _sort_address_key(b["address"]))),
         categories_json=json.dumps(list(CATEGORY_LABELS.items())),
         contracts=contracts,
         contracts_summary=contracts_summary,
@@ -2132,7 +2140,7 @@ def commit_invoices():
             skipped += 1
             continue
 
-        bbl = inv["matched_bbl"]
+        bbl = normalize_bbl(inv["matched_bbl"])
         building = BUILDINGS_DB.get(bbl)
         if not building:
             skipped += 1
@@ -4210,8 +4218,7 @@ function dRenderResults() {
     const pct = Math.round((inv.match_confidence || 0) * 100);
     const bc = inv.matched_bbl ? (pct > 65 ? 'm' : 'l') : 'u';
     const bl = inv.matched_bbl ? (pct > 65 ? `✓ ${pct}%` : `⚠ ${pct}%`) : '✗';
-    const bOpts = '<option value="">— Not assigned —</option>' +
-      D_BUILDINGS.map(b => `<option value="${b.bbl}"${b.bbl === inv.matched_bbl ? ' selected' : ''}>${b.address.substring(0,36)}</option>`).join('');
+    const matchedAddr = inv.matched_bbl ? (D_BUILDINGS.find(b=>b.bbl===inv.matched_bbl)||{}).address||'' : '';
     const cOpts = D_CATEGORIES.map(([k,v]) => `<option value="${k}"${k === inv.category ? ' selected' : ''}>${v}</option>`).join('');
     const tr = document.createElement('tr');
     tr.id = 'dr' + idx;
@@ -4223,7 +4230,13 @@ function dRenderResults() {
       <td><div class="d-amt">${inv.total || '—'}</div></td>
       <td>
         <span class="d-badge ${bc}">${bl}</span>
-        <select class="d-sel" onchange="dUpdBldg(${idx},this.value)">${bOpts}</select>
+        <div class="d-bldg-search" style="position:relative">
+          <input type="text" class="d-sel" id="dbldg${idx}" placeholder="Search building..."
+            value="${matchedAddr.substring(0,36)}"
+            onfocus="dShowBldgList(${idx})" oninput="dFilterBldgs(${idx})"
+            autocomplete="off">
+          <div class="d-bldg-list" id="dbl${idx}" style="display:none;position:absolute;top:100%;left:0;right:0;max-height:200px;overflow-y:auto;background:white;border:1px solid var(--border2);border-radius:4px;z-index:100;box-shadow:0 4px 12px rgba(0,0,0,.15)"></div>
+        </div>
         ${inv.raw_building ? `<div class="d-raw">${inv.raw_building.substring(0,40)}</div>` : ''}
       </td>
       <td>
@@ -4243,6 +4256,51 @@ function dRenderResults() {
 }
 
 function dUpdBldg(i, v) { dInvoices[i].matched_bbl = v; const b = D_BUILDINGS.find(x => x.bbl === v); dInvoices[i].matched_address = b ? b.address : ''; dUpdateSum(); }
+
+function dShowBldgList(idx) {
+  const list = document.getElementById('dbl' + idx);
+  dFilterBldgs(idx);
+  list.style.display = 'block';
+  setTimeout(() => {
+    const closer = (e) => {
+      if (!e.target.closest('#dbl' + idx) && e.target.id !== 'dbldg' + idx) {
+        list.style.display = 'none';
+        document.removeEventListener('click', closer);
+      }
+    };
+    document.addEventListener('click', closer);
+  }, 50);
+}
+
+function dFilterBldgs(idx) {
+  const input = document.getElementById('dbldg' + idx);
+  const list = document.getElementById('dbl' + idx);
+  const q = input.value.toLowerCase().trim();
+  const filtered = q ? D_BUILDINGS.filter(b => b.address.toLowerCase().includes(q)) : D_BUILDINGS;
+  list.innerHTML = '';
+  // "Not assigned" option
+  const na = document.createElement('div');
+  na.style.cssText = 'padding:5px 8px;font-size:11px;color:#999;cursor:pointer';
+  na.textContent = '— Not assigned —';
+  na.onmousedown = () => { input.value = ''; list.style.display = 'none'; dUpdBldg(idx, ''); };
+  list.appendChild(na);
+  // Building options (cap at 50 for performance)
+  filtered.slice(0, 50).forEach(b => {
+    const opt = document.createElement('div');
+    opt.style.cssText = 'padding:5px 8px;font-size:11px;cursor:pointer;border-bottom:1px solid rgba(0,0,0,.04)';
+    opt.textContent = b.address;
+    opt.onmouseover = () => { opt.style.background = '#f0f0f0'; };
+    opt.onmouseout = () => { opt.style.background = 'white'; };
+    opt.onmousedown = () => { input.value = b.address; list.style.display = 'none'; dUpdBldg(idx, b.bbl); };
+    list.appendChild(opt);
+  });
+  if (filtered.length > 50) {
+    const more = document.createElement('div');
+    more.style.cssText = 'padding:5px 8px;font-size:10px;color:#999;text-align:center';
+    more.textContent = '(' + (filtered.length - 50) + ' more — type to filter)';
+    list.appendChild(more);
+  }
+}
 function dUpdCat(i, v) {
   const customInput = document.getElementById('dcustom' + i);
   if (v === '__custom__') {
