@@ -414,20 +414,57 @@ BUILDINGS_DB = {
 }
 
 # ── Merge Century buildings into main DB ─────────────────────────────────────
-BUILDINGS_DB.update(CENTURY_BUILDINGS)
+# Build address→demo_bbl map so Century buildings with matching demo entries
+# point to the rich demo version instead of creating duplicates.
+_DEMO_ADDRESS_MAP = {}
+for _demo_bbl, _demo_bldg in list(BUILDINGS_DB.items()):
+    _addr = _demo_bldg.get("address", "").strip().lower().replace("street", "st")
+    if _addr:
+        _DEMO_ADDRESS_MAP[_addr] = _demo_bbl
+
+# Track Century→demo BBL aliases for buildings that have a richer demo version
+_CENTURY_TO_DEMO = {}
+for _ckey, _cbldg in CENTURY_BUILDINGS.items():
+    _caddr = _cbldg.get("address", "").strip().lower().replace("street", "st")
+    if _caddr in _DEMO_ADDRESS_MAP:
+        # Demo version is richer — keep it, create alias
+        _CENTURY_TO_DEMO[_ckey] = _DEMO_ADDRESS_MAP[_caddr]
+        # Copy any Century-specific fields the demo might be missing
+        demo = BUILDINGS_DB[_DEMO_ADDRESS_MAP[_caddr]]
+        if not demo.get("managing_agent"):
+            demo["managing_agent"] = _cbldg.get("managing_agent", "")
+    else:
+        BUILDINGS_DB[_ckey] = _cbldg
+
+# Create redirect entries so /switch-building/bldg_004 → bbl_1009270001
+for _ckey, _demo_bbl in _CENTURY_TO_DEMO.items():
+    if _ckey not in BUILDINGS_DB:
+        BUILDINGS_DB[_ckey] = BUILDINGS_DB[_demo_bbl]  # alias to same dict
+
+print(f"[BoardIQ] Merged Century buildings ({len(CENTURY_BUILDINGS)} total, {len(_CENTURY_TO_DEMO)} aliased to demo)")
 
 # ── Initialize database and load persisted data ─────────────────────────────
 _db_available = boardiq_db.init_db()
 _load_persisted_vendor_data()
 
 # ── Auth (simple demo auth — swap for real auth in production) ───────────────
+# Build Century buildings list, replacing aliased keys with demo BBLs
+_century_building_keys = []
+for _ckey in CENTURY_BUILDINGS.keys():
+    if _ckey in _CENTURY_TO_DEMO:
+        _demo_bbl = _CENTURY_TO_DEMO[_ckey]
+        if _demo_bbl not in _century_building_keys:
+            _century_building_keys.append(_demo_bbl)
+    else:
+        _century_building_keys.append(_ckey)
+
 DEMO_USERS = {
     "board@130e18.com":      {"password": "demo1234", "buildings": ["bbl_1009270001"], "name": "130 East 18th Board", "role": "board"},
     "board@120w72.com":      {"password": "demo1234", "buildings": ["bbl_1022150001"], "name": "Margaret Chen", "role": "board"},
     "board@740park.com":     {"password": "demo1234", "buildings": ["bbl_1012660001"], "name": "Robert Steinberg", "role": "board"},
     "board@gramercyplaza.com": {"password": "demo1234", "buildings": ["bbl_1009270001"], "name": "Gramercy Plaza Board", "role": "board"},
     "admin@boardiq.com":     {"password": "admin", "buildings": list(BUILDINGS_DB.keys()), "name": "BoardIQ Admin", "is_admin": True, "role": "admin"},
-    "century@boardiq.com":   {"password": "century", "buildings": list(CENTURY_BUILDINGS.keys()), "name": "Century Management", "role": "admin"},
+    "century@boardiq.com":   {"password": "century", "buildings": _century_building_keys, "name": "Century Management", "role": "admin"},
     "vendor@schindler.com":  {"password": "demo1234", "name": "Schindler Elevator Corp", "role": "vendor", "vendor_id": "v001", "buildings": []},
     "vendor@cleanstar.com":  {"password": "demo1234", "name": "Clean Star Services", "role": "vendor", "vendor_id": "v002", "buildings": []},
     "vendor@apexext.com":    {"password": "demo1234", "name": "Apex Exterminating", "role": "vendor", "vendor_id": "v003", "buildings": []},
@@ -800,9 +837,18 @@ BUILDING_CONTRACTS = {
 }
 
 def _get_building_contracts(bbl):
-    """Get all contracts for a building, sorted by status priority then end_date."""
+    """Get all contracts for a building, sorted by status priority then end_date.
+    Also checks aliased BBLs (e.g. Century bldg_004 ↔ demo bbl_1009270001)."""
+    # Collect all BBLs that refer to the same physical building
+    bbl_set = {bbl}
+    # Check if this BBL has aliases (Century→demo or demo→Century)
+    for ckey, demo_bbl in _CENTURY_TO_DEMO.items():
+        if bbl == demo_bbl:
+            bbl_set.add(ckey)
+        elif bbl == ckey:
+            bbl_set.add(demo_bbl)
     status_order = {"expired": 0, "expiring_soon": 1, "active": 2, "pending_document": 3}
-    contracts = [c for c in BUILDING_CONTRACTS.values() if c["building_bbl"] == bbl]
+    contracts = [c for c in BUILDING_CONTRACTS.values() if c["building_bbl"] in bbl_set]
     contracts.sort(key=lambda c: (status_order.get(c["status"], 9), c.get("end_date", "")))
     return contracts
 
