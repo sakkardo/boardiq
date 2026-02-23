@@ -1092,6 +1092,9 @@ def login():
             buildings = user.get("buildings", [])
             if buildings:
                 session["active_building"] = buildings[0]
+            # Management companies (many buildings) → portfolio view
+            if len(buildings) > 20:
+                return redirect(url_for("portfolio_dashboard"))
             return redirect(url_for("dashboard"))
         error = "Invalid credentials."
 
@@ -1132,11 +1135,13 @@ def dashboard():
         else:
             c["linked_vendor"] = None
 
+    has_portfolio = len(user.get("buildings", [])) > 20
     return render_template_string(DASHBOARD_HTML,
         building=building,
         benchmarks=benchmarks,
         user_name=session.get("user_name"),
         is_admin=is_admin,
+        has_portfolio=has_portfolio,
         all_buildings=[ensure_building_data(BUILDINGS_DB[b]) for b in
                        DEMO_USERS[session["user_email"]].get("buildings", [])],
         active_bbl=active_bbl,
@@ -2952,6 +2957,9 @@ table.vt tr.click:hover td{background:var(--surface2)}
     <div class="logo-sub">Property Intelligence</div>
   </div>
   <div class="nav">
+    {% if has_portfolio %}
+    <a href="/portfolio" class="nav-item" style="text-decoration:none;color:var(--gold);margin-bottom:8px;display:block;font-weight:600">← &nbsp;Portfolio</a>
+    {% endif %}
     <div class="nav-label">Intelligence</div>
     <div class="nav-item active">◈ &nbsp;Dashboard</div>
     <div class="nav-item">◎ &nbsp;Savings
@@ -4214,6 +4222,530 @@ function cdShowManualForm() {
   document.getElementById('cdFooter').style.display = 'flex';
   document.getElementById('cdExtracted').style.display = 'none';
 }
+</script>
+</body>
+</html>"""
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  PORTFOLIO DASHBOARD (Management Company View)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.route("/portfolio")
+@login_required
+def portfolio_dashboard():
+    """Management company portfolio view — aggregate stats across all buildings."""
+    user = DEMO_USERS.get(session["user_email"], {})
+    is_admin = user.get("is_admin", False) or user.get("role") == "admin"
+    if not is_admin:
+        return redirect(url_for("dashboard"))
+
+    building_ids = user.get("buildings", [])
+
+    # ── Enrich all buildings and compute aggregates ─────────────────────────
+    buildings_data = []
+    total_units = 0
+    total_hpd_open = 0
+    total_dob_open = 0
+    total_assessed_value = 0
+    total_tax = 0
+    tax_trends = []
+    certiorari_count = 0
+    urgent_count = 0
+    compliance_exposure_low = 0
+    compliance_exposure_high = 0
+    by_law = {}
+    by_borough = {}
+
+    for bbl in building_ids:
+        bldg = BUILDINGS_DB.get(bbl)
+        if not bldg:
+            continue
+        bldg = ensure_building_data(bldg)
+
+        units = bldg.get("units", 0)
+        total_units += units
+
+        # Violations
+        v = bldg.get("violations", {})
+        hpd = v.get("hpd_open", 0)
+        dob = v.get("dob_open", 0)
+        total_hpd_open += hpd
+        total_dob_open += dob
+
+        # Tax
+        tax = bldg.get("tax_assessment", {})
+        total_assessed_value += tax.get("assessed_value", 0)
+        total_tax += tax.get("annual_tax_estimate", tax.get("annual_tax_est", 0))
+        trend = tax.get("trend_pct_2yr", 0)
+        tax_trends.append(trend)
+        if tax.get("certiorari_recommended"):
+            certiorari_count += 1
+
+        # Compliance
+        deadlines = bldg.get("compliance_deadlines", [])
+        high_deadlines = [d for d in deadlines if d.get("urgency") == "HIGH"]
+        med_deadlines = [d for d in deadlines if d.get("urgency") == "MEDIUM"]
+        urgent_count += len(high_deadlines)
+
+        for d in high_deadlines:
+            compliance_exposure_low += d.get("cost_low", 0)
+            compliance_exposure_high += d.get("cost_high", 0)
+
+        for d in deadlines:
+            law_key = d["law"].split("—")[0].split("–")[0].strip()
+            if law_key not in by_law:
+                by_law[law_key] = {"total": 0, "high": 0, "medium": 0}
+            by_law[law_key]["total"] += 1
+            if d.get("urgency") == "HIGH":
+                by_law[law_key]["high"] += 1
+            elif d.get("urgency") == "MEDIUM":
+                by_law[law_key]["medium"] += 1
+
+        # Compliance status for this building
+        if high_deadlines:
+            comp_status = "red"
+        elif med_deadlines:
+            comp_status = "yellow"
+        else:
+            comp_status = "green"
+
+        # Earliest deadline
+        sorted_deadlines = sorted(deadlines, key=lambda x: x.get("months_away", 999))
+        earliest = sorted_deadlines[0] if sorted_deadlines else None
+
+        # Borough aggregation
+        borough = bldg.get("borough", "Unknown")
+        if borough not in by_borough:
+            by_borough[borough] = {"buildings": 0, "units": 0}
+        by_borough[borough]["buildings"] += 1
+        by_borough[borough]["units"] += units
+
+        buildings_data.append({
+            "id": bbl,
+            "address": bldg.get("address", "Unknown"),
+            "units": units,
+            "building_type": bldg.get("building_type", "—"),
+            "neighborhood": bldg.get("neighborhood", "—"),
+            "borough": borough,
+            "year_built": bldg.get("year_built", 0),
+            "floors": bldg.get("floors", 0),
+            "comp_status": comp_status,
+            "urgent_count": len(high_deadlines),
+            "earliest_deadline": earliest["law"].split("—")[0].strip() + " · " + earliest["due_date"] if earliest else "—",
+            "hpd_open": hpd,
+            "dob_open": dob,
+            "tax_trend": trend,
+            "certiorari": tax.get("certiorari_recommended", False),
+            "vendor_count": len(bldg.get("vendor_data", [])),
+        })
+
+    # Sort buildings by urgency (most urgent first), then by address
+    buildings_data.sort(key=lambda b: (
+        0 if b["comp_status"] == "red" else 1 if b["comp_status"] == "yellow" else 2,
+        -b["urgent_count"],
+        b["address"]
+    ))
+
+    avg_tax_trend = round(sum(tax_trends) / len(tax_trends), 1) if tax_trends else 0
+
+    portfolio = {
+        "total_buildings": len(buildings_data),
+        "total_units": total_units,
+        "urgent_count": urgent_count,
+        "total_hpd_open": total_hpd_open,
+        "total_dob_open": total_dob_open,
+        "compliance_exposure_low": compliance_exposure_low,
+        "compliance_exposure_high": compliance_exposure_high,
+        "total_assessed_value": total_assessed_value,
+        "total_tax": total_tax,
+        "avg_tax_trend": avg_tax_trend,
+        "certiorari_count": certiorari_count,
+        "by_law": by_law,
+        "by_borough": by_borough,
+    }
+
+    return render_template_string(PORTFOLIO_HTML,
+        portfolio=portfolio,
+        buildings=buildings_data,
+        user_name=session.get("user_name"),
+    )
+
+
+PORTFOLIO_HTML = """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BoardIQ — Portfolio Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=IBM+Plex+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#f4f1eb;--surface:#fff;--surface2:#f9f7f3;--border:#e5e0d5;--border2:#d4cdc0;
+  --text:#1a1714;--muted:#8a8278;--dim:#6b6560;
+  --green:#1a7a4a;--green-light:#e8f5ee;--green-border:#b8deca;
+  --yellow:#b5720a;--yellow-light:#fef6e6;--yellow-border:#f0d090;
+  --red:#c0392b;--red-light:#fdecea;--red-border:#f0b8b3;
+  --gold:#c4893a;--gold-light:#fdf3e6;--ink:#2c2825;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;min-height:100vh}
+
+/* ── Topbar ── */
+.topbar{position:fixed;top:0;left:0;right:0;height:44px;background:var(--ink);display:flex;align-items:center;justify-content:space-between;padding:0 24px;z-index:150}
+.topbar-logo{font-family:'Playfair Display',serif;font-size:17px;color:#fff}
+.topbar-logo span{color:var(--gold)}
+.topbar-right{display:flex;align-items:center;gap:16px}
+.topbar-user{font-size:12px;color:rgba(255,255,255,.5)}
+.topbar-signout{font-size:12px;color:rgba(255,255,255,.35);text-decoration:none}
+.topbar-signout:hover{color:rgba(255,255,255,.7)}
+
+/* ── Sidebar ── */
+.sidebar{position:fixed;left:0;top:44px;bottom:0;width:220px;background:var(--ink);display:flex;flex-direction:column;z-index:100}
+.logo{padding:26px 22px 22px;border-bottom:1px solid rgba(255,255,255,.08)}
+.logo-mark{font-family:'Playfair Display',serif;font-size:22px;color:#fff}
+.logo-mark span{color:var(--gold)}
+.logo-sub{font-size:10px;color:rgba(255,255,255,.3);letter-spacing:2px;text-transform:uppercase;margin-top:3px}
+.nav{padding:14px 0;flex:1}
+.nav-label{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.25);padding:10px 22px 5px}
+.nav-item{display:flex;align-items:center;gap:8px;padding:8px 22px;font-size:12.5px;color:rgba(255,255,255,.5);cursor:pointer;border-left:2px solid transparent;text-decoration:none}
+.nav-item.active{color:#fff;background:rgba(255,255,255,.06);border-left-color:var(--gold)}
+.nav-item:hover{color:rgba(255,255,255,.8)}
+.nav-badge{margin-left:auto;background:var(--red);color:#fff;font-size:10px;font-weight:600;padding:1px 6px;border-radius:10px}
+.nav-badge.gold{background:var(--gold)}
+.bldg-block{padding:14px 18px;border-top:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03)}
+.bldg-tag{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,.3);margin-bottom:3px}
+.bldg-name{font-size:12.5px;font-weight:600;color:rgba(255,255,255,.85)}
+.bldg-meta{font-size:11px;color:rgba(255,255,255,.35);margin-top:2px}
+
+/* ── Main ── */
+.main{margin-left:220px;padding:30px 34px 48px;margin-top:44px}
+.page-header{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid var(--border)}
+.page-title{font-family:'Playfair Display',serif;font-size:28px;color:var(--ink);letter-spacing:-.5px}
+.page-sub{font-size:12.5px;color:var(--muted);margin-top:4px}
+.header-badge{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);background:var(--surface);border:1px solid var(--border);padding:5px 11px;border-radius:4px}
+
+/* ── KPI Strip ── */
+.strip{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:22px}
+.strip-item{background:var(--surface);padding:16px 20px;position:relative}
+.strip-item::after{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+.strip-item.red::after{background:var(--red)}
+.strip-item.yellow::after{background:var(--yellow)}
+.strip-item.green::after{background:var(--green)}
+.strip-item.blue::after{background:#1a4a7a}
+.strip-label{font-size:9.5px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);margin-bottom:7px;font-weight:600}
+.strip-value{font-family:'Playfair Display',serif;font-size:26px;letter-spacing:-.5px;line-height:1}
+.strip-value.red{color:var(--red)}.strip-value.yellow{color:var(--yellow)}.strip-value.green{color:var(--green)}.strip-value.blue{color:#1a4a7a}
+.strip-sub{font-size:11.5px;color:var(--muted);margin-top:4px}
+
+/* ── Cards & Grid ── */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.card.full{grid-column:1/-1}
+.ch{padding:16px 22px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.ct{font-family:'Playfair Display',serif;font-size:16px;color:var(--ink)}
+.csub{font-size:11px;color:var(--muted);margin-top:2px}
+.mono{font-family:'IBM Plex Mono',monospace;font-size:12px}
+
+/* ── Building Table ── */
+.search-bar{padding:12px 22px;border-bottom:1px solid var(--border);display:flex;gap:10px;align-items:center}
+.search-input{flex:1;border:1px solid var(--border2);border-radius:5px;padding:7px 12px;font-family:inherit;font-size:12.5px;outline:none;background:var(--surface2)}
+.search-input:focus{border-color:var(--gold);background:white}
+.search-count{font-size:11px;color:var(--muted);white-space:nowrap}
+table.bt{width:100%;border-collapse:collapse}
+table.bt th{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);padding:9px 14px;text-align:left;border-bottom:1px solid var(--border);background:var(--surface2);font-weight:600;cursor:pointer;user-select:none;white-space:nowrap}
+table.bt th:hover{color:var(--ink)}
+table.bt th .sort-arrow{font-size:8px;margin-left:3px;opacity:.3}
+table.bt th.sorted .sort-arrow{opacity:1;color:var(--gold)}
+table.bt th.r{text-align:right}
+table.bt td{padding:10px 14px;font-size:12.5px;border-bottom:1px solid var(--border);vertical-align:middle}
+table.bt tr:last-child td{border-bottom:none}
+table.bt tr.brow{cursor:pointer;transition:background .1s}
+table.bt tr.brow:hover td{background:var(--surface2)}
+.addr-main{font-weight:600;color:var(--ink);font-size:12.5px}
+.addr-meta{font-size:10.5px;color:var(--muted);margin-top:1px}
+
+/* ── Status dots & pills ── */
+.status-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.status-dot.red{background:var(--red)}.status-dot.yellow{background:var(--yellow)}.status-dot.green{background:var(--green)}
+.pill{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:600;white-space:nowrap}
+.pill-red{background:var(--red-light);color:var(--red);border:1px solid var(--red-border)}
+.pill-yellow{background:var(--yellow-light);color:var(--yellow);border:1px solid var(--yellow-border)}
+.pill-green{background:var(--green-light);color:var(--green);border:1px solid var(--green-border)}
+
+/* ── Compliance Overview ── */
+.law-row{display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:1px solid var(--border)}
+.law-row:last-child{border-bottom:none}
+.law-name{font-size:12.5px;font-weight:600;color:var(--ink);width:160px;flex-shrink:0}
+.law-bar-wrap{flex:1;display:flex;align-items:center;gap:8px}
+.law-bar{height:18px;border-radius:3px;display:flex;overflow:hidden;flex:1}
+.law-seg{height:100%;transition:width .3s}
+.law-counts{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--dim);width:100px;text-align:right;flex-shrink:0}
+
+/* ── Borough breakdown ── */
+.borough-row{display:flex;align-items:center;justify-content:space-between;padding:10px 18px;border-bottom:1px solid var(--border)}
+.borough-row:last-child{border-bottom:none}
+.borough-name{font-size:12.5px;font-weight:600;color:var(--ink)}
+.borough-stat{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--dim)}
+
+/* ── Responsive ── */
+@media(max-width:900px){
+  .sidebar{display:none}
+  .main{margin-left:0}
+  .strip{grid-template-columns:1fr 1fr}
+  .grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-logo">Board<span>IQ</span></div>
+  <div class="topbar-right">
+    <span class="topbar-user">{{ user_name }}</span>
+    <a href="/logout" class="topbar-signout">Sign Out</a>
+  </div>
+</header>
+
+<nav class="sidebar">
+  <div class="logo">
+    <div class="logo-mark">Board<span>IQ</span></div>
+    <div class="logo-sub">Portfolio Intelligence</div>
+  </div>
+  <div class="nav">
+    <div class="nav-label">Portfolio</div>
+    <a href="/portfolio" class="nav-item active" style="text-decoration:none">◈ &nbsp;Overview</a>
+    <a href="#compliance-section" class="nav-item" style="text-decoration:none">⚑ &nbsp;Compliance
+      {% if portfolio.urgent_count > 0 %}<span class="nav-badge">{{ portfolio.urgent_count }}</span>{% endif %}
+    </a>
+    <a href="#buildings-section" class="nav-item" style="text-decoration:none">▤ &nbsp;Building Directory
+      <span class="nav-badge gold">{{ portfolio.total_buildings }}</span>
+    </a>
+    <div class="nav-label">Tools</div>
+    <a href="/upload" class="nav-item" style="text-decoration:none">↑ &nbsp;Invoice Upload</a>
+  </div>
+  <div class="bldg-block">
+    <div class="bldg-tag">Portfolio</div>
+    <div class="bldg-name">Century Management</div>
+    <div class="bldg-meta">{{ portfolio.total_buildings }} buildings · {{ "{:,}".format(portfolio.total_units) }} units</div>
+  </div>
+</nav>
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <div class="page-title">Portfolio Intelligence</div>
+      <div class="page-sub">Century Management &nbsp;·&nbsp; {{ portfolio.total_buildings }} buildings &nbsp;·&nbsp; {{ "{:,}".format(portfolio.total_units) }} units across NYC</div>
+    </div>
+    <div class="header-badge">{{ portfolio.total_buildings }} Active Properties</div>
+  </div>
+
+  {# ── SUMMARY STRIP ── #}
+  <div class="strip">
+    <div class="strip-item green">
+      <div class="strip-label">Total Portfolio</div>
+      <div class="strip-value green">{{ portfolio.total_buildings }}</div>
+      <div class="strip-sub">buildings · {{ "{:,}".format(portfolio.total_units) }} units</div>
+    </div>
+    <div class="strip-item {% if portfolio.urgent_count > 0 %}red{% else %}green{% endif %}">
+      <div class="strip-label">Urgent Deadlines</div>
+      <div class="strip-value {% if portfolio.urgent_count > 0 %}red{% else %}green{% endif %}">{{ portfolio.urgent_count }}</div>
+      <div class="strip-sub">across all buildings</div>
+    </div>
+    <div class="strip-item {% if portfolio.total_hpd_open > 10 %}yellow{% else %}green{% endif %}">
+      <div class="strip-label">Open HPD Violations</div>
+      <div class="strip-value {% if portfolio.total_hpd_open > 10 %}yellow{% else %}green{% endif %}">{{ portfolio.total_hpd_open }}</div>
+      <div class="strip-sub">+ {{ portfolio.total_dob_open }} DOB violations</div>
+    </div>
+    <div class="strip-item blue">
+      <div class="strip-label">Compliance Exposure</div>
+      <div class="strip-value blue">
+        {% if portfolio.compliance_exposure_high > 0 %}${{ "{:,.0f}".format(portfolio.compliance_exposure_low / 1000) }}K–${{ "{:,.0f}".format(portfolio.compliance_exposure_high / 1000) }}K{% else %}None due{% endif %}
+      </div>
+      <div class="strip-sub">urgent items only</div>
+    </div>
+  </div>
+
+  {# ── BUILDING DIRECTORY TABLE ── #}
+  <div class="card full" id="buildings-section">
+    <div class="ch">
+      <div><div class="ct">Building Directory</div><div class="csub">Click any building to view its full intelligence dashboard</div></div>
+    </div>
+    <div class="search-bar">
+      <input class="search-input" type="text" id="bldgSearch" placeholder="Search by address, neighborhood, or borough..." oninput="filterBuildings()">
+      <span class="search-count" id="bldgCount">{{ buildings|length }} buildings</span>
+    </div>
+    <div style="overflow-x:auto">
+    <table class="bt">
+      <thead>
+        <tr>
+          <th onclick="sortTable(0)">Address <span class="sort-arrow">▼</span></th>
+          <th onclick="sortTable(1)" class="r">Units <span class="sort-arrow">▼</span></th>
+          <th onclick="sortTable(2)">Type <span class="sort-arrow">▼</span></th>
+          <th onclick="sortTable(3)">Neighborhood <span class="sort-arrow">▼</span></th>
+          <th onclick="sortTable(4)">Compliance <span class="sort-arrow">▼</span></th>
+          <th onclick="sortTable(5)" class="r">Violations <span class="sort-arrow">▼</span></th>
+          <th onclick="sortTable(6)" class="r">Tax Trend <span class="sort-arrow">▼</span></th>
+        </tr>
+      </thead>
+      <tbody id="bldgBody">
+        {% for b in buildings %}
+        <tr class="brow" onclick="window.location='/switch-building/{{ b.id }}'" data-search="{{ b.address|lower }} {{ b.neighborhood|lower }} {{ b.borough|lower }}">
+          <td>
+            <div class="addr-main">{{ b.address }}</div>
+            <div class="addr-meta">{{ b.borough }} · {{ b.floors }} floors · Built {{ b.year_built }}</div>
+          </td>
+          <td class="mono r">{{ b.units }}</td>
+          <td><span class="pill pill-{% if b.building_type == 'Coop' %}green{% else %}yellow{% endif %}">{{ b.building_type }}</span></td>
+          <td style="font-size:12px;color:var(--dim)">{{ b.neighborhood }}</td>
+          <td>
+            <span class="status-dot {{ b.comp_status }}"></span>
+            {% if b.comp_status == 'red' %}<span class="pill pill-red">{{ b.urgent_count }} urgent</span>
+            {% elif b.comp_status == 'yellow' %}<span class="pill pill-yellow">Monitor</span>
+            {% else %}<span class="pill pill-green">On track</span>{% endif %}
+            <div style="font-size:10px;color:var(--muted);margin-top:2px">{{ b.earliest_deadline }}</div>
+          </td>
+          <td class="mono r" style="color:{% if b.hpd_open > 3 %}var(--red){% elif b.hpd_open > 0 %}var(--yellow){% else %}var(--green){% endif %}">{{ b.hpd_open }}</td>
+          <td class="mono r" style="color:{% if b.tax_trend > 15 %}var(--red){% elif b.tax_trend > 8 %}var(--yellow){% else %}var(--dim){% endif %}">{% if b.tax_trend > 0 %}+{% endif %}{{ b.tax_trend }}%{% if b.certiorari %} <span style="font-size:9px;color:var(--gold);font-weight:700">⚑</span>{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+  <div class="grid" style="margin-top:18px">
+
+    {# ── COMPLIANCE OVERVIEW ── #}
+    <div class="card" id="compliance-section">
+      <div class="ch">
+        <div><div class="ct">Compliance by Law</div><div class="csub">Deadline distribution across portfolio</div></div>
+      </div>
+      {% for law_name, counts in portfolio.by_law.items() %}
+      {% set total = counts.total %}
+      {% set high_pct = (counts.high / total * 100) if total > 0 else 0 %}
+      {% set med_pct = (counts.medium / total * 100) if total > 0 else 0 %}
+      {% set low_pct = 100 - high_pct - med_pct %}
+      <div class="law-row">
+        <div class="law-name">{{ law_name }}</div>
+        <div class="law-bar-wrap">
+          <div class="law-bar">
+            {% if high_pct > 0 %}<div class="law-seg" style="width:{{ high_pct }}%;background:var(--red)"></div>{% endif %}
+            {% if med_pct > 0 %}<div class="law-seg" style="width:{{ med_pct }}%;background:var(--yellow)"></div>{% endif %}
+            {% if low_pct > 0 %}<div class="law-seg" style="width:{{ low_pct }}%;background:var(--green)"></div>{% endif %}
+          </div>
+          <div class="law-counts">
+            {% if counts.high > 0 %}<span style="color:var(--red);font-weight:600">{{ counts.high }}</span> urgent{% endif %}
+            {% if counts.high > 0 and counts.medium > 0 %} · {% endif %}
+            {% if counts.medium > 0 %}{{ counts.medium }} monitor{% endif %}
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+      <div style="padding:10px 18px;font-size:10px;color:var(--muted);border-top:1px solid var(--border);display:flex;gap:14px">
+        <span><span style="display:inline-block;width:10px;height:10px;background:var(--red);border-radius:2px;vertical-align:middle"></span> Urgent (≤12 mo)</span>
+        <span><span style="display:inline-block;width:10px;height:10px;background:var(--yellow);border-radius:2px;vertical-align:middle"></span> Monitor (≤24 mo)</span>
+        <span><span style="display:inline-block;width:10px;height:10px;background:var(--green);border-radius:2px;vertical-align:middle"></span> On Track</span>
+      </div>
+    </div>
+
+    {# ── PORTFOLIO STATS ── #}
+    <div class="card">
+      <div class="ch">
+        <div><div class="ct">Portfolio Financials</div><div class="csub">Tax assessment &amp; property analysis</div></div>
+      </div>
+      <div style="padding:18px 22px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px">
+          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:14px">
+            <div style="font-size:9.5px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:4px">Total Assessed Value</div>
+            <div style="font-family:'Playfair Display',serif;font-size:22px;color:var(--ink)">${{ "{:,.0f}".format(portfolio.total_assessed_value / 1000000) }}M</div>
+          </div>
+          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:14px">
+            <div style="font-size:9.5px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:4px">Avg Tax Trend (2yr)</div>
+            <div style="font-family:'Playfair Display',serif;font-size:22px;color:{% if portfolio.avg_tax_trend > 10 %}var(--red){% else %}var(--dim){% endif %}">+{{ portfolio.avg_tax_trend }}%</div>
+          </div>
+          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:14px">
+            <div style="font-size:9.5px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:4px">Est. Annual Tax</div>
+            <div style="font-family:'Playfair Display',serif;font-size:22px;color:var(--ink)">${{ "{:,.0f}".format(portfolio.total_tax / 1000000) }}M</div>
+          </div>
+          <div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:14px">
+            <div style="font-size:9.5px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:4px">Certiorari Recommended</div>
+            <div style="font-family:'Playfair Display',serif;font-size:22px;color:var(--gold)">{{ portfolio.certiorari_count }}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">of {{ portfolio.total_buildings }} buildings</div>
+          </div>
+        </div>
+
+        <div style="font-size:10px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:8px">By Borough</div>
+        {% for borough, stats in portfolio.by_borough.items()|sort(attribute='1.buildings', reverse=True) %}
+        <div class="borough-row">
+          <div class="borough-name">{{ borough }}</div>
+          <div class="borough-stat">{{ stats.buildings }} bldgs · {{ "{:,}".format(stats.units) }} units</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<script>
+// ── Search / Filter ──
+function filterBuildings() {
+  const q = document.getElementById('bldgSearch').value.toLowerCase();
+  const rows = document.querySelectorAll('#bldgBody tr');
+  let visible = 0;
+  rows.forEach(r => {
+    const match = !q || r.getAttribute('data-search').includes(q);
+    r.style.display = match ? '' : 'none';
+    if (match) visible++;
+  });
+  document.getElementById('bldgCount').textContent = visible + ' building' + (visible !== 1 ? 's' : '');
+}
+
+// ── Sortable columns ──
+let currentSort = { col: -1, asc: true };
+function sortTable(colIdx) {
+  const tbody = document.getElementById('bldgBody');
+  const rows = Array.from(tbody.querySelectorAll('tr'));
+  const isNum = [false, true, false, false, false, true, true][colIdx];
+
+  // Toggle direction if same column
+  if (currentSort.col === colIdx) {
+    currentSort.asc = !currentSort.asc;
+  } else {
+    currentSort.col = colIdx;
+    currentSort.asc = true;
+  }
+
+  // Update header styling
+  document.querySelectorAll('table.bt th').forEach((th, i) => {
+    th.classList.toggle('sorted', i === colIdx);
+    const arrow = th.querySelector('.sort-arrow');
+    if (arrow) arrow.textContent = (i === colIdx && !currentSort.asc) ? '▲' : '▼';
+  });
+
+  rows.sort((a, b) => {
+    let aVal = a.cells[colIdx].textContent.trim();
+    let bVal = b.cells[colIdx].textContent.trim();
+    if (isNum) {
+      aVal = parseFloat(aVal.replace(/[^\\d.\\-]/g, '')) || 0;
+      bVal = parseFloat(bVal.replace(/[^\\d.\\-]/g, '')) || 0;
+    }
+    let cmp = isNum ? aVal - bVal : aVal.localeCompare(bVal);
+    return currentSort.asc ? cmp : -cmp;
+  });
+
+  rows.forEach(r => tbody.appendChild(r));
+}
+
+// Smooth scroll for nav links
+document.querySelectorAll('.nav-item[href^="#"]').forEach(a => {
+  a.addEventListener('click', e => {
+    e.preventDefault();
+    const target = document.querySelector(a.getAttribute('href'));
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+});
 </script>
 </body>
 </html>"""
