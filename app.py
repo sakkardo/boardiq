@@ -2120,7 +2120,10 @@ def commit_invoices():
 @app.route("/api/upload-contract", methods=["POST"])
 @login_required
 def upload_contract():
-    """Accept contract PDF, extract text, and parse contract terms."""
+    """Accept contract PDF, extract text, and parse contract terms. Admin/management only."""
+    user = DEMO_USERS.get(session.get("user_email"), {})
+    if not (user.get("is_admin") or user.get("role") == "admin"):
+        return jsonify({"error": "Contract uploads are restricted to management company users"}), 403
     if "file" not in request.files:
         return jsonify({"error": "No file provided"}), 400
     f = request.files["file"]
@@ -2136,15 +2139,35 @@ def upload_contract():
     try:
         # Extract text from PDF
         text = ""
+        page_count = 0
         try:
             import pypdf
             reader = pypdf.PdfReader(tmp_path)
+            page_count = len(reader.pages)
             for page in reader.pages:
                 text += page.extract_text() or ""
-        except Exception:
+        except Exception as pdf_err:
+            print(f"[contract-upload] PDF read error: {pdf_err}")
             text = ""
 
         os.remove(tmp_path)
+
+        # Handle empty/unreadable PDFs
+        if not text.strip():
+            return jsonify({
+                "success": True,
+                "filename": f.filename,
+                "parse_method": "none",
+                "empty_pdf": True,
+                "message": "Could not extract text from this PDF. It may be a scanned document or image-based file. Please enter the contract details manually.",
+                "vendor_name": "", "category": "", "annual_value": 0,
+                "term_years": 1, "start_date": "", "end_date": "",
+                "description": "", "auto_renew": False,
+                "cancellation_notice_days": 30, "key_terms": [],
+                "confidence": {f: "low" for f in ["vendor_name", "category", "annual_value",
+                    "start_date", "end_date", "term_years", "auto_renew",
+                    "cancellation_notice_days", "key_terms", "service_description"]},
+            })
 
         # Try Claude AI first, fall back to regex
         parse_method = "regex"
@@ -2187,7 +2210,7 @@ def upload_contract():
 
 
 def _parse_contract_text(text):
-    """Extract contract details from text using regex patterns."""
+    """Extract contract details from text using improved regex patterns."""
     import re
     result = {
         "vendor_name": "",
@@ -2205,60 +2228,175 @@ def _parse_contract_text(text):
     if not text:
         return result
 
-    # Try to extract vendor name (look for "between" ... "and" pattern)
+    # ── Vendor Name ──────────────────────────────────────────────────────
+    # Strategy: try multiple patterns, from most to least specific
+    vendor = ""
+    # Pattern 1: "between X and Y" (formal contracts)
     between_match = re.search(r'between\s+(.+?)\s+(?:and|&)\s+', text, re.IGNORECASE)
     if between_match:
-        result["vendor_name"] = between_match.group(1).strip()[:80]
+        vendor = between_match.group(1).strip()[:80]
+    # Pattern 2: "WELCOME TO X" (marketing/proposal docs like Runwise)
+    if not vendor:
+        welcome = re.search(r'WELCOME TO\s+([A-Z][A-Za-z0-9\s&]+)', text)
+        if welcome:
+            vendor = welcome.group(1).strip()[:80]
+    # Pattern 3: Company name patterns (LLC, Inc, Corp, etc.) in first 3000 chars
+    if not vendor:
+        corp_match = re.search(r'([A-Z][A-Za-z0-9\s&,.\'-]{2,40}(?:LLC|Inc|Corp|Company|Services|Group|Partners|Solutions|Enterprises|Ltd)\.?)', text[:3000])
+        if corp_match:
+            vendor = corp_match.group(1).strip()[:80]
+    # Pattern 4: "Service Order" or "Order Form" with company name nearby
+    if not vendor:
+        order_match = re.search(r'(?:Service Order|Order Form|Agreement)\s+(?:Number|#|No)?[:\s]*\S+\s+(.+?)(?:\n|$)', text)
+        if order_match and len(order_match.group(1).strip()) > 3:
+            vendor = order_match.group(1).strip()[:80]
+    # Pattern 5: "Prepared By: Name" — only use if it looks like a company (not person)
+    if not vendor:
+        prep_match = re.search(r'(?:Prepared|Submitted|Provided)\s+[Bb]y[:\s]+([A-Z][A-Za-z0-9\s&,.\'-]+)', text)
+        if prep_match:
+            name = prep_match.group(1).strip()[:80]
+            # Skip if it looks like a person name (two short words with no corp suffixes)
+            words = name.split()
+            is_person = len(words) <= 3 and all(len(w) < 12 for w in words) and not any(
+                w.lower() in ('llc','inc','corp','company','services','group','co') for w in words)
+            if not is_person:
+                vendor = name
+    # Clean up: strip trailing newlines, limit to first line
+    if vendor:
+        vendor = vendor.split('\n')[0].strip()
+    result["vendor_name"] = vendor
 
-    # Try to extract dates
+    # ── Dates ────────────────────────────────────────────────────────────
+    # Filter out dates that are clearly not contract dates (24/7, page numbers, etc.)
     date_pattern = r'(\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|\w+\s+\d{1,2},?\s+\d{4})'
-    dates = re.findall(date_pattern, text)
-    if len(dates) >= 2:
-        result["start_date"] = dates[0]
-        result["end_date"] = dates[1]
+    raw_dates = re.findall(date_pattern, text)
+    # Filter invalid dates (24/7/365 etc.)
+    valid_dates = []
+    for d in raw_dates:
+        if '24/7' in d or '365' in d:
+            continue
+        # Check it looks like a real date (month <= 12, day <= 31)
+        parts = re.split(r'[/-]', d)
+        if len(parts) == 3:
+            try:
+                nums = [int(p) for p in parts if p.isdigit()]
+                if nums and nums[0] <= 12 and (len(nums) < 2 or nums[1] <= 31):
+                    valid_dates.append(d)
+            except ValueError:
+                valid_dates.append(d)  # Named month format
+        else:
+            valid_dates.append(d)
+    if len(valid_dates) >= 2:
+        result["start_date"] = valid_dates[0]
+        result["end_date"] = valid_dates[1]
+    elif len(valid_dates) == 1:
+        result["start_date"] = valid_dates[0]
 
-    # Dollar amounts
+    # ── Dollar Amounts ───────────────────────────────────────────────────
+    # Find amounts near contract-value keywords, not just the max
     amounts = re.findall(r'\$[\d,]+(?:\.\d{2})?', text)
     if amounts:
-        cleaned = [float(a.replace('$', '').replace(',', '')) for a in amounts]
-        # Largest amount likely the annual value
-        result["annual_value"] = int(max(cleaned))
+        cleaned = [(a, float(a.replace('$', '').replace(',', ''))) for a in amounts]
+        # Look for amounts labeled as annual/management/platform fee
+        annual_val = 0
+        text_lower = text.lower()
+        for raw_amt, val in cleaned:
+            idx = text.find(raw_amt)
+            if idx >= 0:
+                context = text_lower[max(0, idx - 80):idx + 80]
+                # Skip amounts near savings/payback/profit/rebate language
+                is_savings = any(neg in context for neg in ['saving', 'payback', 'profit',
+                    'rebate', 'net savings', 'pays for itself', 'roi', 'return on'])
+                if not is_savings and any(kw in context for kw in ['annual', 'yearly',
+                       'per year', '/yr', 'management fee', 'platform fee', 'service fee',
+                       'contract value', 'total contract', 'monthly fee', 'subscription',
+                       'annual fee', 'per annum']):
+                    if 'monthly' in context:
+                        annual_val = max(annual_val, int(val * 12))
+                    elif val < 200000:  # Sanity cap for annual fees
+                        annual_val = max(annual_val, int(val))
+        # If no context match, use median of reasonable amounts (not max)
+        if not annual_val:
+            reasonable = [v for _, v in cleaned if 500 <= v <= 500000]
+            if reasonable:
+                reasonable.sort()
+                annual_val = int(reasonable[len(reasonable) // 2])
+        result["annual_value"] = annual_val
 
-    # Term years
-    term_match = re.search(r'(\d+)\s*(?:year|yr)', text, re.IGNORECASE)
-    if term_match:
-        result["term_years"] = int(term_match.group(1))
+    # ── Term ─────────────────────────────────────────────────────────────
+    # Check for months first (more specific), then years
+    month_match = re.search(r'[Tt]erm\s*(?:\(in months\)|in months)[:\s]*(\d+)', text)
+    if month_match:
+        months = int(month_match.group(1))
+        result["term_years"] = max(1, months // 12) if months >= 12 else 1
+    else:
+        term_match = re.search(r'(\d+)\s*(?:year|yr)\s*(?:term|agreement|contract)', text, re.IGNORECASE)
+        if term_match:
+            result["term_years"] = int(term_match.group(1))
+        else:
+            term_match2 = re.search(r'(?:term|duration|period)\s*(?:of|:)\s*(\d+)\s*(?:year|yr)', text, re.IGNORECASE)
+            if term_match2:
+                result["term_years"] = int(term_match2.group(1))
 
-    # Auto-renew
-    if re.search(r'auto[- ]?renew|automatic(?:ally)?\s+renew', text, re.IGNORECASE):
+    # ── Auto-renew ───────────────────────────────────────────────────────
+    if re.search(r'auto[- ]?renew|automatic(?:ally)?\s+renew|shall\s+renew\s+automatically', text, re.IGNORECASE):
+        result["auto_renew"] = True
+    elif re.search(r'annual\s+renewal|renew(?:s|ed|al)\s+(?:annually|each year)', text, re.IGNORECASE):
         result["auto_renew"] = True
 
-    # Cancellation notice
-    cancel_match = re.search(r'(\d+)\s*(?:day|calendar day)s?\s*(?:prior|notice|written notice)', text, re.IGNORECASE)
+    # ── Cancellation notice ──────────────────────────────────────────────
+    cancel_match = re.search(r'(\d+)\s*(?:day|calendar day)s?\s*(?:prior|advance|written)?\s*(?:notice|written notice)', text, re.IGNORECASE)
     if cancel_match:
         result["cancellation_notice_days"] = int(cancel_match.group(1))
 
-    # Key terms — look for bullet points or numbered items
-    bullets = re.findall(r'(?:•|·|\d+\.)\s*(.+?)(?:\n|$)', text)
-    if bullets:
-        result["key_terms"] = [b.strip() for b in bullets[:8] if len(b.strip()) > 10]
+    # ── Key Terms ─────────────────────────────────────────────────────────
+    # Look for bullet points, numbered items, or section headers
+    bullets = re.findall(r'(?:•|·|✓|✔|▸|►|\d+\.)\s*(.+?)(?:\n|$)', text)
+    terms = [b.strip() for b in bullets if 10 < len(b.strip()) < 200]
+    if not terms:
+        # Try lines that start with caps and look like obligations
+        terms = re.findall(r'(?:shall|will|must|agrees? to|responsible for|includes?)\s+(.{15,120})', text, re.IGNORECASE)
+        terms = [t.strip().rstrip('.') for t in terms[:8]]
+    result["key_terms"] = terms[:8]
 
-    # Category detection
+    # ── Service Description ──────────────────────────────────────────────
+    # Try to extract from "Scope of Work/Services" sections
+    desc_match = re.search(r"(?:scope of (?:work|services)|services? (?:include|provided|covered)|what's included)[:\s]*(.{20,300})", text, re.IGNORECASE)
+    if desc_match:
+        result["description"] = desc_match.group(1).strip()[:200]
+
+    # ── Category Detection ───────────────────────────────────────────────
     cat_keywords = {
-        "ELEVATOR_MAINTENANCE": ["elevator", "lift", "escalator"],
-        "HVAC_MAINTENANCE": ["hvac", "heating", "ventilation", "air conditioning", "boiler"],
-        "PLUMBING_REPAIRS": ["plumbing", "plumber", "pipe", "drain"],
-        "EXTERMINATING": ["pest", "exterminator", "ipm", "termite", "rodent"],
+        "ELEVATOR_MAINTENANCE": ["elevator", "lift", "escalator", "vertical transport"],
+        "HVAC_MAINTENANCE": ["hvac", "heating", "ventilation", "air conditioning", "boiler", "thermostat", "energy management", "heat control", "runwise"],
+        "PLUMBING_REPAIRS": ["plumbing", "plumber", "pipe", "drain", "water heater"],
+        "EXTERMINATING": ["pest", "exterminator", "ipm", "termite", "rodent", "bed bug"],
         "LANDSCAPING": ["landscape", "garden", "lawn", "snow removal", "grounds"],
-        "CLEANING": ["cleaning", "janitorial", "custodial"],
-        "INSURANCE": ["insurance", "liability", "coverage"],
-        "FIRE_SAFETY": ["fire", "alarm", "sprinkler", "suppression"],
+        "CLEANING": ["cleaning", "janitorial", "custodial", "porter"],
+        "INSURANCE": ["insurance", "liability", "coverage", "underwrite"],
+        "FIRE_SAFETY": ["fire", "alarm", "sprinkler", "suppression", "fire safety"],
+        "SECURITY": ["security", "guard", "cctv", "surveillance", "access control"],
+        "ELECTRICAL": ["electrical", "electrician", "wiring", "lighting"],
+        "WASTE_REMOVAL": ["waste", "garbage", "trash", "recycling", "refuse"],
+        "ROOFING": ["roof", "roofing", "waterproof"],
+        "FACADE_REPAIRS": ["facade", "pointing", "masonry", "exterior wall"],
+        "PAINTING": ["painting", "paint", "interior finish"],
+        "LEGAL": ["legal", "attorney", "counsel", "law firm"],
+        "ACCOUNTING": ["accounting", "accountant", "bookkeeping", "audit", "cpa"],
+        "WATER_TREATMENT": ["water treatment", "water quality", "water tank"],
+        "LAUNDRY": ["laundry", "washer", "dryer"],
+        "MANAGEMENT_FEE": ["management fee", "managing agent"],
     }
     text_lower = text.lower()
+    best_cat = ""
+    best_count = 0
     for cat, keywords in cat_keywords.items():
-        if any(kw in text_lower for kw in keywords):
-            result["category"] = cat
-            break
+        count = sum(1 for kw in keywords if kw in text_lower)
+        if count > best_count:
+            best_count = count
+            best_cat = cat
+    if best_cat:
+        result["category"] = best_cat
 
     return result
 
@@ -2266,7 +2404,10 @@ def _parse_contract_text(text):
 @app.route("/api/save-contract", methods=["POST"])
 @login_required
 def save_contract():
-    """Save or update a contract record."""
+    """Save or update a contract record. Admin/management only."""
+    user = DEMO_USERS.get(session.get("user_email"), {})
+    if not (user.get("is_admin") or user.get("role") == "admin"):
+        return jsonify({"error": "Contract management is restricted to management company users"}), 403
     data = request.get_json()
     if not data:
         return jsonify({"error": "No data provided"}), 400
@@ -2360,7 +2501,10 @@ def save_contract():
 @app.route("/api/request-contract", methods=["POST"])
 @login_required
 def request_contract():
-    """Request a contract document from the vendor."""
+    """Request a contract document from the vendor. Admin/management only."""
+    user = DEMO_USERS.get(session.get("user_email"), {})
+    if not (user.get("is_admin") or user.get("role") == "admin"):
+        return jsonify({"error": "Contract requests are restricted to management company users"}), 403
     data = request.get_json()
     contract_id = data.get("contract_id")
     if not contract_id or contract_id not in BUILDING_CONTRACTS:
@@ -3298,9 +3442,9 @@ table.vt tr.click:hover td{background:var(--surface2)}
         <div class="contracts-header">
           <div>
             <div class="ct">Contract Intelligence</div>
-            <div class="csub">Manage vendor contracts · Track expirations · Ensure compliance</div>
+            <div class="csub">{% if is_admin %}Manage vendor contracts · Track expirations · Ensure compliance{% else %}View vendor contracts · Track expirations · Managed by your management company{% endif %}</div>
           </div>
-          <button class="btn-add-contract" onclick="openContractDrawer()">+ Add Contract</button>
+          {% if is_admin %}<button class="btn-add-contract" onclick="openContractDrawer()">+ Add Contract</button>{% endif %}
         </div>
 
         {# Summary strip #}
@@ -3393,8 +3537,10 @@ table.vt tr.click:hover td{background:var(--surface2)}
             <span class="cc-doc-status on_file">📄 Document On File</span>
             {% elif c.document_status == 'missing' %}
             <span class="cc-doc-status missing">⚠ No Document</span>
+            {% if is_admin %}
             <button class="cc-action-btn primary" onclick="openContractDrawer('{{ c.contract_id }}')">Upload Contract</button>
             <button class="cc-action-btn" onclick="requestContract('{{ c.contract_id }}')">Request from Vendor</button>
+            {% endif %}
             {% elif c.document_status == 'requested' %}
             <span class="cc-doc-status requested">📩 Requested from Vendor</span>
             {% elif c.document_status == 'vendor_uploaded' %}
@@ -3410,7 +3556,8 @@ table.vt tr.click:hover td{background:var(--surface2)}
       {% else %}
       <div style="padding:20px 22px;text-align:center;color:var(--muted);font-size:13px">
         <p>No contracts on file for this building.</p>
-        <button class="btn-add-contract" onclick="openContractDrawer()">+ Add First Contract</button>
+        {% if is_admin %}<button class="btn-add-contract" onclick="openContractDrawer()">+ Add First Contract</button>
+        {% else %}<p style="font-size:12px">Contract records are managed by your management company.</p>{% endif %}
       </div>
       {% endif %}
     </div>
@@ -3467,6 +3614,7 @@ const vendorBenchmarks = {{ benchmarks.vendor_benchmarks | tojson }};
 const complianceItems  = {{ building.compliance_deadlines | tojson }};
 const buildingUnits    = {{ building.units }};
 const contractItems    = {{ contracts_json | safe }};
+const isAdmin          = {{ 'true' if is_admin else 'false' }};
 
 function openPanel(type, idx) {
   const content = document.getElementById('panelContent');
@@ -3560,7 +3708,7 @@ function openPanel(type, idx) {
         ${c.document_filename ? '<div style="font-size:11px;color:var(--muted)">File: ' + c.document_filename + '</div>' : ''}
         ${c.uploaded_by ? '<div style="font-size:11px;color:var(--muted)">Uploaded by: ' + c.uploaded_by + (c.upload_date ? ' on ' + c.upload_date : '') + '</div>' : ''}
         <div style="display:flex;gap:8px;margin-top:10px">
-          ${c.document_status === 'missing' ? '<button class="btn-bid" onclick="closePanel();openContractDrawer(\\'' + c.contract_id + '\\')">Upload Contract</button><button class="btn-out" onclick="closePanel();requestContract(\\'' + c.contract_id + '\\')">Request from Vendor</button>' : ''}
+          ${isAdmin && c.document_status === 'missing' ? '<button class="btn-bid" onclick="closePanel();openContractDrawer(\\'' + c.contract_id + '\\')">Upload Contract</button><button class="btn-out" onclick="closePanel();requestContract(\\'' + c.contract_id + '\\')">Request from Vendor</button>' : ''}
           ${c.document_status === 'on_file' || c.document_status === 'vendor_uploaded' ? '<button class="btn-out">View Document Details</button>' : ''}
         </div>
       </div>
@@ -3574,12 +3722,11 @@ function openPanel(type, idx) {
 
       ${c.notes ? '<div class="panel-section">Management Notes</div><div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:12px;font-size:12px;color:var(--dim);line-height:1.6;font-style:italic">' + c.notes + '</div>' : ''}
 
-      <div class="action-box" style="margin-top:18px">
-        <div class="action-title">Contract Actions</div>
-        ${c.status === 'expired' ? '<button class="btn-full" onclick="closePanel();openContractDrawer()">Upload New Contract →</button><button class="btn-full-out">Initiate Rebid via BidBoard</button>' : ''}
-        ${c.status === 'expiring_soon' ? '<button class="btn-full">Start Renewal Process →</button><button class="btn-full-out">Initiate Competitive Rebid</button>' : ''}
-        ${c.status === 'active' ? '<button class="btn-full-out">Edit Contract Details</button>' : ''}
-      </div>`;
+      ${isAdmin ? '<div class="action-box" style="margin-top:18px"><div class="action-title">Contract Actions</div>' +
+        (c.status === 'expired' ? '<button class="btn-full" onclick="closePanel();openContractDrawer()">Upload New Contract →</button><button class="btn-full-out">Initiate Rebid via BidBoard</button>' : '') +
+        (c.status === 'expiring_soon' ? '<button class="btn-full">Start Renewal Process →</button><button class="btn-full-out">Initiate Competitive Rebid</button>' : '') +
+        (c.status === 'active' ? '<button class="btn-full-out">Edit Contract Details</button>' : '') +
+        '</div>' : '<div style="margin-top:18px;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;font-size:12px;color:var(--muted);text-align:center">Contract management is handled by your management company.</div>'}`;
   } else {
     const d = complianceItems[idx];
     if (!d) return;
@@ -4071,7 +4218,8 @@ function dReset() {
 }
 </script>
 
-<!-- ── Contract Upload Drawer ──────────────────────────────────────── -->
+<!-- ── Contract Upload Drawer (admin/management only) ──────────────── -->
+{% if is_admin %}
 <div class="cd-overlay" id="cdOverlay" onclick="closeContractDrawer()"></div>
 <div class="contract-drawer" id="contractDrawer">
   <div class="cd-header">
@@ -4201,12 +4349,14 @@ function dReset() {
     <button class="btn-bid" onclick="cdSave()">Save Contract →</button>
   </div>
 </div>
+{% endif %}
 
 <script>
 // ── Contract Drawer & Actions ──────────────────────────────────────────
 let cdEditingId = null;
 
 function openContractDrawer(contractId) {
+  if (!isAdmin) return;
   cdEditingId = contractId || null;
   document.getElementById('cdTitle').textContent = contractId ? 'Upload Contract Document' : 'Add New Contract';
   // If editing an existing contract, pre-fill the form
@@ -4269,7 +4419,11 @@ async function cdUploadFile(file) {
     // Show parse method badge
     const badge = document.getElementById('cdParseBadge');
     const msg = document.getElementById('cdExtractedMsg');
-    if (d.parse_method === 'ai') {
+    if (d.empty_pdf) {
+      badge.textContent = '⚠ No Text Found';
+      badge.style.background = '#c0392b'; badge.style.color = '#fff';
+      msg.textContent = d.message || 'Could not extract text — please enter details manually';
+    } else if (d.parse_method === 'ai') {
       badge.textContent = '✦ AI Parsed';
       badge.style.background = 'var(--green)'; badge.style.color = '#fff';
       msg.textContent = 'Contract analyzed with AI — review and verify extracted data below';
@@ -4421,6 +4575,7 @@ function cdReset() {
 }
 
 async function requestContract(contractId) {
+  if (!isAdmin) return;
   if (!confirm('Request a copy of this contract from the vendor?')) return;
   try {
     const r = await fetch('/api/request-contract', {
