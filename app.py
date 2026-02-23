@@ -1459,6 +1459,70 @@ PDF PAGES:
     return _json.loads(text)
 
 
+def _call_claude_for_contract(contract_text, api_key):
+    """Send extracted contract text to Claude API and get back structured data with confidence ratings."""
+    import urllib.request
+    import json as _json
+
+    # Truncate very long contracts to stay within token limits
+    trimmed = contract_text[:8000]
+
+    prompt = f"""You are a contract parser for a NYC property management company (Century Management).
+
+Below is text extracted from a PDF contract document. Extract the following fields:
+
+- vendor_name: the service provider company name
+- counterparty: the building, co-op, condo association, or management company that is the other party
+- category: one of: ELEVATOR_MAINTENANCE, HVAC_MAINTENANCE, PLUMBING_REPAIRS, EXTERMINATING, LANDSCAPING, CLEANING, INSURANCE, FIRE_SAFETY, SECURITY, ELECTRICAL, WASTE_REMOVAL, WINDOW_GLASS, ROOFING, FACADE_REPAIRS, PAINTING, LEGAL, ACCOUNTING, UTILITIES_ELECTRIC, UTILITIES_GAS, UTILITIES_WATER, WATER_TREATMENT, LAUNDRY, MANAGEMENT_FEE, SUPPLIES, REPAIRS_GENERAL, PROFESSIONAL_SERVICES, OTHER
+- annual_value: total annual contract value as a number (no $ sign). If monthly amount given, multiply by 12.
+- start_date: contract start date in YYYY-MM-DD format
+- end_date: contract end date in YYYY-MM-DD format
+- term_years: contract duration in years (integer)
+- auto_renew: true/false — does the contract auto-renew?
+- cancellation_notice_days: number of days notice required for cancellation (integer)
+- key_terms: array of up to 8 important contract terms or obligations (short strings)
+- service_description: 1-2 sentence summary of services covered
+- ai_summary: 2-3 sentence executive summary of this contract for a board member
+
+For EACH field, also provide a confidence rating:
+- "high" = clearly stated in the document
+- "medium" = inferred or partially stated
+- "low" = not found, guessed, or very uncertain
+
+Return ONLY valid JSON with this exact structure (no explanation):
+{{"vendor_name":"...","counterparty":"...","category":"...","annual_value":0,"start_date":"","end_date":"","term_years":1,"auto_renew":false,"cancellation_notice_days":30,"key_terms":[],"service_description":"...","ai_summary":"...","confidence":{{"vendor_name":"high","counterparty":"medium","category":"high","annual_value":"high","start_date":"high","end_date":"high","term_years":"high","auto_renew":"medium","cancellation_notice_days":"medium","key_terms":"medium","service_description":"high"}}}}
+
+CONTRACT TEXT:
+{trimmed}"""
+
+    payload = _json.dumps({
+        "model": "claude-sonnet-4-20250514",
+        "max_tokens": 4000,
+        "messages": [{"role": "user", "content": prompt}]
+    }).encode("utf-8")
+
+    req = urllib.request.Request(
+        "https://api.anthropic.com/v1/messages",
+        data=payload,
+        headers={
+            "Content-Type": "application/json",
+            "x-api-key": api_key,
+            "anthropic-version": "2023-06-01",
+        },
+        method="POST"
+    )
+
+    with urllib.request.urlopen(req, timeout=120) as resp:
+        result = _json.loads(resp.read().decode("utf-8"))
+
+    text = result["content"][0]["text"].strip()
+    # Strip markdown code fences if present
+    if text.startswith("```"):
+        text = re.sub(r'^```[a-z]*\n?', '', text)
+        text = re.sub(r'\n?```$', '', text)
+    return _json.loads(text)
+
+
 def _parse_pdf_invoices(pdf_path):
     """Extract structured invoice data from a PDF using Claude AI.
     Falls back to regex parsing if no API key configured."""
@@ -2082,10 +2146,37 @@ def upload_contract():
 
         os.remove(tmp_path)
 
-        # Parse contract data using regex (similar to invoice parser)
-        result = _parse_contract_text(text)
+        # Try Claude AI first, fall back to regex
+        parse_method = "regex"
+        api_key = os.environ.get("ANTHROPIC_API_KEY", "")
+        result = None
+
+        if api_key and text.strip():
+            try:
+                result = _call_claude_for_contract(text, api_key)
+                parse_method = "ai"
+            except Exception as ai_err:
+                print(f"[contract-ai] Claude API failed, falling back to regex: {ai_err}")
+                result = None
+
+        if result is None:
+            # Regex fallback with auto-generated confidence
+            result = _parse_contract_text(text)
+            # Generate confidence based on what regex actually found
+            confidence = {}
+            for field in ["vendor_name", "category", "annual_value", "start_date",
+                          "end_date", "term_years", "auto_renew", "cancellation_notice_days",
+                          "key_terms", "service_description"]:
+                val = result.get(field)
+                if not val or val == 0 or val == [] or val == "":
+                    confidence[field] = "low"
+                else:
+                    confidence[field] = "medium"
+            result["confidence"] = confidence
+
         result["success"] = True
         result["filename"] = f.filename
+        result["parse_method"] = parse_method
         return jsonify(result)
     except Exception as e:
         try:
@@ -2239,6 +2330,7 @@ def save_contract():
             "ai_summary": f"New contract record for {data.get('vendor_name', 'Unknown')} — {CATEGORY_LABELS.get(data.get('category', ''), data.get('category', ''))} services at ${int(data.get('annual_value', 0)):,}/year. Uploaded via BoardIQ contract management.",
             "alerts": [],
             "request_date": None,
+            "vendor_contact": None,
         }
         # Auto-link to vendor profile
         c["vendor_id"] = _auto_link_contract_vendor(c)
@@ -2247,6 +2339,18 @@ def save_contract():
             c["alerts"].append({"type": "expired", "message": "Contract has expired — formalize new agreement.", "urgency": "HIGH"})
         if status == "expiring_soon":
             c["alerts"].append({"type": "expiring", "message": "Contract expiring soon — initiate renewal or rebid.", "urgency": "HIGH"})
+
+        # Handle vendor request for missing data
+        if data.get("request_vendor") and data.get("vendor_contact"):
+            vc = data["vendor_contact"]
+            c["vendor_contact"] = vc
+            c["document_status"] = "requested"
+            c["request_date"] = now_str
+            c["alerts"].append({
+                "type": "requested",
+                "message": f"Missing contract details requested from {vc.get('name', 'vendor')} ({vc.get('email', '')}) on {now_str}.",
+                "urgency": "MEDIUM",
+            })
 
         BUILDING_CONTRACTS[contract_id] = c
 
@@ -2852,6 +2956,11 @@ table.vt tr.click:hover td{background:var(--surface2)}
 .cd-form-group label{display:block;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:5px;font-weight:600}
 .cd-form-group input,.cd-form-group select,.cd-form-group textarea{width:100%;padding:9px 12px;font-size:13px;font-family:inherit;border:1px solid var(--border2);border-radius:5px;background:var(--surface);color:var(--ink)}
 .cd-form-group textarea{min-height:80px;resize:vertical}
+.cd-conf{display:inline-block;width:8px;height:8px;border-radius:50%;margin-left:4px;vertical-align:middle}
+.cd-conf.conf-high{background:#1a7a4a}
+.cd-conf.conf-medium{background:#d4a017}
+.cd-conf.conf-low{background:#c0392b}
+.cd-form-group.conf-low-field input,.cd-form-group.conf-low-field select,.cd-form-group.conf-low-field textarea{border-color:#c0392b;background:#fef8f8}
 .cd-footer{padding:16px 24px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:flex-end;gap:10px}
 
 .upload-zone{padding:20px 22px;border:2px dashed var(--border2);border-radius:6px;margin:16px 20px;text-align:center;cursor:pointer;transition:all .15s}
@@ -3974,9 +4083,12 @@ function dReset() {
     <div id="cdDropZone" class="cd-drop" onclick="document.getElementById('cdFileInput').click()">
       <div style="font-size:36px;margin-bottom:10px">📋</div>
       <div style="font-size:15px;font-weight:600;color:var(--ink);margin-bottom:5px">Drop contract PDF here</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:14px">BoardIQ will extract vendor, dates, terms, and value automatically</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:14px">BoardIQ will use AI to extract vendor, dates, terms, and value automatically</div>
       <button style="background:var(--ink);color:white;border:none;padding:9px 20px;border-radius:5px;font-family:inherit;font-size:12px;font-weight:600;cursor:pointer" onclick="event.stopPropagation();document.getElementById('cdFileInput').click()">Choose File</button>
       <input type="file" id="cdFileInput" accept=".pdf" style="display:none" onchange="cdHandleFile(this)">
+      <div style="margin-top:18px;padding-top:14px;border-top:1px solid rgba(0,0,0,.08)">
+        <button style="background:none;border:1px solid var(--muted);color:var(--muted);padding:8px 18px;border-radius:5px;font-family:inherit;font-size:12px;font-weight:500;cursor:pointer" onclick="event.stopPropagation();cdShowManualForm()">No PDF? Enter details manually</button>
+      </div>
     </div>
 
     <!-- Processing -->
@@ -3988,16 +4100,22 @@ function dReset() {
 
     <!-- Form (shown after upload or for manual entry) -->
     <div id="cdForm" class="cd-form">
+      <!-- AI/Regex extraction banner -->
       <div style="background:var(--green-light);border:1px solid var(--green-border);border-radius:5px;padding:10px 14px;margin-bottom:18px;font-size:12px;color:var(--green);font-weight:600;display:none" id="cdExtracted">
-        ✓ Contract analyzed — review and edit extracted data below
+        <span id="cdParseBadge" style="display:inline-block;padding:2px 8px;border-radius:3px;font-size:10px;margin-right:6px;font-weight:700;letter-spacing:.3px">AI</span>
+        <span id="cdExtractedMsg">Contract analyzed — review and edit extracted data below</span>
+      </div>
+      <!-- Low confidence warning -->
+      <div style="background:#fff8e6;border:1px solid #f0d060;border-radius:5px;padding:10px 14px;margin-bottom:18px;font-size:12px;color:#856404;font-weight:500;display:none" id="cdLowConfBanner">
+        ⚠ Some fields could not be extracted. Please fill in highlighted fields or <a href="#" onclick="event.preventDefault();document.getElementById('cdVendorRequest').style.display='block';this.parentElement.style.display='none'" style="color:#856404;font-weight:600;text-decoration:underline">request missing info from the vendor</a>.
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
         <div class="cd-form-group">
-          <label>Vendor Name</label>
+          <label>Vendor Name <span class="cd-conf" data-field="vendor_name"></span></label>
           <input type="text" id="cdVendor" placeholder="e.g. Schindler Elevator Corp">
         </div>
         <div class="cd-form-group">
-          <label>Service Category</label>
+          <label>Service Category <span class="cd-conf" data-field="category"></span></label>
           <select id="cdCategory">
             <option value="">Select category...</option>
             {% for key, label in CATEGORY_LABELS.items() %}
@@ -4006,46 +4124,67 @@ function dReset() {
           </select>
         </div>
         <div class="cd-form-group">
-          <label>Annual Value ($)</label>
+          <label>Annual Value ($) <span class="cd-conf" data-field="annual_value"></span></label>
           <input type="number" id="cdValue" placeholder="e.g. 45000">
         </div>
         <div class="cd-form-group">
-          <label>Term (years)</label>
+          <label>Term (years) <span class="cd-conf" data-field="term_years"></span></label>
           <input type="number" id="cdTerm" placeholder="e.g. 3" min="1" max="10">
         </div>
         <div class="cd-form-group">
-          <label>Start Date</label>
+          <label>Start Date <span class="cd-conf" data-field="start_date"></span></label>
           <input type="date" id="cdStart">
         </div>
         <div class="cd-form-group">
-          <label>End Date</label>
+          <label>End Date <span class="cd-conf" data-field="end_date"></span></label>
           <input type="date" id="cdEnd">
         </div>
       </div>
       <div class="cd-form-group">
-        <label>Service Description</label>
+        <label>Service Description <span class="cd-conf" data-field="service_description"></span></label>
         <textarea id="cdDescription" placeholder="Describe the services covered by this contract..."></textarea>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
         <div class="cd-form-group">
-          <label>Auto-Renew?</label>
+          <label>Auto-Renew? <span class="cd-conf" data-field="auto_renew"></span></label>
           <select id="cdAutoRenew">
             <option value="true">Yes</option>
             <option value="false">No</option>
           </select>
         </div>
         <div class="cd-form-group">
-          <label>Cancellation Notice (days)</label>
+          <label>Cancellation Notice (days) <span class="cd-conf" data-field="cancellation_notice_days"></span></label>
           <input type="number" id="cdCancelDays" placeholder="e.g. 90" min="0">
         </div>
       </div>
       <div class="cd-form-group">
-        <label>Key Terms (one per line)</label>
+        <label>Key Terms (one per line) <span class="cd-conf" data-field="key_terms"></span></label>
         <textarea id="cdTerms" placeholder="24/7 emergency service&#10;Monthly inspections&#10;Parts included" style="min-height:100px"></textarea>
       </div>
       <div class="cd-form-group">
         <label>Management Notes</label>
         <textarea id="cdNotes" placeholder="Any additional notes about this contract..."></textarea>
+      </div>
+
+      <!-- Request from Vendor section -->
+      <div id="cdVendorRequest" style="display:none;margin-top:18px;padding:16px;background:#f8f6f3;border:1px solid #e0dcd6;border-radius:6px">
+        <div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:10px">Request Missing Info from Vendor</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:12px">Enter the vendor\\'s contact info. We\\'ll save what we have and mark this contract as pending vendor input.</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+          <div class="cd-form-group" style="margin-bottom:0">
+            <label style="font-size:11px">Contact Name</label>
+            <input type="text" id="cdVrName" placeholder="e.g. John Smith">
+          </div>
+          <div class="cd-form-group" style="margin-bottom:0">
+            <label style="font-size:11px">Email</label>
+            <input type="email" id="cdVrEmail" placeholder="e.g. john@vendor.com">
+          </div>
+        </div>
+        <div class="cd-form-group" style="margin-bottom:10px">
+          <label style="font-size:11px">Phone (optional)</label>
+          <input type="tel" id="cdVrPhone" placeholder="e.g. 212-555-0100">
+        </div>
+        <button class="btn-bid" style="font-size:12px;padding:8px 18px" onclick="cdSaveWithVendorRequest()">Save & Request from Vendor →</button>
       </div>
     </div>
 
@@ -4127,16 +4266,30 @@ async function cdUploadFile(file) {
     document.getElementById('cdForm').style.display = 'block';
     document.getElementById('cdFooter').style.display = 'flex';
     document.getElementById('cdExtracted').style.display = 'block';
+    // Show parse method badge
+    const badge = document.getElementById('cdParseBadge');
+    const msg = document.getElementById('cdExtractedMsg');
+    if (d.parse_method === 'ai') {
+      badge.textContent = '✦ AI Parsed';
+      badge.style.background = 'var(--green)'; badge.style.color = '#fff';
+      msg.textContent = 'Contract analyzed with AI — review and verify extracted data below';
+    } else {
+      badge.textContent = '⚙ Basic Extraction';
+      badge.style.background = '#e0dcd6'; badge.style.color = 'var(--ink)';
+      msg.textContent = 'Basic text extraction — please verify all fields carefully';
+    }
     if (d.vendor_name) document.getElementById('cdVendor').value = d.vendor_name;
     if (d.category) document.getElementById('cdCategory').value = d.category;
     if (d.annual_value) document.getElementById('cdValue').value = d.annual_value;
     if (d.term_years) document.getElementById('cdTerm').value = d.term_years;
     if (d.start_date) document.getElementById('cdStart').value = d.start_date;
     if (d.end_date) document.getElementById('cdEnd').value = d.end_date;
-    if (d.description) document.getElementById('cdDescription').value = d.description;
+    if (d.description || d.service_description) document.getElementById('cdDescription').value = d.description || d.service_description;
     if (d.auto_renew !== undefined) document.getElementById('cdAutoRenew').value = String(d.auto_renew);
     if (d.cancellation_notice_days) document.getElementById('cdCancelDays').value = d.cancellation_notice_days;
     if (d.key_terms) document.getElementById('cdTerms').value = d.key_terms.join('\\n');
+    // Apply confidence indicators
+    cdApplyConfidence(d.confidence || {});
   } catch(e) {
     clearInterval(tick);
     // Fall back to manual entry
@@ -4144,8 +4297,38 @@ async function cdUploadFile(file) {
     document.getElementById('cdForm').style.display = 'block';
     document.getElementById('cdFooter').style.display = 'flex';
     document.getElementById('cdExtracted').style.display = 'none';
+    cdClearConfidence();
     alert('Could not extract contract data automatically. Please fill in the details manually.');
   }
+}
+
+function cdApplyConfidence(conf) {
+  let lowCount = 0, totalFields = 0;
+  document.querySelectorAll('.cd-conf').forEach(dot => {
+    const field = dot.getAttribute('data-field');
+    const level = conf[field] || 'low';
+    dot.className = 'cd-conf conf-' + level;
+    const group = dot.closest('.cd-form-group');
+    if (group) {
+      group.classList.remove('conf-low-field');
+      if (level === 'low') { group.classList.add('conf-low-field'); lowCount++; }
+    }
+    totalFields++;
+  });
+  // Show low-confidence warning if many fields missing
+  const banner = document.getElementById('cdLowConfBanner');
+  if (lowCount >= 3) {
+    banner.style.display = 'block';
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
+function cdClearConfidence() {
+  document.querySelectorAll('.cd-conf').forEach(dot => { dot.className = 'cd-conf'; });
+  document.querySelectorAll('.conf-low-field').forEach(el => { el.classList.remove('conf-low-field'); });
+  document.getElementById('cdLowConfBanner').style.display = 'none';
+  document.getElementById('cdVendorRequest').style.display = 'none';
 }
 
 async function cdSave() {
@@ -4180,6 +4363,47 @@ async function cdSave() {
   }
 }
 
+async function cdSaveWithVendorRequest() {
+  const vrName = document.getElementById('cdVrName').value.trim();
+  const vrEmail = document.getElementById('cdVrEmail').value.trim();
+  if (!vrEmail) { alert('Please enter the vendor\\'s email address.'); return; }
+  const data = {
+    contract_id: cdEditingId || null,
+    vendor_name: document.getElementById('cdVendor').value,
+    category: document.getElementById('cdCategory').value,
+    annual_value: parseInt(document.getElementById('cdValue').value) || 0,
+    term_years: parseInt(document.getElementById('cdTerm').value) || 1,
+    start_date: document.getElementById('cdStart').value,
+    end_date: document.getElementById('cdEnd').value,
+    service_description: document.getElementById('cdDescription').value,
+    auto_renew: document.getElementById('cdAutoRenew').value === 'true',
+    cancellation_notice_days: parseInt(document.getElementById('cdCancelDays').value) || 0,
+    key_terms: document.getElementById('cdTerms').value.split('\\n').filter(t => t.trim()),
+    notes: document.getElementById('cdNotes').value,
+    request_vendor: true,
+    vendor_contact: {
+      name: vrName,
+      email: vrEmail,
+      phone: document.getElementById('cdVrPhone').value.trim()
+    }
+  };
+  try {
+    const r = await fetch('/api/save-contract', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(data)
+    });
+    const d = await r.json();
+    if (!d.success) throw new Error(d.error || 'Save failed');
+    document.getElementById('cdForm').style.display = 'none';
+    document.getElementById('cdFooter').style.display = 'none';
+    document.getElementById('cdSuccess').style.display = 'block';
+    document.getElementById('cdSuccSub').textContent = 'Partial contract saved. Vendor (' + vrEmail + ') has been flagged for follow-up.';
+  } catch(e) {
+    alert('Error: ' + e.message);
+  }
+}
+
 function cdReset() {
   cdEditingId = null;
   document.getElementById('cdDropZone').style.display = 'block';
@@ -4188,7 +4412,8 @@ function cdReset() {
   document.getElementById('cdSuccess').style.display = 'none';
   document.getElementById('cdFooter').style.display = 'none';
   document.getElementById('cdExtracted').style.display = 'none';
-  ['cdVendor','cdCategory','cdValue','cdTerm','cdStart','cdEnd','cdDescription','cdCancelDays','cdTerms','cdNotes'].forEach(id => {
+  cdClearConfidence();
+  ['cdVendor','cdCategory','cdValue','cdTerm','cdStart','cdEnd','cdDescription','cdCancelDays','cdTerms','cdNotes','cdVrName','cdVrEmail','cdVrPhone'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
@@ -4221,6 +4446,7 @@ function cdShowManualForm() {
   document.getElementById('cdForm').style.display = 'block';
   document.getElementById('cdFooter').style.display = 'flex';
   document.getElementById('cdExtracted').style.display = 'none';
+  cdClearConfidence();
 }
 </script>
 </body>
