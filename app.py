@@ -2132,31 +2132,38 @@ def commit_invoices():
     if not invoices:
         return jsonify({"error": "No invoices provided"}), 400
 
-    updated_buildings = {}
+    updated_buildings = {}  # bbl -> {"address": str, "vendors": [{"vendor": str, "amount": float, "category": str}]}
     skipped = 0
+    skip_reasons = []
+
+    RECURRING_CATS = {"ELEVATOR_MAINTENANCE", "MANAGEMENT_FEE", "UTILITIES_ELECTRIC",
+                      "UTILITIES_GAS", "UTILITIES_WATER", "UTILITIES_TELECOM",
+                      "HVAC_MAINTENANCE", "EXTERMINATING", "WASTE_REMOVAL",
+                      "LANDSCAPING", "LAUNDRY", "CLEANING", "INSURANCE"}
 
     for inv in invoices:
-        if inv.get("skip") or not inv.get("matched_bbl"):
+        if inv.get("skip"):
             skipped += 1
+            skip_reasons.append(f"Skipped by user: {inv.get('vendor', '?')}")
+            continue
+        if not inv.get("matched_bbl"):
+            skipped += 1
+            skip_reasons.append(f"No building assigned: {inv.get('vendor', '?')}")
             continue
 
         bbl = normalize_bbl(inv["matched_bbl"])
         building = BUILDINGS_DB.get(bbl)
         if not building:
             skipped += 1
+            skip_reasons.append(f"Building not found ({bbl}): {inv.get('vendor', '?')}")
+            print(f"[CommitInvoice] SKIP — BBL {inv['matched_bbl']} -> {bbl} not in BUILDINGS_DB")
             continue
 
-        # Find existing vendor entry or create new one
         vendor_name = inv.get("vendor", "Unknown")
         category = inv.get("category", "PROFESSIONAL_SERVICES")
         amount = float(inv.get("total_amount", 0))
         units = building.get("units", 1)
 
-        # Annualize only for recurring/monthly contracts; treat repairs as one-time
-        RECURRING_CATS = {"ELEVATOR_MAINTENANCE", "MANAGEMENT_FEE", "UTILITIES_ELECTRIC",
-                          "UTILITIES_GAS", "UTILITIES_WATER", "UTILITIES_TELECOM",
-                          "HVAC_MAINTENANCE", "EXTERMINATING", "WASTE_REMOVAL",
-                          "LANDSCAPING", "LAUNDRY", "CLEANING", "INSURANCE"}
         is_recurring = (category in RECURRING_CATS or
                         re.search(r'monthly|service agreement|annual contract|per month|/month',
                                   inv.get("description", ""), re.IGNORECASE))
@@ -2170,13 +2177,11 @@ def commit_invoices():
                 break
 
         if existing:
-            # Update with new data
             existing["annual"] = annual
             existing["per_unit"] = round(annual / max(units, 1))
             existing["last_invoice_date"] = inv.get("date", "")
             existing["last_invoice_amount"] = amount
         else:
-            # Add new vendor entry
             if "vendor_data" not in building:
                 building["vendor_data"] = []
             building["vendor_data"].append({
@@ -2190,16 +2195,27 @@ def commit_invoices():
                 "last_invoice_amount": amount,
             })
 
-        updated_buildings[bbl] = building.get("address", bbl)
+        if bbl not in updated_buildings:
+            updated_buildings[bbl] = {"address": building.get("address", bbl), "vendors": []}
+        updated_buildings[bbl]["vendors"].append({
+            "vendor": vendor_name,
+            "amount": annual,
+            "category": CATEGORY_LABELS.get(category, category),
+        })
+
+        print(f"[CommitInvoice] OK — {vendor_name} → {building.get('address', bbl)} (${annual:,.0f}/yr)")
 
     # Persist to disk so data survives restarts
     _save_vendor_data()
+    if skip_reasons:
+        print(f"[CommitInvoice] Skipped {len(skip_reasons)}: {'; '.join(skip_reasons[:5])}")
 
     return jsonify({
         "success": True,
         "updated": len(updated_buildings),
         "skipped": skipped,
-        "buildings": list(updated_buildings.values()),
+        "buildings_detail": {addr_info["address"]: addr_info["vendors"] for addr_info in updated_buildings.values()},
+        "buildings": [info["address"] for info in updated_buildings.values()],
     })
 
 
@@ -3020,9 +3036,12 @@ body{background:var(--bg);color:var(--text);font-family:'Plus Jakarta Sans',sans
 .user-name{font-size:12px;color:rgba(255,255,255,.5)}
 .logout-link{font-size:11px;color:rgba(255,255,255,.3);text-decoration:none}
 .logout-link:hover{color:rgba(255,255,255,.6)}
-{% if all_buildings|length > 1 %}.switch-links{padding:10px 18px;border-top:1px solid rgba(255,255,255,.06)}
-.switch-link{display:block;font-size:11px;color:rgba(255,255,255,.4);text-decoration:none;padding:3px 0}
-.switch-link:hover{color:rgba(255,255,255,.7)}
+{% if all_buildings|length > 1 %}.switch-links{padding:0 0 8px;border-top:1px solid rgba(255,255,255,.06);display:flex;flex-direction:column;min-height:0;flex:1;overflow:hidden}
+.switch-search{margin:8px 14px 4px;padding:5px 10px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:4px;color:white;font-size:11px;font-family:inherit;outline:none}
+.switch-search::placeholder{color:rgba(255,255,255,.3)}
+.switch-list{overflow-y:auto;flex:1;padding:0 4px}
+.switch-link{display:block;font-size:11px;color:rgba(255,255,255,.4);text-decoration:none;padding:4px 14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.switch-link:hover{color:rgba(255,255,255,.7);background:rgba(255,255,255,.04)}
 .switch-link.active-link{color:var(--gold)}{% endif %}
 .main{margin-left:220px;padding:30px 34px 48px;margin-top:44px}
 .page-header{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid var(--border)}
@@ -3328,12 +3347,15 @@ table.vt tr.click:hover td{background:var(--surface2)}
   </div>
   {% if all_buildings|length > 1 %}
   <div class="switch-links">
+    <input type="text" class="switch-search" id="sidebarBldgSearch" placeholder="Search buildings..." oninput="filterSidebarBldgs(this.value)">
+    <div class="switch-list" id="sidebarBldgList">
     {% for b in all_buildings %}
     <a href="/switch-building/{{ b.id }}"
-       class="switch-link {% if b.id == active_bbl %}active-link{% endif %}">
-      {% if b.id == active_bbl %}▶ {% endif %}{{ b.address[:28] }}
+       class="switch-link {% if b.id == active_bbl %}active-link{% endif %}" data-addr="{{ b.address|lower }}">
+      {% if b.id == active_bbl %}▶ {% endif %}{{ b.address[:32] }}
     </a>
     {% endfor %}
+    </div>
   </div>
   {% endif %}
   <div class="bldg-block">
@@ -4139,12 +4161,16 @@ async function uploadInvoices(input) {
     </div>
 
     <!-- Success -->
-    <div id="dSuccess" style="display:none;text-align:center;padding:60px 0">
-      <div style="font-size:44px;margin-bottom:14px">✅</div>
-      <div style="font-family:'Playfair Display',serif;font-size:22px;color:var(--ink);margin-bottom:8px">Invoices Committed</div>
-      <div style="font-size:13px;color:var(--muted);margin-bottom:16px" id="dSuccSub"></div>
-      <div style="display:flex;flex-wrap:wrap;gap:7px;justify-content:center;margin-bottom:24px" id="dSuccBldgs"></div>
-      <button style="background:var(--ink);color:white;border:none;padding:10px 24px;border-radius:6px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer" onclick="closeUploadDrawer();location.reload()">Close & Refresh Dashboard</button>
+    <div id="dSuccess" style="display:none;padding:30px 24px">
+      <div style="text-align:center;margin-bottom:20px">
+        <div style="font-size:44px;margin-bottom:10px">✅</div>
+        <div style="font-family:'Playfair Display',serif;font-size:22px;color:var(--ink);margin-bottom:6px">Invoices Committed</div>
+        <div style="font-size:13px;color:var(--muted)" id="dSuccSub"></div>
+      </div>
+      <div id="dSuccDetail" style="max-height:340px;overflow-y:auto;margin-bottom:20px"></div>
+      <div style="text-align:center">
+        <button style="background:var(--ink);color:white;border:none;padding:10px 24px;border-radius:6px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer" onclick="closeUploadDrawer();location.reload()">Close & Refresh Dashboard</button>
+      </div>
     </div>
 
   </div>
@@ -4156,6 +4182,15 @@ async function uploadInvoices(input) {
 </div>
 
 <script>
+// ── Sidebar Building Search ──────────────────────────────────────────
+function filterSidebarBldgs(q) {
+  const links = document.querySelectorAll('#sidebarBldgList .switch-link');
+  const term = q.toLowerCase().trim();
+  links.forEach(a => {
+    a.style.display = (!term || a.dataset.addr.includes(term)) ? '' : 'none';
+  });
+}
+
 // ── Upload Drawer ─────────────────────────────────────────────────────
 const D_BUILDINGS = {{ all_buildings_json | safe }};
 const D_CATEGORIES = {{ categories_json | safe }};
@@ -4342,8 +4377,27 @@ async function dCommit() {
     document.getElementById('dResults').style.display = 'none';
     document.getElementById('drawerFooter').style.display = 'none';
     document.getElementById('dSuccess').style.display = 'block';
-    document.getElementById('dSuccSub').textContent = `${d.updated} buildings updated · ${d.skipped} skipped`;
-    document.getElementById('dSuccBldgs').innerHTML = (d.buildings || []).map(b => `<span style="padding:5px 12px;background:var(--green-light);border:1px solid var(--green-border);border-radius:20px;font-size:11px;color:var(--green);font-weight:600">${b}</span>`).join('');
+    document.getElementById('dSuccSub').textContent = `${d.updated} building${d.updated !== 1 ? 's' : ''} updated · ${d.skipped} skipped`;
+    // Render per-building detail
+    const detail = document.getElementById('dSuccDetail');
+    const bd = d.buildings_detail || {};
+    let html = '';
+    Object.keys(bd).forEach(addr => {
+      const vendors = bd[addr];
+      html += `<div style="background:var(--green-light);border:1px solid var(--green-border);border-radius:8px;padding:12px 16px;margin-bottom:10px">`;
+      html += `<div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:6px">✓ ${addr}</div>`;
+      vendors.forEach(v => {
+        html += `<div style="display:flex;justify-content:space-between;font-size:11px;padding:2px 0;color:var(--ink)">`;
+        html += `<span>${v.vendor} <span style="color:var(--muted)">· ${v.category}</span></span>`;
+        html += `<span style="font-family:'IBM Plex Mono',monospace;font-weight:600">$${Number(v.amount).toLocaleString('en-US',{maximumFractionDigits:0})}/yr</span>`;
+        html += `</div>`;
+      });
+      html += `</div>`;
+    });
+    if (!Object.keys(bd).length && d.buildings) {
+      html = (d.buildings || []).map(b => `<span style="padding:5px 12px;background:var(--green-light);border:1px solid var(--green-border);border-radius:20px;font-size:11px;color:var(--green);font-weight:600">${b}</span>`).join('');
+    }
+    detail.innerHTML = html;
   } catch(e) {
     btn.disabled = false; btn.textContent = 'Commit to Buildings →';
     alert('Error: ' + e.message);
