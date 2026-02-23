@@ -89,9 +89,19 @@ def init_db():
                 data JSONB NOT NULL DEFAULT '{}'
             );
         """)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS building_contracts (
+                contract_id TEXT PRIMARY KEY,
+                building_bbl TEXT NOT NULL,
+                data JSONB NOT NULL DEFAULT '{}'
+            );
+        """)
+        cur.execute("""
+            CREATE INDEX IF NOT EXISTS idx_contracts_bbl ON building_contracts(building_bbl);
+        """)
         conn.commit()
         cur.close()
-        print("[BoardIQ DB] Tables ready")
+        print("[BoardIQ DB] Tables ready (including contracts)")
         return True
     except Exception as e:
         conn.rollback()
@@ -335,3 +345,78 @@ def save_vendor_registry_entry(email, entry):
 def has_database():
     """Check if a database is available."""
     return _get_pool() is not None
+
+
+# ── Building Contracts ──────────────────────────────────────────────────────
+
+def load_all_contracts():
+    """Load all contracts from DB. Returns {contract_id: contract_dict}."""
+    conn = _get_conn()
+    if conn is None:
+        return {}
+    try:
+        cur = conn.cursor()
+        cur.execute("SELECT contract_id, building_bbl, data FROM building_contracts")
+        rows = cur.fetchall()
+        cur.close()
+        result = {}
+        for cid, bbl, data in rows:
+            contract = data if isinstance(data, dict) else json.loads(data)
+            contract["contract_id"] = cid
+            contract["building_bbl"] = bbl
+            result[cid] = contract
+        print(f"[BoardIQ DB] Loaded {len(result)} contracts")
+        return result
+    except Exception as e:
+        print(f"[BoardIQ DB] Error loading contracts: {e}")
+        return {}
+    finally:
+        _put_conn(conn)
+
+
+def save_contract(contract_id, contract):
+    """Upsert a single contract."""
+    conn = _get_conn()
+    if conn is None:
+        return
+    try:
+        cur = conn.cursor()
+        bbl = contract.get("building_bbl", "")
+        data = json.dumps(contract, default=str)
+        cur.execute("""
+            INSERT INTO building_contracts (contract_id, building_bbl, data)
+            VALUES (%s, %s, %s::jsonb)
+            ON CONFLICT (contract_id) DO UPDATE SET building_bbl = EXCLUDED.building_bbl, data = EXCLUDED.data
+        """, (contract_id, bbl, data))
+        conn.commit()
+        cur.close()
+    except Exception as e:
+        conn.rollback()
+        print(f"[BoardIQ DB] Error saving contract {contract_id}: {e}")
+    finally:
+        _put_conn(conn)
+
+
+def save_all_contracts(contracts_dict):
+    """Bulk save all contracts."""
+    conn = _get_conn()
+    if conn is None:
+        return
+    try:
+        cur = conn.cursor()
+        for cid, contract in contracts_dict.items():
+            bbl = contract.get("building_bbl", "")
+            data = json.dumps(contract, default=str)
+            cur.execute("""
+                INSERT INTO building_contracts (contract_id, building_bbl, data)
+                VALUES (%s, %s, %s::jsonb)
+                ON CONFLICT (contract_id) DO UPDATE SET building_bbl = EXCLUDED.building_bbl, data = EXCLUDED.data
+            """, (cid, bbl, data))
+        conn.commit()
+        cur.close()
+        print(f"[BoardIQ DB] Saved {len(contracts_dict)} contracts")
+    except Exception as e:
+        conn.rollback()
+        print(f"[BoardIQ DB] Error in save_all_contracts: {e}")
+    finally:
+        _put_conn(conn)

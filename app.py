@@ -853,6 +853,16 @@ if _db_available and not _db_profiles:
     boardiq_db.save_all_vendor_data(BUILDINGS_DB)
     print("[BoardIQ] Seeded building vendor data into PostgreSQL")
 
+# ── Load contracts from DB (merge over seed data, DB wins) ──────────────────
+_db_contracts = boardiq_db.load_all_contracts()
+if _db_contracts:
+    BUILDING_CONTRACTS.update(_db_contracts)
+    print(f"[BoardIQ] Loaded {len(_db_contracts)} contracts from PostgreSQL")
+elif _db_available:
+    # First deploy: seed DB with hardcoded demo contracts
+    boardiq_db.save_all_contracts(BUILDING_CONTRACTS)
+    print("[BoardIQ] Seeded contracts into PostgreSQL")
+
 # Map: management company name → list of building BBLs
 MANAGEMENT_CO_BUILDINGS = {
     "Century Management": [b.get("bbl") or b.get("id") for b in BUILDINGS_DB.values() if b.get("management_company") == "Century Management" or b.get("managing_agent")],
@@ -2495,6 +2505,9 @@ def save_contract():
 
         BUILDING_CONTRACTS[contract_id] = c
 
+    # Persist to PostgreSQL if available
+    boardiq_db.save_contract(contract_id, BUILDING_CONTRACTS[contract_id])
+
     return jsonify({"success": True, "contract_id": contract_id})
 
 
@@ -2521,6 +2534,9 @@ def request_contract():
         "message": f"Contract document requested from vendor on {c['request_date']}.",
         "urgency": "MEDIUM",
     })
+
+    # Persist to PostgreSQL if available
+    boardiq_db.save_contract(contract_id, c)
 
     return jsonify({"success": True, "contract_id": contract_id})
 
@@ -5499,6 +5515,9 @@ def vendor_upload_contract():
     c["document_filename"] = f"vendor_uploaded_{contract_id}.pdf"
     # Remove request alerts
     c["alerts"] = [a for a in c.get("alerts", []) if a.get("type") not in ("missing_doc", "requested")]
+
+    # Persist to PostgreSQL if available
+    boardiq_db.save_contract(contract_id, c)
 
     return jsonify({"success": True, "contract_id": contract_id})
 
