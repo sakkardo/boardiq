@@ -1007,18 +1007,35 @@ def get_current_building():
             session["active_building"] = bbl
     return BUILDINGS_DB.get(bbl)
 
+_CATEGORY_TO_BENCHMARK = {
+    "BOILER_REPAIR": "BOILER_MAINTENANCE",
+    "HEATING": "BOILER_MAINTENANCE",
+    "UTILITIES_WATER": "WATER_TREATMENT",
+    "UTILITIES_GAS": "MANAGEMENT_FEE",
+    "UTILITIES_ELECTRIC": "MANAGEMENT_FEE",
+    "LAUNDRY": "MANAGEMENT_FEE",
+    "WINDOW_GLASS": "PAINTING",
+    "REPAIRS_GENERAL": "PLUMBING_REPAIRS",
+    "PROFESSIONAL_SERVICES": "MANAGEMENT_FEE",
+    "ACCOUNTING": "MANAGEMENT_FEE",
+    "LEGAL": "MANAGEMENT_FEE",
+    "FACADE_REPAIRS": "ROOFING",
+}
+
 def compute_benchmarks(building):
     """Compute live benchmark scores for a building's vendor data."""
     vendor_flat = {}
     for v in building.get("vendor_data", []):
-        key = f"{v['vendor']}::{v['category']}"
+        raw_cat = v["category"]
+        bench_cat = _CATEGORY_TO_BENCHMARK.get(raw_cat, raw_cat)
+        key = f"{v['vendor']}::{bench_cat}"
         vendor_flat[key] = {
             "vendor_name": v["vendor"],
-            "category": v["category"],
+            "category": bench_cat,
             "total_annual": v["annual"],
             "per_unit_annual": v["per_unit"],
         }
-    last_bids = {v["category"]: v["last_bid_year"]
+    last_bids = {_CATEGORY_TO_BENCHMARK.get(v["category"], v["category"]): v["last_bid_year"]
                  for v in building.get("vendor_data", []) if v.get("last_bid_year")}
     return benchmark_building(
         vendor_flat,

@@ -250,6 +250,96 @@ BASELINE_BENCHMARKS = {
         },
         "factors": ["Building size", "Systems complexity", "Bundled with LL97 prep"],
     },
+    "LANDSCAPING": {
+        "description": "Landscaping / grounds maintenance",
+        "unit": "per_unit_annual",
+        "by_size": {
+            "small":  {"p25": 25, "p50": 42, "p75": 65, "p90": 95},
+            "medium": {"p25": 20, "p50": 35, "p75": 55, "p90": 80},
+            "large":  {"p25": 15, "p50": 28, "p75": 44, "p90": 65},
+        },
+        "factors": ["Lot size", "Garden areas", "Seasonal scope", "Frequency"],
+    },
+    "PLUMBING_REPAIRS": {
+        "description": "Plumbing repairs & maintenance",
+        "unit": "per_unit_annual",
+        "by_size": {
+            "small":  {"p25": 55, "p50": 85, "p75": 125, "p90": 175},
+            "medium": {"p25": 50, "p50": 78, "p75": 115, "p90": 160},
+            "large":  {"p25": 42, "p50": 68, "p75": 100, "p90": 140},
+        },
+        "factors": ["Pipe age", "Riser material", "Number of stacks", "Building age"],
+    },
+    "HVAC_MAINTENANCE": {
+        "description": "HVAC / heating system maintenance",
+        "unit": "per_unit_annual",
+        "by_size": {
+            "small":  {"p25": 85, "p50": 120, "p75": 162, "p90": 210},
+            "medium": {"p25": 90, "p50": 130, "p75": 175, "p90": 230},
+            "large":  {"p25": 75, "p50": 110, "p75": 150, "p90": 195},
+        },
+        "factors": ["System type (steam/hot water)", "Number of zones", "Equipment age", "Controls sophistication"],
+    },
+    "ELECTRICAL": {
+        "description": "Electrical repairs & maintenance",
+        "unit": "per_unit_annual",
+        "by_size": {
+            "small":  {"p25": 40, "p50": 65, "p75": 95, "p90": 135},
+            "medium": {"p25": 35, "p50": 58, "p75": 85, "p90": 120},
+            "large":  {"p25": 30, "p50": 50, "p75": 75, "p90": 105},
+        },
+        "factors": ["Wiring age", "Panel upgrades needed", "Common area lighting", "Emergency systems"],
+    },
+    "FIRE_SAFETY": {
+        "description": "Fire safety / sprinkler / alarm maintenance",
+        "unit": "per_unit_annual",
+        "by_size": {
+            "small":  {"p25": 30, "p50": 48, "p75": 72, "p90": 100},
+            "medium": {"p25": 25, "p50": 42, "p75": 62, "p90": 88},
+            "large":  {"p25": 20, "p50": 35, "p75": 52, "p90": 75},
+        },
+        "factors": ["Sprinkler system age", "Standpipe condition", "Alarm panel type", "Inspection requirements"],
+    },
+    "SECURITY": {
+        "description": "Security / doorman / concierge services",
+        "unit": "per_unit_annual",
+        "by_size": {
+            "small":  {"p25": 380, "p50": 520, "p75": 680, "p90": 860},
+            "medium": {"p25": 340, "p50": 470, "p75": 620, "p90": 790},
+            "large":  {"p25": 290, "p50": 410, "p75": 550, "p90": 700},
+        },
+        "factors": ["Hours of coverage", "Number of posts", "Union vs non-union", "Camera systems"],
+    },
+    "PAINTING": {
+        "description": "Interior / hallway painting",
+        "unit": "per_unit_annual",
+        "by_size": {
+            "small":  {"p25": 18, "p50": 32, "p75": 50, "p90": 75},
+            "medium": {"p25": 15, "p50": 28, "p75": 44, "p90": 65},
+            "large":  {"p25": 12, "p50": 22, "p75": 36, "p90": 55},
+        },
+        "factors": ["Common area square footage", "Frequency", "Quality grade", "Lead paint remediation"],
+    },
+    "SUPPLIES": {
+        "description": "Building supplies & materials",
+        "unit": "per_unit_annual",
+        "by_size": {
+            "small":  {"p25": 30, "p50": 50, "p75": 75, "p90": 110},
+            "medium": {"p25": 25, "p50": 42, "p75": 65, "p90": 95},
+            "large":  {"p25": 20, "p50": 35, "p75": 55, "p90": 80},
+        },
+        "factors": ["Bulk purchasing", "Vendor relationships", "Storage capacity"],
+    },
+    "ROOFING": {
+        "description": "Roofing repairs & maintenance",
+        "unit": "per_unit_annual",
+        "by_size": {
+            "small":  {"p25": 20, "p50": 38, "p75": 60, "p90": 90},
+            "medium": {"p25": 15, "p50": 30, "p75": 50, "p90": 75},
+            "large":  {"p25": 12, "p50": 24, "p75": 40, "p90": 60},
+        },
+        "factors": ["Roof type", "Age", "Drainage issues", "Membrane condition"],
+    },
 }
 
 
