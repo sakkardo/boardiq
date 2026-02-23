@@ -414,57 +414,46 @@ BUILDINGS_DB = {
 }
 
 # ── Merge Century buildings into main DB ─────────────────────────────────────
-# Build address→demo_bbl map so Century buildings with matching demo entries
-# point to the rich demo version instead of creating duplicates.
-_DEMO_ADDRESS_MAP = {}
-for _demo_bbl, _demo_bldg in list(BUILDINGS_DB.items()):
-    _addr = _demo_bldg.get("address", "").strip().lower().replace("street", "st")
-    if _addr:
-        _DEMO_ADDRESS_MAP[_addr] = _demo_bbl
+# When a Century building has the same address as a demo building, keep the
+# richer demo version and map the Century key to the demo BBL so both users
+# see the same data (including contracts).
+_norm_addr = lambda s: s.strip().lower().replace("street", "st").replace("avenue", "ave")
+_DEMO_ADDR_TO_BBL = {_norm_addr(b.get("address", "")): k for k, b in BUILDINGS_DB.items() if b.get("address")}
 
-# Track Century→demo BBL aliases for buildings that have a richer demo version
-_CENTURY_TO_DEMO = {}
+# BBL_NORMALIZE: maps any Century key to its demo BBL equivalent (if one exists)
+BBL_NORMALIZE = {}
 for _ckey, _cbldg in CENTURY_BUILDINGS.items():
-    _caddr = _cbldg.get("address", "").strip().lower().replace("street", "st")
-    if _caddr in _DEMO_ADDRESS_MAP:
-        # Demo version is richer — keep it, create alias
-        _CENTURY_TO_DEMO[_ckey] = _DEMO_ADDRESS_MAP[_caddr]
-        # Copy any Century-specific fields the demo might be missing
-        demo = BUILDINGS_DB[_DEMO_ADDRESS_MAP[_caddr]]
-        if not demo.get("managing_agent"):
-            demo["managing_agent"] = _cbldg.get("managing_agent", "")
+    _caddr = _norm_addr(_cbldg.get("address", ""))
+    if _caddr in _DEMO_ADDR_TO_BBL:
+        BBL_NORMALIZE[_ckey] = _DEMO_ADDR_TO_BBL[_caddr]
     else:
         BUILDINGS_DB[_ckey] = _cbldg
 
-# Create redirect entries so /switch-building/bldg_004 → bbl_1009270001
-for _ckey, _demo_bbl in _CENTURY_TO_DEMO.items():
-    if _ckey not in BUILDINGS_DB:
-        BUILDINGS_DB[_ckey] = BUILDINGS_DB[_demo_bbl]  # alias to same dict
+# Also add Century keys that map to demo buildings, so /switch-building/bldg_004 works
+for _ckey, _demo_bbl in BBL_NORMALIZE.items():
+    BUILDINGS_DB[_ckey] = BUILDINGS_DB[_demo_bbl]
 
-print(f"[BoardIQ] Merged Century buildings ({len(CENTURY_BUILDINGS)} total, {len(_CENTURY_TO_DEMO)} aliased to demo)")
+def normalize_bbl(bbl):
+    """If a Century key has a demo equivalent, return the demo BBL."""
+    return BBL_NORMALIZE.get(bbl, bbl)
+
+print(f"[BoardIQ] Merged Century buildings ({len(CENTURY_BUILDINGS)} total, {len(BBL_NORMALIZE)} mapped to demo BBLs)")
+if BBL_NORMALIZE:
+    for _c, _d in BBL_NORMALIZE.items():
+        print(f"  {_c} → {_d}")
 
 # ── Initialize database and load persisted data ─────────────────────────────
 _db_available = boardiq_db.init_db()
 _load_persisted_vendor_data()
 
 # ── Auth (simple demo auth — swap for real auth in production) ───────────────
-# Build Century buildings list, replacing aliased keys with demo BBLs
-_century_building_keys = []
-for _ckey in CENTURY_BUILDINGS.keys():
-    if _ckey in _CENTURY_TO_DEMO:
-        _demo_bbl = _CENTURY_TO_DEMO[_ckey]
-        if _demo_bbl not in _century_building_keys:
-            _century_building_keys.append(_demo_bbl)
-    else:
-        _century_building_keys.append(_ckey)
-
 DEMO_USERS = {
     "board@130e18.com":      {"password": "demo1234", "buildings": ["bbl_1009270001"], "name": "130 East 18th Board", "role": "board"},
     "board@120w72.com":      {"password": "demo1234", "buildings": ["bbl_1022150001"], "name": "Margaret Chen", "role": "board"},
     "board@740park.com":     {"password": "demo1234", "buildings": ["bbl_1012660001"], "name": "Robert Steinberg", "role": "board"},
     "board@gramercyplaza.com": {"password": "demo1234", "buildings": ["bbl_1009270001"], "name": "Gramercy Plaza Board", "role": "board"},
     "admin@boardiq.com":     {"password": "admin", "buildings": list(BUILDINGS_DB.keys()), "name": "BoardIQ Admin", "is_admin": True, "role": "admin"},
-    "century@boardiq.com":   {"password": "century", "buildings": _century_building_keys, "name": "Century Management", "role": "admin"},
+    "century@boardiq.com":   {"password": "century", "buildings": list(CENTURY_BUILDINGS.keys()), "name": "Century Management", "role": "admin"},
     "vendor@schindler.com":  {"password": "demo1234", "name": "Schindler Elevator Corp", "role": "vendor", "vendor_id": "v001", "buildings": []},
     "vendor@cleanstar.com":  {"password": "demo1234", "name": "Clean Star Services", "role": "vendor", "vendor_id": "v002", "buildings": []},
     "vendor@apexext.com":    {"password": "demo1234", "name": "Apex Exterminating", "role": "vendor", "vendor_id": "v003", "buildings": []},
@@ -837,18 +826,10 @@ BUILDING_CONTRACTS = {
 }
 
 def _get_building_contracts(bbl):
-    """Get all contracts for a building, sorted by status priority then end_date.
-    Also checks aliased BBLs (e.g. Century bldg_004 ↔ demo bbl_1009270001)."""
-    # Collect all BBLs that refer to the same physical building
-    bbl_set = {bbl}
-    # Check if this BBL has aliases (Century→demo or demo→Century)
-    for ckey, demo_bbl in _CENTURY_TO_DEMO.items():
-        if bbl == demo_bbl:
-            bbl_set.add(ckey)
-        elif bbl == ckey:
-            bbl_set.add(demo_bbl)
+    """Get all contracts for a building, sorted by status priority then end_date."""
+    nbbl = normalize_bbl(bbl)
     status_order = {"expired": 0, "expiring_soon": 1, "active": 2, "pending_document": 3}
-    contracts = [c for c in BUILDING_CONTRACTS.values() if c["building_bbl"] in bbl_set]
+    contracts = [c for c in BUILDING_CONTRACTS.values() if normalize_bbl(c["building_bbl"]) == nbbl]
     contracts.sort(key=lambda c: (status_order.get(c["status"], 9), c.get("end_date", "")))
     return contracts
 
@@ -902,6 +883,15 @@ if _db_available and not _db_profiles:
 # ── Load contracts from DB (merge over seed data, DB wins) ──────────────────
 _db_contracts = boardiq_db.load_all_contracts()
 if _db_contracts:
+    # Normalize any Century BBLs to demo BBLs so board members can see them
+    for _cid, _ct in _db_contracts.items():
+        _old_bbl = _ct.get("building_bbl", "")
+        _new_bbl = normalize_bbl(_old_bbl)
+        if _new_bbl != _old_bbl:
+            _ct["building_bbl"] = _new_bbl
+            print(f"[BoardIQ] Normalized contract {_cid} BBL: {_old_bbl} → {_new_bbl}")
+            # Also update in DB so this only happens once
+            boardiq_db.save_contract(_cid, _ct)
     BUILDING_CONTRACTS.update(_db_contracts)
     print(f"[BoardIQ] Loaded {len(_db_contracts)} contracts from PostgreSQL")
 elif _db_available:
@@ -2468,7 +2458,7 @@ def save_contract():
     if not data:
         return jsonify({"error": "No data provided"}), 400
 
-    active_bbl = session.get("active_building")
+    active_bbl = normalize_bbl(session.get("active_building", ""))
     if not active_bbl:
         return jsonify({"error": "No active building"}), 400
 
