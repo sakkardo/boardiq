@@ -2865,7 +2865,6 @@ function renderResults() {
       <td>
         <span class="badge ${bc}">${bl}</span><br>
         <select class="bldg-select" style="margin-top:4px" onchange="updBldg(${idx},this.value)">${bldgOpts}</select>
-        ${inv.raw_building?`<div class="raw-addr">PDF: ${inv.raw_building.substring(0,45)}</div>`:''}
       </td>
       <td><select class="cat-select" onchange="updCat(${idx},this.value)">${catOpts}</select></td>
       <td style="font-size:11px;color:var(--dim);max-width:140px">${(inv.description||'').substring(0,55)}</td>
@@ -4289,7 +4288,6 @@ function dRenderResults() {
             autocomplete="off">
           <div class="d-bldg-list" id="dbl${idx}" style="display:none;position:absolute;top:100%;left:0;right:0;max-height:200px;overflow-y:auto;background:white;border:1px solid var(--border2);border-radius:4px;z-index:100;box-shadow:0 4px 12px rgba(0,0,0,.15)"></div>
         </div>
-        ${inv.raw_building ? `<div class="d-raw">${inv.raw_building.substring(0,40)}</div>` : ''}
       </td>
       <td>
         <select class="d-sel" id="dcat${idx}" onchange="dUpdCat(${idx},this.value)">
