@@ -745,7 +745,8 @@ def _next_bid_request_id():
     return f"br{(max(existing) + 1) if existing else 1:03d}"
 
 def _get_bid_requests_for_building(bbl):
-    return [br for br in BID_REQUESTS.values() if br["building_bbl"] == bbl]
+    nbbl = normalize_bbl(bbl)
+    return [br for br in BID_REQUESTS.values() if br["building_bbl"] == nbbl or br["building_bbl"] == bbl]
 
 def _get_open_requests_for_category(category):
     return [br for br in BID_REQUESTS.values() if br["status"] == "open" and br["category"] == category]
