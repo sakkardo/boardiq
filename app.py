@@ -662,6 +662,100 @@ def _get_vendor_bids(vendor_id):
 def _get_bids_for_building(bbl):
     return [b for b in VENDOR_BIDS.values() if b["building_bbl"] == bbl]
 
+# ── Bid Requests (Compliance / Contract → Vendor Opportunities) ──────────────
+
+_LAW_TO_CATEGORY = {
+    "elevator": "ELEVATOR_MAINTENANCE",
+    "fisp": "FACADE_REPAIRS",
+    "facade": "FACADE_REPAIRS",
+    "local law 11": "FACADE_REPAIRS",
+    "carbon": "HVAC_MAINTENANCE",
+    "local law 97": "HVAC_MAINTENANCE",
+    "energy audit": "HVAC_MAINTENANCE",
+    "local law 87": "HVAC_MAINTENANCE",
+    "boiler": "BOILER_MAINTENANCE",
+    "gas piping": "PLUMBING_REPAIRS",
+    "local law 152": "PLUMBING_REPAIRS",
+    "sprinkler": "FIRE_SAFETY",
+    "fire": "FIRE_SAFETY",
+    "local law 26": "FIRE_SAFETY",
+    "water tower": "WATER_TREATMENT",
+    "backflow": "WATER_TREATMENT",
+    "pest": "EXTERMINATING",
+    "exterminating": "EXTERMINATING",
+    "cleaning": "CLEANING",
+    "roofing": "ROOFING",
+    "painting": "PAINTING",
+    "plumbing": "PLUMBING_REPAIRS",
+    "electrical": "ELECTRICAL",
+    "hvac": "HVAC_MAINTENANCE",
+    "landscaping": "LANDSCAPING",
+    "security": "SECURITY",
+}
+
+def _infer_category_from_text(text):
+    """Infer service category from a law name, contract description, or compliance item."""
+    t = text.lower()
+    for keyword, cat in _LAW_TO_CATEGORY.items():
+        if keyword in t:
+            return cat
+    return None
+
+BID_REQUESTS = {
+    "br001": {
+        "request_id": "br001",
+        "building_bbl": "bbl_1009270001",
+        "category": "ELEVATOR_MAINTENANCE",
+        "source_type": "compliance",
+        "source_ref": "Elevator Annual Inspection",
+        "title": "Elevator Annual Inspection — 130 East 18th St",
+        "scope": "Annual elevator cab inspection and safety certification required by DOB for 2 passenger elevators. Inspector must conduct safety tests on each cab. Building needs DOB Certificate of Operation renewed.",
+        "building_address": "130 East 18th St",
+        "building_units": 420,
+        "due_date": "Mar 2026",
+        "budget_low": 800,
+        "budget_high": 1400,
+        "status": "open",
+        "created_date": "2026-02-23",
+        "awarded_vendor_id": None,
+        "awarded_bid_id": None,
+    },
+    "br002": {
+        "request_id": "br002",
+        "building_bbl": "bbl_1009270001",
+        "category": "EXTERMINATING",
+        "source_type": "contract",
+        "source_ref": "Dial-A-Bug Pest Control",
+        "title": "Pest Control Rebid — 130 East 18th St",
+        "scope": "Integrated Pest Management (IPM) program for all common areas, basement, compactor room, and laundry facilities. Monthly treatments with quarterly comprehensive inspections. Individual unit treatments on request. Current contract with Dial-A-Bug expires May 2026 — no auto-renew.",
+        "building_address": "130 East 18th St",
+        "building_units": 420,
+        "due_date": "May 2026",
+        "budget_low": 24000,
+        "budget_high": 36000,
+        "status": "open",
+        "created_date": "2026-02-23",
+        "awarded_vendor_id": None,
+        "awarded_bid_id": None,
+    },
+}
+
+def _next_bid_request_id():
+    existing = [int(k[2:]) for k in BID_REQUESTS if k.startswith("br") and k[2:].isdigit()]
+    return f"br{(max(existing) + 1) if existing else 1:03d}"
+
+def _get_bid_requests_for_building(bbl):
+    return [br for br in BID_REQUESTS.values() if br["building_bbl"] == bbl]
+
+def _get_open_requests_for_category(category):
+    return [br for br in BID_REQUESTS.values() if br["status"] == "open" and br["category"] == category]
+
+def _count_bids_for_request(request_id):
+    return len([b for b in VENDOR_BIDS.values() if b.get("bid_request_id") == request_id])
+
+def _get_eligible_vendor_count(category):
+    return len([v for v in VENDOR_PROFILES.values() if category in v.get("categories", [])])
+
 # ── Building Contracts ────────────────────────────────────────────────────────
 BUILDING_CONTRACTS = {
     "c001": {
@@ -1255,6 +1349,14 @@ def dashboard():
         contracts_summary=contracts_summary,
         contracts_json=json.dumps(contracts, default=str),
         CATEGORY_LABELS=CATEGORY_LABELS,
+        bid_requests=[dict(br, bids_count=_count_bids_for_request(br["request_id"]),
+                           category_label=CATEGORY_LABELS.get(br["category"], br["category"]))
+                      for br in _get_bid_requests_for_building(active_bbl)],
+        bid_requests_json=json.dumps([dict(br, bids_count=_count_bids_for_request(br["request_id"]),
+                                           category_label=CATEGORY_LABELS.get(br["category"], br["category"]),
+                                           bids=[dict(b, vendor_name=VENDOR_PROFILES.get(b["vendor_id"], {}).get("company_name", "Unknown"))
+                                                 for b in VENDOR_BIDS.values() if b.get("bid_request_id") == br["request_id"]])
+                                     for br in _get_bid_requests_for_building(active_bbl)], default=str),
     )
 
 @app.route("/switch-building/<bbl>")
@@ -2651,6 +2753,169 @@ def request_contract():
     return jsonify({"success": True, "contract_id": contract_id})
 
 
+# ── Bid Request API ────────────────────────────────────────────────────────────
+
+@app.route("/api/create-bid-request", methods=["POST"])
+@login_required
+def create_bid_request():
+    """Create a bid request from a compliance deadline or expiring contract."""
+    user = DEMO_USERS.get(session.get("user_email"), {})
+    if not (user.get("is_admin") or user.get("role") == "admin"):
+        return jsonify({"error": "Only management can create bid requests"}), 403
+
+    data = request.get_json()
+    bbl = normalize_bbl(data.get("building_bbl", ""))
+    source_type = data.get("source_type", "compliance")  # compliance or contract
+    source_ref = data.get("source_ref", "")
+    category_override = data.get("category")
+
+    building = BUILDINGS_DB.get(bbl)
+    if not building:
+        return jsonify({"error": "Building not found"}), 404
+
+    addr = building.get("address", bbl)
+    units = building.get("units", 0)
+    title = ""
+    scope = ""
+    due_date = ""
+    budget_low = 0
+    budget_high = 0
+    category = category_override
+
+    if source_type == "compliance":
+        # Find matching compliance deadline
+        for d in building.get("compliance_deadlines", []):
+            if source_ref and source_ref.lower() in d.get("law", "").lower():
+                title = f"{d['law'].split(chr(8212))[0].strip()} — {addr}"
+                scope = d.get("context", d.get("law", ""))
+                due_date = d.get("due_date", "")
+                budget_low = d.get("cost_low", 0)
+                budget_high = d.get("cost_high", 0)
+                if not category:
+                    category = _infer_category_from_text(d.get("law", ""))
+                break
+        if not title:
+            title = f"{source_ref} — {addr}"
+            if not category:
+                category = _infer_category_from_text(source_ref)
+
+    elif source_type == "contract":
+        # Find matching contract
+        for c in BUILDING_CONTRACTS.values():
+            if c.get("contract_id") == source_ref or (source_ref and source_ref.lower() in c.get("vendor_name", "").lower()):
+                title = f"{CATEGORY_LABELS.get(c['category'], c['category'])} Rebid — {addr}"
+                scope = c.get("service_description", "") or c.get("ai_summary", "")
+                due_date = c.get("end_date", "")
+                av = c.get("annual_value", 0)
+                budget_low = int(av * 0.8)
+                budget_high = int(av * 1.2)
+                if not category:
+                    category = c.get("category")
+                break
+        if not title:
+            title = f"Rebid — {addr}"
+
+    if not category:
+        category = "MANAGEMENT_FEE"  # fallback
+
+    # Check for duplicate open request
+    for br in BID_REQUESTS.values():
+        if br["building_bbl"] == bbl and br["category"] == category and br["status"] == "open" and br.get("source_ref", "").lower() == source_ref.lower():
+            return jsonify({
+                "ok": True, "duplicate": True,
+                "request_id": br["request_id"],
+                "message": "A bid request already exists for this item",
+                "eligible_vendors": _get_eligible_vendor_count(category),
+            })
+
+    rid = _next_bid_request_id()
+    now_str = datetime.now().strftime("%Y-%m-%d")
+    BID_REQUESTS[rid] = {
+        "request_id": rid,
+        "building_bbl": bbl,
+        "category": category,
+        "source_type": source_type,
+        "source_ref": source_ref,
+        "title": title,
+        "scope": scope,
+        "building_address": addr,
+        "building_units": units,
+        "due_date": due_date,
+        "budget_low": budget_low,
+        "budget_high": budget_high,
+        "status": "open",
+        "created_date": now_str,
+        "awarded_vendor_id": None,
+        "awarded_bid_id": None,
+    }
+    eligible = _get_eligible_vendor_count(category)
+    print(f"[BidRequest] Created {rid}: {title} — {category} — {eligible} eligible vendors")
+    return jsonify({
+        "ok": True,
+        "request_id": rid,
+        "category": category,
+        "category_label": CATEGORY_LABELS.get(category, category),
+        "eligible_vendors": eligible,
+        "title": title,
+    })
+
+
+@app.route("/api/award-bid-request", methods=["POST"])
+@login_required
+def award_bid_request():
+    """Award a bid request to a specific vendor bid."""
+    user = DEMO_USERS.get(session.get("user_email"), {})
+    if not (user.get("is_admin") or user.get("role") == "admin"):
+        return jsonify({"error": "Only management can award bids"}), 403
+
+    data = request.get_json()
+    request_id = data.get("request_id")
+    bid_id = data.get("bid_id")
+
+    if request_id not in BID_REQUESTS:
+        return jsonify({"error": "Bid request not found"}), 404
+    if bid_id not in VENDOR_BIDS:
+        return jsonify({"error": "Bid not found"}), 404
+
+    br = BID_REQUESTS[request_id]
+    bid = VENDOR_BIDS[bid_id]
+
+    br["status"] = "awarded"
+    br["awarded_vendor_id"] = bid["vendor_id"]
+    br["awarded_bid_id"] = bid_id
+
+    bid["status"] = "won"
+    bid["updated_date"] = datetime.now().strftime("%Y-%m-%d")
+    bid["mgmt_response"] = f"Bid awarded on {bid['updated_date']}"
+
+    # Mark other bids for this request as lost
+    for b in VENDOR_BIDS.values():
+        if b.get("bid_request_id") == request_id and b["bid_id"] != bid_id and b["status"] not in ("won", "lost"):
+            b["status"] = "lost"
+            b["updated_date"] = bid["updated_date"]
+            b["mgmt_response"] = "Another vendor was selected."
+
+    print(f"[BidRequest] Awarded {request_id} to bid {bid_id} (vendor {bid['vendor_id']})")
+    return jsonify({"ok": True, "request_id": request_id, "bid_id": bid_id})
+
+
+@app.route("/api/close-bid-request", methods=["POST"])
+@login_required
+def close_bid_request():
+    """Close a bid request without awarding."""
+    user = DEMO_USERS.get(session.get("user_email"), {})
+    if not (user.get("is_admin") or user.get("role") == "admin"):
+        return jsonify({"error": "Only management can close bid requests"}), 403
+
+    data = request.get_json()
+    request_id = data.get("request_id")
+    if request_id not in BID_REQUESTS:
+        return jsonify({"error": "Bid request not found"}), 404
+
+    BID_REQUESTS[request_id]["status"] = "closed"
+    return jsonify({"ok": True, "request_id": request_id})
+
+
 UPLOAD_PAGE_HTML = None  # defined below
 
 @app.route("/upload")
@@ -3347,7 +3612,9 @@ table.vt tr.click:hover td{background:var(--surface2)}
       {% if benchmarks.above_market_count > 0 %}
       <span class="nav-badge">{{ benchmarks.above_market_count }}</span>{% endif %}
     </div>
-    <div class="nav-item">⊞ &nbsp;BidBoard</div>
+    <div class="nav-item" onclick="document.getElementById('bidRequestsSection').scrollIntoView({behavior:'smooth',block:'start'})">⊞ &nbsp;BidBoard
+      {% if bid_requests|selectattr('status','eq','open')|list|length > 0 %}<span class="nav-badge">{{ bid_requests|selectattr('status','eq','open')|list|length }}</span>{% endif %}
+    </div>
     <div class="nav-label">Compliance</div>
     <div class="nav-item">⚑ &nbsp;Compliance Calendar
       <span class="nav-badge">{{ building.compliance_deadlines|selectattr('urgency','eq','HIGH')|list|length }}</span>
@@ -3567,6 +3834,37 @@ table.vt tr.click:hover td{background:var(--surface2)}
       {% endfor %}
     </div>
 
+    {# ── BID REQUESTS (BidBoard) ── #}
+    <div id="bidRequestsSection" class="card full" style="padding:0">
+      <div style="padding:20px 22px 14px">
+        <div class="ct">BidBoard — Active Bid Requests</div>
+        <div class="csub">Competitive bids solicited for compliance work and expiring contracts</div>
+      </div>
+      {% if bid_requests %}
+      <div style="padding:0 22px 18px">
+        {% for br in bid_requests %}
+        <div onclick="openPanel('bid_request', {{ loop.index0 }})" style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;margin-bottom:8px;cursor:pointer;transition:border-color .2s" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='var(--border)'">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:700;color:var(--ink);margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ br.title }}</div>
+            <div style="font-size:11px;color:var(--muted)">{{ br.category_label }} · Due {{ br.due_date }} · ${{ "{:,.0f}".format(br.budget_low) }}–${{ "{:,.0f}".format(br.budget_high) }}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;flex-shrink:0;margin-left:16px">
+            <div style="text-align:center">
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:700;color:var(--ink)">{{ br.bids_count }}</div>
+              <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px">Bids</div>
+            </div>
+            <div style="font-size:10px;font-weight:700;padding:4px 10px;border-radius:12px;background:{% if br.status == 'open' %}rgba(26,122,74,.1);color:var(--green){% elif br.status == 'awarded' %}rgba(196,137,58,.1);color:var(--gold){% else %}rgba(0,0,0,.06);color:var(--muted){% endif %}">{{ br.status|upper }}</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div style="padding:16px 22px 22px;font-size:13px;color:var(--muted);text-align:center">
+        No active bid requests. Click <strong>Start BidBoard</strong> on a compliance item or expiring contract to solicit competitive bids.
+      </div>
+      {% endif %}
+    </div>
+
     {# ── CONTRACT INTELLIGENCE ── #}
     <div id="contractsSection" class="card full" style="padding:0">
       <div style="padding:20px 22px 0">
@@ -3745,7 +4043,57 @@ const vendorBenchmarks = {{ benchmarks.vendor_benchmarks | tojson }};
 const complianceItems  = {{ building.compliance_deadlines | tojson }};
 const buildingUnits    = {{ building.units }};
 const contractItems    = {{ contracts_json | safe }};
+const bidRequestItems  = {{ bid_requests_json | safe }};
 const isAdmin          = {{ 'true' if is_admin else 'false' }};
+const buildingBBL      = '{{ building.bbl }}';
+
+async function createBidRequest(sourceType, sourceId, sourceRef, btn) {
+  if (btn) { btn.disabled = true; btn.textContent = 'Sending...'; }
+  try {
+    const resp = await fetch('/api/create-bid-request', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ building_bbl: buildingBBL, source_type: sourceType, source_ref: sourceRef || sourceId })
+    });
+    const d = await resp.json();
+    if (d.ok) {
+      if (btn) {
+        btn.textContent = d.duplicate ? '⊞ Already Requested' : ('✓ Sent to ' + d.eligible_vendors + ' vendor' + (d.eligible_vendors !== 1 ? 's' : ''));
+        btn.style.background = 'var(--green)'; btn.style.color = '#fff'; btn.style.border = 'none';
+      }
+      if (!d.duplicate) setTimeout(() => location.reload(), 1500);
+    } else {
+      if (btn) { btn.textContent = d.error || 'Error'; btn.disabled = false; }
+    }
+  } catch(e) { if (btn) { btn.textContent = 'Error'; btn.disabled = false; } }
+}
+
+async function awardBid(requestId, bidId, btn) {
+  if (!confirm('Award this bid? Other bidders will be notified.')) return;
+  if (btn) { btn.disabled = true; btn.textContent = 'Awarding...'; }
+  try {
+    const resp = await fetch('/api/award-bid-request', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ request_id: requestId, bid_id: bidId })
+    });
+    const d = await resp.json();
+    if (d.ok) { location.reload(); }
+    else { alert(d.error || 'Error awarding bid'); if (btn) btn.disabled = false; }
+  } catch(e) { alert('Network error'); if (btn) btn.disabled = false; }
+}
+
+async function closeBidRequest(requestId, btn) {
+  if (!confirm('Close this bid request? No more bids will be accepted.')) return;
+  if (btn) { btn.disabled = true; btn.textContent = 'Closing...'; }
+  try {
+    const resp = await fetch('/api/close-bid-request', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ request_id: requestId })
+    });
+    const d = await resp.json();
+    if (d.ok) { location.reload(); }
+    else { alert(d.error || 'Error'); if (btn) btn.disabled = false; }
+  } catch(e) { alert('Network error'); if (btn) btn.disabled = false; }
+}
 
 function openPanel(type, idx) {
   const content = document.getElementById('panelContent');
@@ -3854,10 +4202,48 @@ function openPanel(type, idx) {
       ${c.notes ? '<div class="panel-section">Management Notes</div><div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:12px;font-size:12px;color:var(--dim);line-height:1.6;font-style:italic">' + c.notes + '</div>' : ''}
 
       ${isAdmin ? '<div class="action-box" style="margin-top:18px"><div class="action-title">Contract Actions</div>' +
-        (c.status === 'expired' ? '<button class="btn-full" onclick="closePanel();openContractDrawer()">Upload New Contract →</button><button class="btn-full-out">Initiate Rebid via BidBoard</button>' : '') +
-        (c.status === 'expiring_soon' ? '<button class="btn-full">Start Renewal Process →</button><button class="btn-full-out">Initiate Competitive Rebid</button>' : '') +
+        (c.status === 'expired' ? '<button class="btn-full" onclick="closePanel();openContractDrawer()">Upload New Contract →</button><button class="btn-full-out" id="cRebidBtn'+idx+'" onclick="event.stopPropagation();createBidRequest(\\'contract\\',\\''+c.contract_id+'\\',\\''+c.vendor_name.replace(/'/g,'')+'\\',this)">Initiate Rebid via BidBoard →</button>' : '') +
+        (c.status === 'expiring_soon' ? '<button class="btn-full-out" id="cRebidBtn'+idx+'" onclick="event.stopPropagation();createBidRequest(\\'contract\\',\\''+c.contract_id+'\\',\\''+c.vendor_name.replace(/'/g,'')+'\\',this)">Initiate Competitive Rebid →</button>' : '') +
         (c.status === 'active' ? '<button class="btn-full-out">Edit Contract Details</button>' : '') +
         '</div>' : '<div style="margin-top:18px;padding:12px 14px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;font-size:12px;color:var(--muted);text-align:center">Contract management is handled by your management company.</div>'}`;
+  } else if (type === 'bid_request') {
+    const br = bidRequestItems[idx];
+    if (!br) return;
+    const statusColor = br.status === 'open' ? 'green' : (br.status === 'awarded' ? 'gold' : 'muted');
+    const bids = br.bids || [];
+    const bidsHTML = bids.length ? bids.map(b => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;margin-bottom:6px">
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--ink)">${b.vendor_name || 'Unknown Vendor'}</div>
+          <div style="font-size:11px;color:var(--muted);margin-top:2px">${b.proposal_notes ? b.proposal_notes.substring(0,120) + (b.proposal_notes.length > 120 ? '...' : '') : 'No notes'}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0;margin-left:12px">
+          <div style="font-family:\\'IBM Plex Mono\\',monospace;font-size:15px;font-weight:700;color:var(--ink)">$${(b.proposed_annual||0).toLocaleString()}</div>
+          <div style="font-size:10px;color:var(--muted)">${b.status === 'won' ? '✓ Awarded' : b.status}</div>
+          ${br.status === 'open' && isAdmin ? '<button onclick="event.stopPropagation();awardBid(\\''+br.request_id+'\\',\\''+b.bid_id+'\\',this)" style="margin-top:6px;font-size:10px;padding:4px 10px;background:var(--gold);color:white;border:none;border-radius:4px;cursor:pointer;font-weight:600">Award ✓</button>' : ''}
+        </div>
+      </div>`).join('') : '<div style="padding:18px;text-align:center;font-size:12px;color:var(--muted);background:var(--surface2);border:1px solid var(--border);border-radius:6px">No bids received yet. Qualified vendors will see this request in their portal.</div>';
+
+    content.innerHTML = `
+      <div class="panel-title">${br.title}</div>
+      <div class="panel-sub">${br.category_label}</div>
+      <div style="display:inline-block;font-size:11px;font-weight:700;padding:4px 10px;border-radius:12px;background:rgba(0,0,0,.06);color:var(--${statusColor});margin:8px 0 16px">${br.status.toUpperCase()}</div>
+
+      <div class="stat-grid">
+        <div class="stat-box"><div class="stat-lbl">Budget Low</div><div class="stat-val gold">$${(br.budget_low||0).toLocaleString()}</div></div>
+        <div class="stat-box"><div class="stat-lbl">Budget High</div><div class="stat-val gold">$${(br.budget_high||0).toLocaleString()}</div></div>
+        <div class="stat-box"><div class="stat-lbl">Due Date</div><div class="stat-val">${br.due_date}</div></div>
+        <div class="stat-box"><div class="stat-lbl">Bids Received</div><div class="stat-val">${bids.length}</div></div>
+      </div>
+
+      <div class="panel-section">Scope of Work</div>
+      <div style="font-size:12.5px;color:var(--dim);line-height:1.7;background:var(--surface2);padding:13px 14px;border-radius:6px;border:1px solid var(--border)">${br.scope || 'No scope description provided.'}</div>
+
+      <div class="panel-section">Vendor Bids</div>
+      ${bidsHTML}
+
+      ${br.status === 'open' && isAdmin ? '<div style="margin-top:16px"><button onclick="closeBidRequest(\\''+br.request_id+'\\',this)" class="btn-full-out" style="width:100%">Close Request (Stop Accepting Bids)</button></div>' : ''}
+    `;
   } else {
     const d = complianceItems[idx];
     if (!d) return;
@@ -4100,8 +4486,8 @@ function openPanel(type, idx) {
         <div style="font-size:10px;color:var(--muted);margin-top:6px;text-align:center;font-style:italic">Sample bids based on network pricing data · Actual quotes may vary</div>
         ` : ''}
 
-        <button class="btn-full" style="margin-top:14px">Request Live Bids — ${d.law.split(/[-—]/)[0].trim()} →</button>
-        <button class="btn-full-out">Send Scope to Managing Agent</button>
+        <button class="btn-full" style="margin-top:14px" onclick="event.stopPropagation();createBidRequest(\\'compliance\\',\\'${idx}\\',\\'${d.law.replace(/'/g,"")}\\'  ,this)">Request Live Bids — ${d.law.split(/[-—]/)[0].trim()} →</button>
+        <button class="btn-full-out" onclick="event.stopPropagation();createBidRequest(\\'compliance\\',\\'${idx}\\',\\'${d.law.replace(/'/g,"")}\\'  ,this)">Send Scope to Managing Agent</button>
       </div>`;
   }
   document.getElementById('overlay').classList.add('open');
@@ -5546,6 +5932,21 @@ def vendor_dashboard():
     total_annual = sum(w["annual_value"] for w in current_work)
     total_units_served = sum(w["units"] for w in current_work)
 
+    # Open bid requests matching this vendor's categories
+    vendor_bid_requests = []
+    for br in BID_REQUESTS.values():
+        if br["status"] == "open" and br["category"] in vendor_categories:
+            # Check if vendor already submitted a bid for this request
+            existing_bid = next((b for b in VENDOR_BIDS.values()
+                                 if b.get("bid_request_id") == br["request_id"] and b["vendor_id"] == vid), None)
+            vendor_bid_requests.append({
+                **br,
+                "category_label": CATEGORY_LABELS.get(br["category"], br["category"]),
+                "bids_count": _count_bids_for_request(br["request_id"]),
+                "already_bid": existing_bid is not None,
+                "existing_bid_status": existing_bid["status"] if existing_bid else None,
+            })
+
     return render_template_string(VENDOR_DASHBOARD_HTML,
         profile=profile,
         current_work=current_work,
@@ -5572,6 +5973,7 @@ def vendor_dashboard():
         total_buildings=len(BUILDINGS_DB),
         contract_requests=contract_requests,
         vendor_linked_contracts=vendor_linked_contracts,
+        vendor_bid_requests=vendor_bid_requests,
     )
 
 @app.route("/vendor/save-profile", methods=["POST"])
@@ -5654,6 +6056,8 @@ def vendor_bid():
     if existing and action == "interest":
         return jsonify({"ok": True, "message": "Already tracking this opportunity", "bid_id": existing[0]["bid_id"]})
 
+    bid_request_id = data.get("bid_request_id")  # link to BID_REQUESTS if provided
+
     if action == "proposal":
         proposed_annual = data.get("proposed_annual", 0)
         notes = data.get("notes", "")
@@ -5663,12 +6067,14 @@ def vendor_bid():
             bid["proposed_annual"] = proposed_annual
             bid["proposal_notes"] = notes
             bid["updated_date"] = datetime.now().strftime("%Y-%m-%d")
+            if bid_request_id:
+                bid["bid_request_id"] = bid_request_id
             return jsonify({"ok": True, "message": "Proposal submitted", "bid_id": bid["bid_id"]})
 
     # Create new bid
     bid_id = _next_bid_id()
     profile = VENDOR_PROFILES.get(vid, {})
-    VENDOR_BIDS[bid_id] = {
+    new_bid = {
         "bid_id": bid_id,
         "vendor_id": vid,
         "building_bbl": bbl,
@@ -5681,6 +6087,9 @@ def vendor_bid():
         "mgmt_viewed": False,
         "mgmt_response": "",
     }
+    if bid_request_id:
+        new_bid["bid_request_id"] = bid_request_id
+    VENDOR_BIDS[bid_id] = new_bid
     return jsonify({"ok": True, "message": "Interest registered" if action == "interest" else "Proposal submitted", "bid_id": bid_id})
 
 
@@ -6867,6 +7276,48 @@ VENDOR_DASHBOARD_HTML = """<!DOCTYPE html>
       </span>
     </div>
 
+    {% if vendor_bid_requests %}
+    <!-- Active Bid Requests from BidBoard -->
+    <div style="margin-bottom:24px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+        <span style="font-size:18px;">📋</span>
+        <h3 style="font-size:16px;font-weight:800;color:var(--navy);margin:0;">Active Bid Requests</h3>
+        <span style="background:var(--green);color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;">{{ vendor_bid_requests|length }}</span>
+      </div>
+      <p style="font-size:12px;color:var(--mid);margin-bottom:12px;">Management companies actively soliciting bids for these services. Submit a proposal to compete.</p>
+      <div class="opp-grid">
+        {% for br in vendor_bid_requests %}
+        <div class="opp-card" style="border-left:3px solid var(--green);">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;">
+            <div class="opp-name">{{ br.title }}</div>
+            <span class="badge badge-green">RFP</span>
+          </div>
+          <div class="opp-meta">{{ br.building_address }} &middot; {{ br.building_units }} units</div>
+          <div class="opp-badges">
+            <span class="badge badge-green">{{ br.category_label }}</span>
+            <span class="badge" style="background:#e0e7ff;color:#4338ca;">Due {{ br.due_date }}</span>
+          </div>
+          <div style="font-size:12px;color:var(--dim);margin:6px 0;line-height:1.5;">{{ br.scope[:150] }}{% if br.scope|length > 150 %}&hellip;{% endif %}</div>
+          <div class="opp-value" style="margin-bottom:4px;">
+            ${{ '{:,.0f}'.format(br.budget_low) }} &ndash; ${{ '{:,.0f}'.format(br.budget_high) }} <span>budget range</span>
+          </div>
+          {% if br.bids_count > 0 %}
+          <div class="competing-badge" style="margin-bottom:8px;">&#x1F525; {{ br.bids_count }} bid{{ 's' if br.bids_count > 1 else '' }} submitted</div>
+          {% endif %}
+          <div style="margin-top:auto;">
+            {% if br.already_bid %}
+              <span class="urgency-tag bid-active">{{ br.existing_bid_status | replace('_', ' ') | title }}</span>
+            {% else %}
+              <button class="connect-btn" onclick="openProposalModal('{{ br.building_bbl }}', '{{ br.building_address }}', {{ br.budget_high }}, '{{ br.request_id }}')">Submit Proposal &rarr;</button>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    <div style="border-bottom:1px solid var(--light);margin-bottom:20px;"></div>
+    {% endif %}
+
     <!-- SUBSCRIBED: show all opportunities -->
     <div class="opp-grid" id="oppGrid">
       {% for opp in opportunities %}
@@ -7113,6 +7564,7 @@ VENDOR_DASHBOARD_HTML = """<!DOCTYPE html>
       <div class="modal-title">Submit Proposal</div>
       <p style="font-size:14px;color:var(--mid);margin-bottom:20px;">for <strong id="proposalBldgName"></strong></p>
       <input type="hidden" id="proposalBbl" value="">
+      <input type="hidden" id="proposalBidRequestId" value="">
       <div class="form-grid" style="gap:14px;">
         <div class="form-group form-full">
           <label>Proposed Annual Value ($)</label>
@@ -7182,8 +7634,9 @@ VENDOR_DASHBOARD_HTML = """<!DOCTYPE html>
     }
   }
 
-  function openProposalModal(bbl, name, currentValue) {
+  function openProposalModal(bbl, name, currentValue, bidRequestId) {
     document.getElementById('proposalBbl').value = bbl;
+    document.getElementById('proposalBidRequestId').value = bidRequestId || '';
     document.getElementById('proposalBldgName').textContent = name;
     document.getElementById('proposalAmount').value = currentValue > 0 ? currentValue : '';
     document.getElementById('proposalNotes').value = '';
@@ -7194,11 +7647,14 @@ VENDOR_DASHBOARD_HTML = """<!DOCTYPE html>
     const bbl = document.getElementById('proposalBbl').value;
     const amount = parseInt(document.getElementById('proposalAmount').value) || 0;
     const notes = document.getElementById('proposalNotes').value;
+    const bidRequestId = document.getElementById('proposalBidRequestId').value || null;
     if(!amount) { alert('Please enter a proposed annual value.'); return; }
+    const payload = {bbl: bbl, action: 'proposal', proposed_annual: amount, notes: notes};
+    if(bidRequestId) payload.bid_request_id = bidRequestId;
     const r = await fetch('/vendor/bid', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({bbl: bbl, action: 'proposal', proposed_annual: amount, notes: notes})
+      body: JSON.stringify(payload)
     });
     const d = await r.json();
     if(d.ok) {
