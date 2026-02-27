@@ -1297,7 +1297,26 @@ def login():
             return redirect(url_for("dashboard"))
         error = "Invalid credentials."
 
-    return render_template_string(LOGIN_HTML, error=error)
+    # Compute live stats for splash page
+    total_buildings = len(BUILDINGS_DB)
+    total_units = sum(b.get("units", 0) for b in BUILDINGS_DB.values())
+    total_spend = 0
+    for bldg in BUILDINGS_DB.values():
+        for v in bldg.get("vendor_data", []):
+            total_spend += v.get("annual", 0)
+    if total_spend >= 1_000_000:
+        total_vendor_spend = f"${total_spend / 1_000_000:.1f}M"
+    else:
+        total_vendor_spend = f"${total_spend / 1_000:,.0f}K"
+    num_categories = len(ALL_CATEGORIES)
+
+    return render_template_string(LOGIN_HTML,
+        error=error,
+        total_buildings=total_buildings,
+        total_units=f"{total_units:,}",
+        total_vendor_spend=total_vendor_spend,
+        num_categories=num_categories,
+    )
 
 @app.route("/logout")
 def logout():
@@ -3230,53 +3249,291 @@ def get_sample_csv():
 LOGIN_HTML = """<!DOCTYPE html>
 <html>
 <head>
-<title>BoardIQ — Sign In</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<title>BoardIQ — Vendor &amp; Compliance Intelligence for NYC Co-ops</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: #f4f1eb; font-family: 'Plus Jakarta Sans', sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
-.card { background: white; border: 1px solid #e5e0d5; border-radius: 10px; padding: 48px 44px; width: 420px; }
-.logo { font-family: 'Playfair Display', serif; font-size: 28px; color: #1a1714; margin-bottom: 6px; }
-.logo span { color: #c4893a; }
-.tagline { font-size: 13px; color: #8a8278; margin-bottom: 36px; }
-label { font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; color: #6b6560; font-weight: 600; display: block; margin-bottom: 6px; }
-input { width: 100%; padding: 11px 14px; border: 1px solid #e5e0d5; border-radius: 5px; font-size: 14px; font-family: inherit; margin-bottom: 16px; outline: none; transition: border 0.15s; }
-input:focus { border-color: #c4893a; }
-button { width: 100%; background: #2c2825; color: white; font-family: inherit; font-size: 14px; font-weight: 600; padding: 12px; border: none; border-radius: 5px; cursor: pointer; margin-top: 4px; }
-button:hover { background: #1a1714; }
-.error { background: #fdecea; color: #c0392b; border: 1px solid #f0b8b3; border-radius: 4px; padding: 10px 14px; font-size: 13px; margin-bottom: 16px; }
-.demo-hint { margin-top: 20px; background: #f9f7f3; border: 1px solid #e5e0d5; border-radius: 5px; padding: 14px; font-size: 12px; color: #6b6560; line-height: 1.6; }
-.demo-hint strong { color: #2c2825; }
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#f4f1eb;--bg-deep:#e8e2d6;--ink:#2c2825;--ink-light:#6b6560;--ink-muted:#8a8278;--gold:#c4893a;--gold-light:#f5e6d0;--green:#1a7a4a;--green-light:#e6f4ec;--red:#c0392b;--border:#e5e0d5;--white:#ffffff;--card-shadow:0 2px 20px rgba(44,40,37,0.08)}
+body{background:var(--bg);font-family:'Plus Jakarta Sans',sans-serif;color:var(--ink);line-height:1.6;-webkit-font-smoothing:antialiased}
+
+/* ── NAV ── */
+.splash-nav{position:fixed;top:0;left:0;right:0;z-index:100;padding:16px 40px;display:flex;align-items:center;justify-content:space-between;background:rgba(244,241,235,0.92);backdrop-filter:blur(12px);border-bottom:1px solid transparent;transition:border-color 0.3s}
+.splash-nav.scrolled{border-bottom-color:var(--border)}
+.nav-logo{font-family:'Playfair Display',serif;font-size:24px;color:var(--ink);text-decoration:none}
+.nav-logo b{color:var(--gold)}
+.nav-links{display:flex;align-items:center;gap:28px}
+.nav-links a{font-size:13px;font-weight:500;color:var(--ink-light);text-decoration:none;transition:color 0.15s}
+.nav-links a:hover{color:var(--ink)}
+.nav-cta{background:var(--ink);color:var(--white);padding:9px 22px;border-radius:6px;font-size:13px;font-weight:600;text-decoration:none;transition:background 0.15s}
+.nav-cta:hover{background:#1a1714;color:var(--white)}
+
+/* ── HERO ── */
+.hero{min-height:100vh;display:flex;align-items:center;padding:120px 40px 80px;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;top:-200px;right:-200px;width:600px;height:600px;background:radial-gradient(circle,rgba(196,137,58,0.06) 0%,transparent 70%);pointer-events:none}
+.hero::after{content:'';position:absolute;bottom:-150px;left:-150px;width:500px;height:500px;background:radial-gradient(circle,rgba(26,122,74,0.04) 0%,transparent 70%);pointer-events:none}
+.hero-inner{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:1fr 420px;gap:80px;align-items:center;width:100%}
+.hero-text h1{font-family:'Playfair Display',serif;font-size:52px;line-height:1.15;color:var(--ink);margin-bottom:20px;letter-spacing:-0.5px}
+.hero-text h1 em{font-style:normal;color:var(--gold)}
+.hero-text .subtitle{font-size:18px;color:var(--ink-muted);line-height:1.7;margin-bottom:36px;max-width:520px}
+.hero-badges{display:flex;gap:12px;margin-bottom:40px;flex-wrap:wrap}
+.hero-badge{display:inline-flex;align-items:center;gap:6px;background:var(--white);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:12px;font-weight:500;color:var(--ink)}
+.hero-badge .dot{width:6px;height:6px;border-radius:50%}
+.hero-badge .dot-gold{background:var(--gold)}
+.hero-badge .dot-green{background:var(--green)}
+.hero-scroll{font-size:13px;color:var(--ink-muted);display:flex;align-items:center;gap:8px;margin-top:20px}
+.hero-scroll span{animation:bounce 2s infinite}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(4px)}}
+
+/* ── LOGIN CARD ── */
+.login-card{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:40px 36px;box-shadow:var(--card-shadow)}
+.login-card .card-label{font-size:9px;letter-spacing:1.8px;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:16px}
+.login-card h2{font-family:'Playfair Display',serif;font-size:22px;margin-bottom:6px}
+.login-card .card-sub{font-size:13px;color:var(--ink-muted);margin-bottom:24px}
+.login-card label{font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:var(--ink-light);font-weight:600;display:block;margin-bottom:6px}
+.login-card input{width:100%;padding:11px 14px;border:1px solid var(--border);border-radius:6px;font-size:14px;font-family:inherit;margin-bottom:14px;outline:none;transition:border 0.15s}
+.login-card input:focus{border-color:var(--gold)}
+.login-btn{width:100%;background:var(--ink);color:var(--white);font-family:inherit;font-size:14px;font-weight:600;padding:13px;border:none;border-radius:6px;cursor:pointer;margin-top:4px;transition:background 0.15s}
+.login-btn:hover{background:#1a1714}
+.error-msg{background:#fdecea;color:var(--red);border:1px solid #f0b8b3;border-radius:6px;padding:10px 14px;font-size:13px;margin-bottom:14px}
+.demo-accounts{margin-top:18px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px 16px;font-size:11.5px;color:var(--ink-muted);line-height:1.7}
+.demo-accounts strong{color:var(--ink);font-weight:600}
+.demo-accounts .role-tag{display:inline-block;font-size:9px;letter-spacing:0.8px;text-transform:uppercase;font-weight:700;padding:1px 6px;border-radius:3px;margin-left:4px}
+.demo-accounts .role-board{background:var(--gold-light);color:var(--gold)}
+.demo-accounts .role-admin{background:var(--green-light);color:var(--green)}
+.demo-accounts .role-vendor{background:#e8e2f0;color:#6b4d9e}
+.login-card .vendor-link{display:block;text-align:center;margin-top:14px;font-size:12px;color:var(--ink-muted)}
+.login-card .vendor-link a{color:var(--gold);font-weight:600;text-decoration:none}
+.login-card .vendor-link a:hover{text-decoration:underline}
+
+/* ── STATS STRIP ── */
+.stats-strip{background:var(--ink);padding:48px 40px}
+.stats-inner{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);gap:32px;text-align:center}
+.stat-item .stat-num{font-family:'IBM Plex Mono',monospace;font-size:36px;font-weight:500;color:var(--gold);margin-bottom:4px}
+.stat-item .stat-label{font-size:12px;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,0.55);font-weight:500}
+
+/* ── FEATURES ── */
+.features{padding:80px 40px;background:var(--bg)}
+.section-inner{max-width:1200px;margin:0 auto}
+.section-label{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:10px;text-align:center}
+.section-title{font-family:'Playfair Display',serif;font-size:36px;text-align:center;margin-bottom:12px}
+.section-sub{font-size:15px;color:var(--ink-muted);text-align:center;max-width:600px;margin:0 auto 48px}
+.feature-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+.feature-card{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:32px 28px;position:relative;transition:box-shadow 0.2s}
+.feature-card:hover{box-shadow:var(--card-shadow)}
+.feature-icon{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:16px}
+.feature-icon-gold{background:var(--gold-light);color:var(--gold)}
+.feature-icon-green{background:var(--green-light);color:var(--green)}
+.feature-icon-ink{background:#eae6df;color:var(--ink)}
+.feature-card h3{font-family:'Playfair Display',serif;font-size:18px;margin-bottom:8px}
+.feature-card p{font-size:13.5px;color:var(--ink-muted);line-height:1.65}
+.feature-card .feature-tag{position:absolute;top:16px;right:16px;font-size:9px;letter-spacing:1px;text-transform:uppercase;font-weight:700;padding:3px 8px;border-radius:4px}
+.tag-live{background:var(--green-light);color:var(--green)}
+.tag-new{background:var(--gold-light);color:var(--gold)}
+
+/* ── HOW IT WORKS ── */
+.how-it-works{padding:80px 40px;background:var(--white)}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:0;position:relative;max-width:900px;margin:0 auto}
+.step{text-align:center;padding:0 32px;position:relative}
+.step:not(:last-child)::after{content:'';position:absolute;top:28px;right:-12px;width:24px;height:2px;background:var(--border)}
+.step-num{width:56px;height:56px;border-radius:50%;background:var(--bg);border:2px solid var(--border);display:inline-flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono',monospace;font-size:18px;font-weight:500;color:var(--gold);margin-bottom:16px}
+.step h4{font-size:15px;font-weight:600;margin-bottom:6px}
+.step p{font-size:13px;color:var(--ink-muted);line-height:1.6}
+
+/* ── CTA BOTTOM ── */
+.cta-bottom{padding:80px 40px;background:var(--bg-deep);text-align:center}
+.cta-bottom h2{font-family:'Playfair Display',serif;font-size:32px;margin-bottom:10px}
+.cta-bottom p{font-size:15px;color:var(--ink-muted);margin-bottom:28px}
+.cta-bottom .cta-btn{display:inline-block;background:var(--ink);color:var(--white);padding:14px 36px;border-radius:6px;font-size:15px;font-weight:600;text-decoration:none;transition:background 0.15s}
+.cta-bottom .cta-btn:hover{background:#1a1714}
+
+/* ── FOOTER ── */
+.splash-footer{padding:32px 40px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--bg)}
+.splash-footer .foot-logo{font-family:'Playfair Display',serif;font-size:18px;color:var(--ink-muted)}
+.splash-footer .foot-logo b{color:var(--gold)}
+.splash-footer .foot-links{display:flex;gap:20px}
+.splash-footer .foot-links a{font-size:12px;color:var(--ink-muted);text-decoration:none}
+.splash-footer .foot-links a:hover{color:var(--ink)}
+
+/* ── MOBILE ── */
+@media(max-width:900px){
+  .hero-inner{grid-template-columns:1fr;gap:40px;text-align:center}
+  .hero-text h1{font-size:36px}
+  .hero-text .subtitle{margin:0 auto 28px}
+  .hero-badges{justify-content:center}
+  .login-card{max-width:420px;margin:0 auto}
+  .stats-inner{grid-template-columns:repeat(2,1fr);gap:24px}
+  .feature-grid{grid-template-columns:1fr}
+  .steps{grid-template-columns:1fr;gap:32px}
+  .step:not(:last-child)::after{display:none}
+  .splash-nav .nav-links a:not(.nav-cta){display:none}
+  .splash-nav{padding:12px 20px}
+  .hero{padding:100px 20px 60px}
+  .features,.how-it-works,.cta-bottom{padding:60px 20px}
+}
 </style>
 </head>
 <body>
-<div class="card">
-  <div class="logo">Board<span>IQ</span></div>
-  <div class="tagline">Vendor &amp; Compliance Intelligence for NYC Co-ops</div>
-  {% if error %}<div class="error">{{ error }}</div>{% endif %}
-  <form method="POST">
-    <label>Email Address</label>
-    <input type="email" name="email" placeholder="board@yourbuilding.com" required>
-    <label>Password</label>
-    <input type="password" name="password" placeholder="••••••••" required>
-    <button type="submit">Sign In →</button>
-  </form>
-  <div class="demo-hint">
-    <strong>Demo accounts:</strong><br>
-    board@130e18.com · demo1234 (130 East 18th St)<br>
-    board@120w72.com · demo1234 (120 W 72nd St)<br>
-    board@740park.com · demo1234 (740 Park Ave)<br>
-    admin@boardiq.com · admin (all buildings)<br><br>
-    <strong>Vendor accounts:</strong><br>
-    vendor@schindler.com · demo1234 (Elevator)<br>
-    vendor@cleanstar.com · demo1234 (Cleaning)<br>
-    vendor@apexext.com · demo1234 (Pest Control)
+
+<!-- NAV -->
+<nav class="splash-nav" id="splashNav">
+  <a href="/" class="nav-logo">Board<b>IQ</b></a>
+  <div class="nav-links">
+    <a href="#features">Features</a>
+    <a href="#how-it-works">How It Works</a>
+    <a href="/vendors">For Vendors</a>
+    <a href="#login-section" class="nav-cta">Sign In</a>
   </div>
-  <div style="margin-top:16px;text-align:center;padding-top:16px;border-top:1px solid #e5e0d5">
-    <span style="font-size:12px;color:#8a8278">Are you a vendor? </span>
-    <a href="/vendor/register" style="font-size:12px;color:#c4893a;font-weight:600;text-decoration:none">Register for the Vendor Network →</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="hero">
+  <div class="hero-inner">
+    <div class="hero-text">
+      <div class="hero-badges">
+        <span class="hero-badge"><span class="dot dot-gold"></span> NYC Co-ops &amp; Condos</span>
+        <span class="hero-badge"><span class="dot dot-green"></span> Built for Board Members</span>
+      </div>
+      <h1>Know what your building <em>should</em> be paying.</h1>
+      <p class="subtitle">BoardIQ gives co-op and condo boards real-time vendor benchmarks, compliance tracking, and competitive bidding tools &mdash; so you can cut costs, stay compliant, and make smarter decisions.</p>
+      <a href="#login-section" style="display:inline-block;background:var(--gold);color:var(--white);padding:13px 32px;border-radius:6px;font-size:15px;font-weight:600;text-decoration:none;transition:background 0.15s">Get Started &rarr;</a>
+      <div class="hero-scroll"><span>&darr;</span> Scroll to explore</div>
+    </div>
+    <div class="login-card" id="login-section">
+      <div class="card-label">Board &amp; Admin Access</div>
+      <h2>Sign In</h2>
+      <div class="card-sub">Access your building dashboard</div>
+      {% if error %}<div class="error-msg">{{ error }}</div>{% endif %}
+      <form method="POST" action="/login">
+        <label>Email Address</label>
+        <input type="email" name="email" placeholder="board@yourbuilding.com" required>
+        <label>Password</label>
+        <input type="password" name="password" placeholder="••••••••" required>
+        <button type="submit" class="login-btn">Sign In &rarr;</button>
+      </form>
+      <div class="demo-accounts">
+        <strong>Demo Accounts</strong><br>
+        board@130e18.com &middot; demo1234 <span class="role-tag role-board">Board</span><br>
+        admin@boardiq.com &middot; admin <span class="role-tag role-admin">Admin</span><br>
+        vendor@schindler.com &middot; demo1234 <span class="role-tag role-vendor">Vendor</span>
+      </div>
+      <div class="vendor-link">Are you a vendor? <a href="/vendor/register">Join the Vendor Network &rarr;</a></div>
+    </div>
   </div>
-</div>
+</section>
+
+<!-- STATS -->
+<section class="stats-strip">
+  <div class="stats-inner">
+    <div class="stat-item"><div class="stat-num">{{ total_buildings }}</div><div class="stat-label">NYC Buildings</div></div>
+    <div class="stat-item"><div class="stat-num">{{ total_units }}</div><div class="stat-label">Residential Units</div></div>
+    <div class="stat-item"><div class="stat-num">{{ total_vendor_spend }}</div><div class="stat-label">Vendor Spend Tracked</div></div>
+    <div class="stat-item"><div class="stat-num">{{ num_categories }}</div><div class="stat-label">Service Categories</div></div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features" id="features">
+  <div class="section-inner">
+    <div class="section-label">Platform</div>
+    <div class="section-title">Everything your board needs in one place</div>
+    <div class="section-sub">From vendor cost intelligence to compliance deadlines to competitive bidding &mdash; BoardIQ replaces spreadsheets, guesswork, and expensive consultants.</div>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <span class="feature-tag tag-live">Live</span>
+        <div class="feature-icon feature-icon-gold">&#9878;</div>
+        <h3>Vendor Intelligence</h3>
+        <p>See exactly what peer buildings pay for every service. Benchmark your contracts against real market data from hundreds of NYC co-ops and condos.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-tag tag-live">Live</span>
+        <div class="feature-icon feature-icon-green">&#9881;</div>
+        <h3>Compliance Command</h3>
+        <p>Track LL97 carbon penalties, FISP facade inspections, elevator certifications, and more. See deadlines, cost ranges, and which laws apply to your building.</p>
+      </div>
+      <div class="feature-card">
+        <span class="feature-tag tag-new">New</span>
+        <div class="feature-icon feature-icon-ink">&#9733;</div>
+        <h3>BidBoard Network</h3>
+        <p>Request competitive bids from qualified vendors with one click. Compare proposals side-by-side and award contracts &mdash; all from your dashboard.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon feature-icon-gold">&#128196;</div>
+        <h3>Contract Tracker</h3>
+        <p>Upload and track every vendor contract. Get alerts before renewals, see spending trends, and compare terms against market benchmarks.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon feature-icon-green">&#128218;</div>
+        <h3>Education Center</h3>
+        <p>Compliance guides tailored to your building. Understand what laws apply, what they cost, and what steps to take &mdash; written for board members, not lawyers.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon feature-icon-ink">&#128202;</div>
+        <h3>Peer Benchmarking</h3>
+        <p>Automatically matched to a peer group of similar buildings by size, age, and type. Every cost comparison is apples-to-apples.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how-it-works" id="how-it-works">
+  <div class="section-inner">
+    <div class="section-label">Process</div>
+    <div class="section-title">Three steps to smarter building management</div>
+    <div class="section-sub">BoardIQ works with the data you already have. No new systems to learn, no lengthy onboarding.</div>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <h4>Upload Your Vendor Data</h4>
+        <p>Drop in a CSV or PDF from Yardi, AvidXchange, or any accounting system. We parse it automatically.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <h4>Get Instant Benchmarks</h4>
+        <p>See how every vendor contract compares to peer buildings. Above market? Below? We flag the savings opportunities.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <h4>Act on Insights</h4>
+        <p>Request competitive bids, track compliance deadlines, and manage contracts &mdash; all from one dashboard your whole board can access.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA BOTTOM -->
+<section class="cta-bottom">
+  <h2>Ready to see what your building should be paying?</h2>
+  <p>Join {{ total_buildings }} NYC buildings already using BoardIQ to benchmark, comply, and save.</p>
+  <a href="#login-section" class="cta-btn">Sign In to Your Dashboard &rarr;</a>
+</section>
+
+<!-- FOOTER -->
+<footer class="splash-footer">
+  <div class="foot-logo">Board<b>IQ</b></div>
+  <div class="foot-links">
+    <a href="/vendors">For Vendors</a>
+    <a href="/vendor/register">Vendor Registration</a>
+    <a href="#login-section">Sign In</a>
+  </div>
+</footer>
+
+<script>
+// Nav scroll effect
+window.addEventListener('scroll', function(){
+  var nav = document.getElementById('splashNav');
+  if(window.scrollY > 40) nav.classList.add('scrolled');
+  else nav.classList.remove('scrolled');
+});
+// Smooth scroll for anchor links
+document.querySelectorAll('a[href^="#"]').forEach(function(a){
+  a.addEventListener('click', function(e){
+    var target = document.querySelector(this.getAttribute('href'));
+    if(target){e.preventDefault(); target.scrollIntoView({behavior:'smooth',block:'start'});}
+  });
+});
+</script>
 </body>
 </html>"""
 
