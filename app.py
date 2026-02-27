@@ -3372,8 +3372,12 @@ body{background:var(--bg);font-family:'Plus Jakarta Sans',sans-serif;color:var(-
 .splash-footer .foot-links a{font-size:12px;color:var(--ink-muted);text-decoration:none}
 .splash-footer .foot-links a:hover{color:var(--ink)}
 
+/* ── Splash Mobile Hamburger ── */
+.splash-hamburger{display:none;background:none;border:none;color:var(--ink);font-size:22px;cursor:pointer;padding:4px 8px;line-height:1}
+
 /* ── MOBILE ── */
 @media(max-width:900px){
+  .splash-hamburger{display:block}
   .hero-inner{grid-template-columns:1fr;gap:40px;text-align:center}
   .hero-text h1{font-size:36px}
   .hero-text .subtitle{margin:0 auto 28px}
@@ -3383,8 +3387,11 @@ body{background:var(--bg);font-family:'Plus Jakarta Sans',sans-serif;color:var(-
   .feature-grid{grid-template-columns:1fr}
   .steps{grid-template-columns:1fr;gap:32px}
   .step:not(:last-child)::after{display:none}
-  .splash-nav .nav-links a:not(.nav-cta){display:none}
-  .splash-nav{padding:12px 20px}
+  .splash-nav .nav-links{display:none;position:absolute;top:100%;right:20px;background:var(--white);border:1px solid var(--ink-border);border-radius:8px;padding:12px 0;box-shadow:0 8px 24px rgba(0,0,0,.12);flex-direction:column;min-width:180px}
+  .splash-nav .nav-links.open{display:flex}
+  .splash-nav .nav-links a{padding:10px 20px;font-size:14px;display:block;color:var(--ink)}
+  .splash-nav .nav-links a.nav-cta{margin:4px 12px;text-align:center}
+  .splash-nav{padding:12px 20px;position:relative}
   .hero{padding:100px 20px 60px}
   .features,.how-it-works,.cta-bottom{padding:60px 20px}
 }
@@ -3395,11 +3402,12 @@ body{background:var(--bg);font-family:'Plus Jakarta Sans',sans-serif;color:var(-
 <!-- NAV -->
 <nav class="splash-nav" id="splashNav">
   <a href="/" class="nav-logo">Board<b>IQ</b></a>
+  <button class="splash-hamburger" onclick="document.querySelector('.splash-nav .nav-links').classList.toggle('open')" aria-label="Menu">☰</button>
   <div class="nav-links">
-    <a href="#features">Features</a>
-    <a href="#how-it-works">How It Works</a>
+    <a href="#features" onclick="document.querySelector('.splash-nav .nav-links').classList.remove('open')">Features</a>
+    <a href="#how-it-works" onclick="document.querySelector('.splash-nav .nav-links').classList.remove('open')">How It Works</a>
     <a href="/vendors">For Vendors</a>
-    <a href="#login-section" class="nav-cta">Sign In</a>
+    <a href="#login-section" class="nav-cta" onclick="document.querySelector('.splash-nav .nav-links').classList.remove('open')">Sign In</a>
   </div>
 </nav>
 
@@ -3739,9 +3747,16 @@ table.vt tr.click:hover td{background:var(--surface2)}
 .accordion.open .accordion-body{max-height:5000px}
 .accordion-body-inner{padding:0}
 
+/* ── Mobile Hamburger Menu ── */
+.hamburger{display:none;background:none;border:none;color:#fff;font-size:22px;cursor:pointer;padding:4px 8px;margin-right:8px;line-height:1}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(26,23,20,.5);z-index:99}
+body.sidebar-open .sidebar-overlay{display:block}
+
 /* ── Mobile Responsive ── */
 @media (max-width:768px){
-  .sidebar{display:none}
+  .hamburger{display:block}
+  .sidebar{left:-220px;display:flex;transition:left .25s ease}
+  body.sidebar-open .sidebar{left:0}
   .main{margin-left:0!important;padding:16px 14px 40px!important;margin-top:44px}
   .topbar{padding:0 14px}
   .strip{grid-template-columns:1fr 1fr;gap:1px}
@@ -3752,6 +3767,7 @@ table.vt tr.click:hover td{background:var(--surface2)}
   .contracts-strip{grid-template-columns:repeat(3,1fr)}
   .stat-grid{grid-template-columns:1fr 1fr}
   .panel{width:100vw!important;max-width:100vw!important}
+  .contract-drawer{max-width:96vw}
   .peer-banner{flex-direction:column;text-align:center;gap:10px}
   .peer-banner .peer-banner-stat{display:inline-block;margin:0 10px}
   .page-header{flex-direction:column;align-items:flex-start;gap:8px}
@@ -3968,6 +3984,7 @@ table.vt tr.click:hover td{background:var(--surface2)}
 
 <!-- TOP BAR with Sign Out always visible -->
 <header class="topbar">
+  <button class="hamburger" onclick="document.body.classList.toggle('sidebar-open')" aria-label="Menu">☰</button>
   <div class="topbar-logo">Board<span>IQ</span></div>
   <div class="topbar-right">
     <span class="topbar-user">{{ user_name }}</span>
@@ -3978,6 +3995,7 @@ table.vt tr.click:hover td{background:var(--surface2)}
   </div>
 </header>
 
+<div class="sidebar-overlay" onclick="document.body.classList.remove('sidebar-open')"></div>
 <nav class="sidebar">
   <div class="logo">
     <div class="logo-mark">Board<span>IQ</span></div>
@@ -5315,6 +5333,8 @@ function filterEduGuides(cat, el) {
 function scrollToSection(sectionId, navEl) {
   var el = document.getElementById(sectionId);
   if (!el) return;
+  // Close mobile sidebar if open
+  document.body.classList.remove('sidebar-open');
   // If target is an accordion, open it
   if (el.classList.contains('accordion') && !el.classList.contains('open')) {
     el.classList.add('open');
@@ -6401,9 +6421,16 @@ table.bt tr.brow:hover td{background:var(--surface2)}
 .borough-name{font-size:12.5px;font-weight:600;color:var(--ink)}
 .borough-stat{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--dim)}
 
+/* ── Portfolio Mobile Hamburger ── */
+.p-hamburger{display:none;background:none;border:none;color:#fff;font-size:22px;cursor:pointer;padding:4px 8px;margin-right:8px;line-height:1}
+.p-sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(26,23,20,.5);z-index:99}
+body.p-sidebar-open .p-sidebar-overlay{display:block}
+
 /* ── Responsive ── */
 @media(max-width:900px){
-  .sidebar{display:none}
+  .p-hamburger{display:block}
+  .sidebar{left:-220px;display:flex;transition:left .25s ease}
+  body.p-sidebar-open .sidebar{left:0}
   .main{margin-left:0}
   .strip{grid-template-columns:1fr 1fr}
   .grid{grid-template-columns:1fr}
@@ -6413,6 +6440,7 @@ table.bt tr.brow:hover td{background:var(--surface2)}
 <body>
 
 <header class="topbar">
+  <button class="p-hamburger" onclick="document.body.classList.toggle('p-sidebar-open')" aria-label="Menu">☰</button>
   <div class="topbar-logo">Board<span>IQ</span></div>
   <div class="topbar-right">
     <span class="topbar-user">{{ user_name }}</span>
@@ -6420,6 +6448,7 @@ table.bt tr.brow:hover td{background:var(--surface2)}
   </div>
 </header>
 
+<div class="p-sidebar-overlay" onclick="document.body.classList.remove('p-sidebar-open')"></div>
 <nav class="sidebar">
   <div class="logo">
     <div class="logo-mark">Board<span>IQ</span></div>
@@ -6655,6 +6684,7 @@ function sortTable(colIdx) {
 document.querySelectorAll('.nav-item[href^="#"]').forEach(a => {
   a.addEventListener('click', e => {
     e.preventDefault();
+    document.body.classList.remove('p-sidebar-open');
     const target = document.querySelector(a.getAttribute('href'));
     if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
@@ -7236,7 +7266,11 @@ VENDOR_LANDING_HTML = """<!DOCTYPE html>
     border-top: 1px solid rgba(255,255,255,.05); }
   .lp-footer p { color: rgba(255,255,255,.2); font-size: 12px; }
 
+  /* ── Vendor Landing Hamburger ── */
+  .lp-hamburger{display:none;background:none;border:none;color:#fff;font-size:22px;cursor:pointer;padding:4px 8px;line-height:1}
+
   @media (max-width: 768px) {
+    .lp-hamburger{display:block}
     .hero { padding: 50px 20px 40px; }
     .hero h1 { font-size: 30px; }
     .hero p { font-size: 15px; }
@@ -7247,7 +7281,12 @@ VENDOR_LANDING_HTML = """<!DOCTYPE html>
     .pricing-section { grid-template-columns: 1fr; }
     .testimonials-grid { grid-template-columns: 1fr; }
     .section { padding: 44px 20px; }
-    .lp-nav { padding: 0 20px; }
+    .lp-nav { padding: 0 20px; position:relative; }
+    .lp-nav-links{display:none;position:absolute;top:100%;right:20px;background:var(--ink);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:12px 0;box-shadow:0 8px 24px rgba(0,0,0,.3);flex-direction:column;min-width:180px}
+    .lp-nav-links.open{display:flex}
+    .lp-nav-links a{padding:10px 20px;font-size:14px}
+    .lp-nav-btn{margin:4px 12px;text-align:center}
+    .lp-nav-login{margin:4px 12px;text-align:center}
   }
 </style>
 </head>
@@ -7256,10 +7295,11 @@ VENDOR_LANDING_HTML = """<!DOCTYPE html>
 <!-- NAV -->
 <nav class="lp-nav">
   <div class="lp-nav-logo">Board<span>IQ</span></div>
+  <button class="lp-hamburger" onclick="document.querySelector('.lp-nav-links').classList.toggle('open')" aria-label="Menu">☰</button>
   <div class="lp-nav-links">
-    <a href="#how-it-works">How It Works</a>
-    <a href="#pricing">Pricing</a>
-    <a href="#faq">FAQ</a>
+    <a href="#how-it-works" onclick="document.querySelector('.lp-nav-links').classList.remove('open')">How It Works</a>
+    <a href="#pricing" onclick="document.querySelector('.lp-nav-links').classList.remove('open')">Pricing</a>
+    <a href="#faq" onclick="document.querySelector('.lp-nav-links').classList.remove('open')">FAQ</a>
     <a href="/login" class="lp-nav-login">Sign In</a>
     <a href="/vendor/register" class="lp-nav-btn">Get Started Free</a>
   </div>
@@ -7814,9 +7854,16 @@ VENDOR_DASHBOARD_HTML = """<!DOCTYPE html>
   .modal-close { float:right;background:none;border:none;font-size:18px;
     color:var(--muted);cursor:pointer }
 
+  /* ── Vendor Mobile Hamburger ── */
+  .v-hamburger{display:none;background:none;border:none;color:#fff;font-size:22px;cursor:pointer;padding:4px 8px;margin-right:8px;line-height:1}
+  .v-sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(26,23,20,.5);z-index:99}
+  body.v-sidebar-open .v-sidebar-overlay{display:block}
+
   @media (max-width: 900px) {
+    .v-hamburger{display:block}
     .page { grid-template-columns: 1fr; }
-    .sidebar { display: none; }
+    .sidebar { left:-220px;display:flex;transition:left .25s ease }
+    body.v-sidebar-open .sidebar{left:0}
     .main { margin-left:0 }
     .stats-row { grid-template-columns: 1fr 1fr; }
     .form-grid { grid-template-columns: 1fr; }
@@ -7831,6 +7878,7 @@ VENDOR_DASHBOARD_HTML = """<!DOCTYPE html>
 
 <!-- TOP BAR -->
 <div class="top-bar">
+  <button class="v-hamburger" onclick="document.body.classList.toggle('v-sidebar-open')" aria-label="Menu">☰</button>
   <div class="top-bar-left">
     <div class="logo-mark">Board<span>IQ</span></div>
     <span class="portal-badge">Vendor Portal</span>
@@ -7841,6 +7889,7 @@ VENDOR_DASHBOARD_HTML = """<!DOCTYPE html>
   </div>
 </div>
 
+<div class="v-sidebar-overlay" onclick="document.body.classList.remove('v-sidebar-open')"></div>
 <div class="page">
 
 <!-- SIDEBAR -->
@@ -8947,6 +8996,7 @@ VENDOR_DASHBOARD_HTML = """<!DOCTYPE html>
 <script>
 // ── Tab switching ──────────────────────────────────────────────────────────
 function showTab(name) {
+  document.body.classList.remove('v-sidebar-open');
   document.querySelectorAll('.tab-section').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.sidebar-item').forEach(s => s.classList.remove('active'));
   const section = document.getElementById('tab-' + name);
