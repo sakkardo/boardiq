@@ -4813,7 +4813,7 @@ const eduGuides = {
       }
       if (vendor) {
         const pctColor = vendor.percentile > 75 ? 'var(--red)' : vendor.percentile > 50 ? 'var(--yellow)' : 'var(--green)';
-        html += '<div class="edu-callout">📊 Your elevator maintenance cost is <strong style="color:' + pctColor + '">' + vendor.percentile + 'th percentile</strong> vs. comparable buildings ($' + vendor.annual.toLocaleString() + '/yr, $' + vendor.per_unit + '/unit).' + (vendor.percentile > 75 ? ' <strong>This is a strong candidate for competitive bidding.</strong>' : '') + '</div>';
+        html += '<div class="edu-callout">📊 Your elevator maintenance cost is <strong style="color:' + pctColor + '">' + vendor.percentile + 'th percentile</strong> vs. comparable buildings ($' + (vendor.annual_spend||0).toLocaleString() + '/yr, $' + vendor.per_unit + '/unit).' + (vendor.percentile > 75 ? ' <strong>This is a strong candidate for competitive bidding.</strong>' : '') + '</div>';
       }
       return html;
     },
@@ -4976,20 +4976,22 @@ function scrollToSection(sectionId, navEl) {
 // ── Education: building-relevance indicators ─────────────────────────
 (function markRelevantGuides() {
   Object.keys(eduGuides).forEach(function(key) {
-    var g = eduGuides[key];
-    if (g.buildingCallout && g.buildingCallout() !== '') {
-      var card = document.getElementById('eduCard-' + key);
-      if (card) {
-        card.classList.add('edu-card-relevant');
-        var meta = card.querySelector('.edu-card-meta');
-        if (meta) {
-          var tag = document.createElement('span');
-          tag.className = 'edu-relevance-tag';
-          tag.innerHTML = '● Relevant to your building';
-          meta.appendChild(tag);
+    try {
+      var g = eduGuides[key];
+      if (g.buildingCallout && g.buildingCallout() !== '') {
+        var card = document.getElementById('eduCard-' + key);
+        if (card) {
+          card.classList.add('edu-card-relevant');
+          var meta = card.querySelector('.edu-card-meta');
+          if (meta) {
+            var tag = document.createElement('span');
+            tag.className = 'edu-relevance-tag';
+            tag.innerHTML = '● Relevant to your building';
+            meta.appendChild(tag);
+          }
         }
       }
-    }
+    } catch(e) { /* skip guides with data issues */ }
   });
 })();
 
