@@ -3416,6 +3416,39 @@ table.vt tr.click:hover td{background:var(--surface2)}
 .topbar-signout:hover{background:var(--ink);color:white;border-color:var(--ink);}
 .viol-flag{background:var(--red-light);border:1px solid var(--red-border);border-radius:4px;padding:8px 10px;font-size:11.5px;color:var(--red);font-weight:500;line-height:1.4}
 
+/* ── Education Center ── */
+.edu-header{margin-bottom:22px}
+.edu-title{font-family:'Playfair Display',serif;font-size:22px;color:var(--ink);font-weight:600}
+.edu-sub{font-size:12.5px;color:var(--muted);margin-top:3px;line-height:1.5}
+.edu-featured{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:24px;margin-bottom:20px;display:flex;gap:24px;align-items:flex-start}
+.edu-feat-left{flex:1}
+.edu-feat-badge{display:inline-block;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--gold);background:var(--gold-light);padding:3px 9px;border-radius:4px;margin-bottom:10px}
+.edu-feat-title{font-family:'Playfair Display',serif;font-size:18px;color:var(--ink);font-weight:600;line-height:1.3;margin-bottom:6px}
+.edu-feat-desc{font-size:12.5px;color:var(--dim);line-height:1.65;margin-bottom:14px}
+.edu-feat-link{font-size:12.5px;font-weight:600;color:var(--gold);cursor:pointer;text-decoration:none;transition:color .15s}
+.edu-feat-link:hover{color:var(--ink)}
+.edu-feat-stats{width:155px;flex-shrink:0;display:flex;flex-direction:column;gap:7px}
+.edu-feat-stat{background:var(--surface2);border:1px solid var(--border);border-radius:7px;padding:10px;text-align:center}
+.edu-feat-stat-num{font-family:'IBM Plex Mono',monospace;font-size:18px;font-weight:600;color:var(--ink)}
+.edu-feat-stat-lbl{font-size:9.5px;color:var(--muted);margin-top:1px}
+.edu-pills{display:flex;gap:7px;margin-bottom:18px;flex-wrap:wrap}
+.edu-pill{font-size:11.5px;font-weight:500;padding:5px 13px;border-radius:18px;border:1px solid var(--border);background:var(--surface);color:var(--dim);cursor:pointer;transition:all .15s}
+.edu-pill:hover{border-color:var(--gold);color:var(--ink)}
+.edu-pill.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+.edu-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px}
+.edu-card{background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:20px;cursor:pointer;transition:all .2s}
+.edu-card:hover{border-color:var(--gold);box-shadow:0 2px 10px rgba(0,0,0,.05)}
+.edu-card-icon{font-size:28px;margin-bottom:10px}
+.edu-card-tag{display:inline-block;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:2px 7px;border-radius:3px;margin-bottom:8px}
+.edu-card-tag.compliance{background:var(--red-light);color:var(--red)}
+.edu-card-tag.financial{background:var(--gold-light);color:var(--gold)}
+.edu-card-title{font-family:'Playfair Display',serif;font-size:15px;color:var(--ink);font-weight:600;margin-bottom:5px;line-height:1.3}
+.edu-card-desc{font-size:12px;color:var(--dim);line-height:1.55}
+.edu-card-meta{display:flex;align-items:center;gap:10px;margin-top:12px;padding-top:10px;border-top:1px solid var(--border);font-size:10.5px;color:var(--muted)}
+.edu-card-meta .read-time{font-weight:600;color:var(--dim)}
+.edu-callout{background:var(--gold-light);border:1px solid rgba(196,137,58,.3);border-radius:6px;padding:13px 15px;margin:12px 0;font-size:12.5px;color:var(--ink);line-height:1.65}
+.edu-callout strong{color:var(--gold)}
+
 /* ── Contract Intelligence ── */
 .contracts-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
 .contracts-header .ct{font-family:'Playfair Display',serif;font-size:18px;color:var(--ink);font-weight:700}
@@ -3628,6 +3661,10 @@ table.vt tr.click:hover td{background:var(--surface2)}
     <div class="nav-item">◷ &nbsp;Tax &amp; Assessment</div>
     <div class="nav-item">☰ &nbsp;Violations</div>
     <a href="/upload" class="nav-item" style="text-decoration:none;color:rgba(255,255,255,.5)">↑ &nbsp;Invoice Upload</a>
+    <div class="nav-label">Resources</div>
+    <div class="nav-item" onclick="document.getElementById('educationSection').scrollIntoView({behavior:'smooth',block:'start'})">📖 &nbsp;Education
+      <span style="font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;background:var(--gold);color:var(--ink);padding:1px 5px;border-radius:3px;margin-left:auto">NEW</span>
+    </div>
   </div>
   {% if all_buildings|length > 1 %}
   <div class="switch-links">
@@ -4025,6 +4062,118 @@ table.vt tr.click:hover td{background:var(--surface2)}
           {% endif %}
         </div>
       </div>
+    </div>
+
+    {# ── EDUCATION CENTER ── #}
+    <div id="educationSection" class="card full" style="padding:22px">
+      <div class="edu-header">
+        <div class="edu-title">Board Education Center</div>
+        <div class="edu-sub">Practical guides for NYC co-op and condo board members — understand your obligations, reduce costs, and make informed decisions.</div>
+      </div>
+
+      <!-- Featured Guide -->
+      <div class="edu-featured">
+        <div class="edu-feat-left">
+          <div class="edu-feat-badge">Featured Guide</div>
+          <div class="edu-feat-title">Local Law 97: What Every Board Needs to Know</div>
+          <div class="edu-feat-desc">
+            NYC's carbon emissions law caps buildings over 25,000 sq ft. This guide breaks down the penalty structure,
+            compliance options, and cost-effective strategies boards are using — from RECs to heat pump conversions.
+          </div>
+          <a class="edu-feat-link" onclick="openGuide('ll97')">Read the Full Guide →</a>
+        </div>
+        <div class="edu-feat-stats">
+          <div class="edu-feat-stat">
+            <div class="edu-feat-stat-num">$268</div>
+            <div class="edu-feat-stat-lbl">Per ton CO₂ penalty</div>
+          </div>
+          <div class="edu-feat-stat">
+            <div class="edu-feat-stat-num">~$31K</div>
+            <div class="edu-feat-stat-lbl">Avg. annual penalty</div>
+          </div>
+          <div class="edu-feat-stat">
+            <div class="edu-feat-stat-num">84%</div>
+            <div class="edu-feat-stat-lbl">Of boards unaware</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Category Filters -->
+      <div class="edu-pills">
+        <div class="edu-pill active" onclick="filterEduGuides('all',this)">All Guides</div>
+        <div class="edu-pill" onclick="filterEduGuides('compliance',this)">Compliance</div>
+        <div class="edu-pill" onclick="filterEduGuides('financial',this)">Financial</div>
+      </div>
+
+      <!-- Guide Cards Grid -->
+      <div class="edu-grid" id="eduGrid">
+
+        <div class="edu-card" data-cat="compliance" onclick="openGuide('fisp')">
+          <div class="edu-card-icon">🏗</div>
+          <div class="edu-card-tag compliance">Compliance</div>
+          <div class="edu-card-title">Local Law 11 — FISP Facade Inspections</div>
+          <div class="edu-card-desc">Every 5 years your building's exterior must be inspected. Learn who to hire, what to expect, and how to avoid the most common mistakes.</div>
+          <div class="edu-card-meta"><span class="read-time">8 min read</span><span>·</span><span>Updated Jan 2026</span></div>
+        </div>
+
+        <div class="edu-card" data-cat="compliance" onclick="openGuide('ll97')">
+          <div class="edu-card-icon">🌿</div>
+          <div class="edu-card-tag compliance">Compliance</div>
+          <div class="edu-card-title">Local Law 97 — Carbon Emissions Caps</div>
+          <div class="edu-card-desc">Your building may face annual fines of $268/ton. Understand the penalty formula, compliance strategies, and how RECs reduce your exposure.</div>
+          <div class="edu-card-meta"><span class="read-time">12 min read</span><span>·</span><span>Updated Feb 2026</span></div>
+        </div>
+
+        <div class="edu-card" data-cat="compliance" onclick="openGuide('ll87')">
+          <div class="edu-card-icon">⚡</div>
+          <div class="edu-card-tag compliance">Compliance</div>
+          <div class="edu-card-title">Local Law 87 — Energy Audits</div>
+          <div class="edu-card-desc">Buildings over 50,000 sq ft must conduct energy audits every 10 years. What boards need to know about scoping, selecting an auditor, and acting on results.</div>
+          <div class="edu-card-meta"><span class="read-time">6 min read</span><span>·</span><span>Updated Dec 2025</span></div>
+        </div>
+
+        <div class="edu-card" data-cat="compliance" onclick="openGuide('ll152')">
+          <div class="edu-card-icon">🔧</div>
+          <div class="edu-card-tag compliance">Compliance</div>
+          <div class="edu-card-title">Local Law 152 — Gas Pipe Inspections</div>
+          <div class="edu-card-desc">All exposed gas piping must be inspected every 4 years. A straightforward compliance requirement, but missed deadlines trigger serious consequences.</div>
+          <div class="edu-card-meta"><span class="read-time">5 min read</span><span>·</span><span>Updated Nov 2025</span></div>
+        </div>
+
+        <div class="edu-card" data-cat="compliance" onclick="openGuide('elevator')">
+          <div class="edu-card-icon">🛗</div>
+          <div class="edu-card-tag compliance">Compliance</div>
+          <div class="edu-card-title">Elevator Inspections & Maintenance</div>
+          <div class="edu-card-desc">Annual inspections, 5-year tests, and what to do when your contract expires. The most common vendor category where buildings overpay.</div>
+          <div class="edu-card-meta"><span class="read-time">8 min read</span><span>·</span><span>Updated Jan 2026</span></div>
+        </div>
+
+        <div class="edu-card" data-cat="financial" onclick="openGuide('bidding')">
+          <div class="edu-card-icon">📊</div>
+          <div class="edu-card-tag financial">Financial</div>
+          <div class="edu-card-title">Competitive Bidding — How to Save 20–40%</div>
+          <div class="edu-card-desc">Most buildings haven't bid their elevator contract in 8+ years. Learn the step-by-step process for running a competitive bid and what savings to expect.</div>
+          <div class="edu-card-meta"><span class="read-time">10 min read</span><span>·</span><span>Updated Jan 2026</span></div>
+        </div>
+
+        <div class="edu-card" data-cat="financial" onclick="openGuide('tax')">
+          <div class="edu-card-icon">🏛</div>
+          <div class="edu-card-tag financial">Financial</div>
+          <div class="edu-card-title">Tax Assessments & Certiorari</div>
+          <div class="edu-card-desc">Is your building over-assessed? How NYC property tax works for co-ops, when to file a certiorari challenge, and what savings are realistic.</div>
+          <div class="edu-card-meta"><span class="read-time">9 min read</span><span>·</span><span>Updated Feb 2026</span></div>
+        </div>
+
+        <div class="edu-card" data-cat="financial" onclick="openGuide('contracts')">
+          <div class="edu-card-icon">📋</div>
+          <div class="edu-card-tag financial">Financial</div>
+          <div class="edu-card-title">Vendor Contracts — What to Look For</div>
+          <div class="edu-card-desc">Key clauses every board should understand: auto-renewals, escalation caps, scope definitions, insurance requirements, and termination provisions.</div>
+          <div class="edu-card-meta"><span class="read-time">7 min read</span><span>·</span><span>Updated Dec 2025</span></div>
+        </div>
+
+      </div>
+
     </div>
 
   </div>
@@ -4520,6 +4669,250 @@ async function uploadInvoices(input) {
     resultEl.textContent = 'Upload failed — check console.';
   }
 }
+
+// ── Education Center ─────────────────────────────────────────────────
+const eduGuides = {
+  fisp: {
+    icon: '🏗', title: 'Local Law 11 — FISP Facade Inspections', tag: 'Compliance',
+    sections: [
+      { heading: 'What It Is', content: 'NYC requires all buildings over 6 stories to have a licensed engineer inspect the exterior facade every 5 years under the Facade Inspection Safety Program (FISP). The engineer files a report classifying the facade as <strong>Safe</strong>, <strong>SWARMP</strong> (Safe With Repair & Maintenance Program), or <strong>Unsafe</strong>. If classified Unsafe, repairs must begin immediately.' },
+      { heading: 'Why It Matters to Your Board', content: 'A missed FISP deadline triggers DOB violations starting at <strong>$1,000/month</strong>, and an Unsafe classification can require immediate sidewalk shed installation ($30K–$100K+). The inspection itself is relatively affordable ($14K–$22K for a typical building), but delays cascade into far more expensive problems.' },
+      { heading: 'Who You Need to Hire', content: 'A licensed NYC Professional Engineer (PE) or Registered Architect (RA) with FISP experience. They must be hired <strong>directly by the building</strong>, not through the contractor who will do repairs. This independence is legally required.' },
+      { heading: 'Step-by-Step Timeline', type: 'timeline', steps: [
+        'Hire FISP engineer 12+ months before your cycle deadline',
+        'Engineer conducts rope, scaffold, or drone inspection (2–8 weeks)',
+        'Report preparation and DOB filing (4–6 weeks)',
+        'If SWARMP or Unsafe: repairs required concurrent with filing',
+        'Sidewalk shed installed if unsafe conditions found'
+      ]},
+      { heading: 'Board Tip', type: 'tip', content: 'Get 3 quotes from FISP engineers — prices vary 40–60% for the same building. Start early; engineers book up in the 6 months before cycle deadlines.' },
+      { heading: 'DOB Filing', content: 'Engineer files FISP report electronically through DOB NOW: Safety. Building receives a FISP cycle number.' }
+    ],
+    buildingCallout: function() {
+      const match = complianceItems.find(c => c.law.toLowerCase().includes('11') || c.law.toLowerCase().includes('fisp'));
+      if (!match) return '';
+      return '<div class="edu-callout">📍 <strong>Your building ({{ building.address }})</strong> has a FISP deadline of <strong>' + match.due_date + '</strong> (' + match.months_away + ' months away). Network cost range: $' + match.cost_low.toLocaleString() + '–$' + match.cost_high.toLocaleString() + ' based on ' + match.network_comps + ' comparable buildings.</div>';
+    },
+    complianceLink: 'fisp'
+  },
+  ll97: {
+    icon: '🌿', title: 'Local Law 97 — Carbon Emissions', tag: 'Compliance',
+    sections: [
+      { heading: 'What It Is', content: 'Local Law 97 is NYC\\'s landmark climate legislation that caps annual carbon emissions for buildings over 25,000 sq ft. Buildings that exceed their cap pay a penalty of <strong>$268 per metric ton of CO₂</strong> over the limit every year. The first compliance period began in 2024, with stricter caps in 2030.' },
+      { heading: 'Why It Matters to Your Board', content: 'The average NYC co-op that exceeds its cap faces a penalty of approximately <strong>$31,000 per year</strong>. This is not a one-time fine — it recurs annually until emissions are reduced below the cap. For a ' + buildingUnits + '-unit building, that\\'s roughly $' + Math.round(31000/buildingUnits).toLocaleString() + ' per unit per year added to maintenance.' },
+      { heading: 'Compliance Strategies (Lowest to Highest Cost)', type: 'timeline', steps: [
+        'Renewable Energy Credits (RECs) — can offset up to 30% of penalty at ~$20–40/ton vs. $268/ton penalty',
+        'LED lighting upgrades — typically 2–3 year payback, modest emissions reduction',
+        'Building management system optimization — tune existing HVAC, reduce waste',
+        'Heat pump conversion — significant capital ($500K+) but largest emissions reduction',
+        'Full envelope upgrade (insulation, windows) — highest cost, longest payback'
+      ]},
+      { heading: 'Board Tip', type: 'tip', content: 'RECs are the lowest-cost first step. Check current REC market pricing before committing to major capital improvements. Many boards are buying RECs for $20–40/ton to offset a $268/ton penalty while they plan longer-term retrofits.' },
+      { heading: 'Filing Requirements', content: 'An annual Building Energy and Emissions Report must be filed through DOB NOW: Energy by May 1st each year. This requires Energy Star Portfolio Manager benchmarking data for the prior calendar year.' }
+    ],
+    buildingCallout: function() {
+      const match = complianceItems.find(c => c.law.toLowerCase().includes('97') || c.law.toLowerCase().includes('carbon'));
+      if (!match) return '';
+      return '<div class="edu-callout">📍 <strong>Your building ({{ building.address }})</strong> faces an estimated LL97 penalty of <strong>' + match.consequence + '</strong>. Compliance deadline: ' + match.due_date + '. Network cost range for compliance work: $' + match.cost_low.toLocaleString() + '–$' + match.cost_high.toLocaleString() + ' based on ' + match.network_comps + ' comparable filings.</div>';
+    },
+    complianceLink: '97'
+  },
+  ll87: {
+    icon: '⚡', title: 'Local Law 87 — Energy Audits', tag: 'Compliance',
+    sections: [
+      { heading: 'What It Is', content: 'Buildings over 50,000 sq ft must conduct a professional <strong>energy audit</strong> and <strong>retro-commissioning study</strong> every 10 years. The audit covers all building systems (HVAC, lighting, envelope, hot water) and identifies efficiency improvements. Retro-commissioning ensures existing systems are working as designed.' },
+      { heading: 'Why It Matters to Your Board', content: 'Non-compliance triggers fines of <strong>$3,000 in year one</strong> and <strong>$5,000/yr thereafter</strong>. But the real value is in the audit findings — they identify energy savings that directly reduce your LL97 exposure and operating costs.' },
+      { heading: 'Step-by-Step Process', type: 'timeline', steps: [
+        'Verify last LL87 filing date in DOB BIS records',
+        'Issue RFP to 3 qualified energy audit firms (6+ months before deadline)',
+        'Audit and retro-commissioning study takes 3–6 months',
+        'Final report preparation and DOB filing',
+        'Consider implementing high-ROI recommendations to reduce LL97 exposure'
+      ]},
+      { heading: 'Board Tip', type: 'tip', content: 'An LL87 audit and an LL97 benchmarking study can often be combined with one firm, reducing total cost. The audit findings also inform your LL97 retrofit strategy.' },
+      { heading: 'DOB Filing', content: 'Filed through DOB NOW: Energy. Requires submission of energy audit report and retro-commissioning report.' }
+    ],
+    buildingCallout: function() {
+      const match = complianceItems.find(c => c.law.toLowerCase().includes('87') || c.law.toLowerCase().includes('energy audit'));
+      if (!match) return '';
+      return '<div class="edu-callout">📍 <strong>Your building ({{ building.address }})</strong> has an LL87 deadline of <strong>' + match.due_date + '</strong>. Network cost range: $' + match.cost_low.toLocaleString() + '–$' + match.cost_high.toLocaleString() + ' based on ' + match.network_comps + ' comparable buildings.</div>';
+    },
+    complianceLink: '87'
+  },
+  ll152: {
+    icon: '🔧', title: 'Local Law 152 — Gas Pipe Inspections', tag: 'Compliance',
+    sections: [
+      { heading: 'What It Is', content: 'All exposed gas piping must be inspected by a licensed master plumber every 4 years. The plumber files a <strong>GPS1 form</strong> with the DOB. If defects are found, they must be corrected and re-inspected before the filing deadline.' },
+      { heading: 'Why It Matters to Your Board', content: 'Gas leak-related incidents are among the most dangerous building emergencies in NYC. After the 2014 East Harlem explosion, LL152 was enacted to mandate regular inspections. Non-compliance can result in DOB violations and — in extreme cases — gas shutoffs affecting every unit.' },
+      { heading: 'Step-by-Step Process', type: 'timeline', steps: [
+        'Hire licensed master plumber 3+ months before deadline',
+        'Plumber inspects all exposed gas piping (1–2 days for most buildings)',
+        'Any deficiencies must be repaired before filing',
+        'Plumber files GPS1 report with DOB upon completion',
+        'Defects requiring emergency repair must be addressed immediately'
+      ]},
+      { heading: 'Board Tip', type: 'tip', content: 'Inspectors book up quickly near the Dec 31 deadline. Schedule in September or October. If defects are found, you\\'ll need time for repairs before the filing window closes.' },
+      { heading: 'DOB Filing', content: 'Licensed master plumber files GPS1 form through DOB NOW. Building retains copy for records.' }
+    ],
+    buildingCallout: function() {
+      const match = complianceItems.find(c => c.law.toLowerCase().includes('152') || c.law.toLowerCase().includes('gas'));
+      if (!match) return '';
+      return '<div class="edu-callout">📍 <strong>Your building ({{ building.address }})</strong> has an LL152 deadline of <strong>' + match.due_date + '</strong>. Network cost range: $' + match.cost_low.toLocaleString() + '–$' + match.cost_high.toLocaleString() + ' based on ' + match.network_comps + ' comparable buildings.</div>';
+    },
+    complianceLink: '152'
+  },
+  elevator: {
+    icon: '🛗', title: 'Elevator Inspections & Maintenance', tag: 'Compliance',
+    sections: [
+      { heading: 'What It Is', content: 'All elevator cabs must be inspected and tested annually by a licensed DOB elevator inspector. If an elevator fails inspection or the inspection lapses, the DOB can <strong>order the cab shut down immediately</strong> — requiring residents to use stairs until the cab passes re-inspection.' },
+      { heading: 'Why Boards Overpay', content: 'Elevator maintenance is the <strong>single most over-charged vendor category</strong> in NYC co-ops. The average building hasn\\'t bid its elevator contract in 8+ years, during which escalation clauses have compounded. Boards that competitively bid typically save 20–35%.' },
+      { heading: 'Inspection Timeline', type: 'timeline', steps: [
+        'Confirm inspection schedule with your elevator contractor 60+ days out',
+        'Ensure all maintenance is current before inspection date',
+        'Inspector conducts safety tests on each cab (2–4 hours per cab)',
+        'DOB issues Certificate of Operation if passed',
+        'Failed cabs must be repaired and re-inspected before reopening'
+      ]},
+      { heading: 'Board Tip', type: 'tip', content: 'Ask your elevator contractor for written confirmation of the scheduled inspection date and inspector name each year. Keep copies of Certificates of Operation on file. And bid your contract every 3–5 years — this is where the real savings are.' }
+    ],
+    buildingCallout: function() {
+      const match = complianceItems.find(c => c.law.toLowerCase().includes('elevator'));
+      const vendor = vendorBenchmarks.find(v => v.category === 'ELEVATOR_MAINTENANCE');
+      let html = '';
+      if (match) {
+        html += '<div class="edu-callout">📍 <strong>Your building ({{ building.address }})</strong> has an elevator inspection deadline of <strong>' + match.due_date + '</strong> (' + match.months_away + ' months away).</div>';
+      }
+      if (vendor) {
+        const pctColor = vendor.percentile > 75 ? 'var(--red)' : vendor.percentile > 50 ? 'var(--yellow)' : 'var(--green)';
+        html += '<div class="edu-callout">📊 Your elevator maintenance cost is <strong style="color:' + pctColor + '">' + vendor.percentile + 'th percentile</strong> vs. comparable buildings ($' + vendor.annual.toLocaleString() + '/yr, $' + vendor.per_unit + '/unit).' + (vendor.percentile > 75 ? ' <strong>This is a strong candidate for competitive bidding.</strong>' : '') + '</div>';
+      }
+      return html;
+    },
+    complianceLink: 'elevator'
+  },
+  bidding: {
+    icon: '📊', title: 'Competitive Bidding — How to Save 20–40%', tag: 'Financial',
+    sections: [
+      { heading: 'Why Competitive Bidding Matters', content: 'The average NYC co-op hasn\\'t competitively bid its elevator contract in <strong>8+ years</strong>. Without regular bidding, prices drift upward through automatic escalation clauses. Buildings that bid their top 3 vendor categories typically identify <strong>$30,000–$60,000 in annual savings</strong>.' },
+      { heading: 'Which Contracts to Bid First', content: 'Start with your highest-cost categories. For most buildings: <strong>elevator maintenance</strong> (often the single largest vendor expense), <strong>insurance</strong>, and <strong>cleaning/superintendent services</strong>. Your BoardIQ Savings tab shows exactly where you\\'re above market.' },
+      { heading: 'The Bidding Process', type: 'timeline', steps: [
+        'Identify contracts where your per-unit cost exceeds the 75th percentile',
+        'Write a clear scope of work (BoardIQ generates this automatically)',
+        'Solicit 3–5 qualified bids through BidBoard',
+        'Compare bids on cost, scope, insurance coverage, and references',
+        'Present top 2–3 bids to the board with a recommendation'
+      ]},
+      { heading: 'Board Tip', type: 'tip', content: 'Never bid just on price. The cheapest vendor isn\\'t always the best value. Check insurance coverage, look for auto-renewal traps, and call 2–3 references. BoardIQ\\'s vendor profiles include verified ratings and NYC job counts.' }
+    ],
+    buildingCallout: function() {
+      const aboveMarket = vendorBenchmarks.filter(v => v.percentile > 75);
+      if (aboveMarket.length === 0) return '';
+      const total = aboveMarket.reduce((s,v) => s + (v.potential_savings || 0), 0);
+      return '<div class="edu-callout">📍 <strong>Your building ({{ building.address }})</strong> has <strong>' + aboveMarket.length + ' vendor categor' + (aboveMarket.length === 1 ? 'y' : 'ies') + '</strong> above the 75th percentile.' + (total > 0 ? ' Estimated annual savings opportunity: <strong>$' + total.toLocaleString() + '</strong>.' : '') + ' Check your Savings section above for details.</div>';
+    }
+  },
+  tax: {
+    icon: '🏛', title: 'Tax Assessments & Certiorari', tag: 'Financial',
+    sections: [
+      { heading: 'How NYC Property Tax Works for Co-ops', content: 'NYC co-ops are classified as <strong>Class 2</strong> properties and taxed on assessed value (not market value). The assessed value is set by the NYC Department of Finance and increases are capped at 8%/year or 30% over 5 years — but these caps don\\'t prevent gradual over-assessment over time.' },
+      { heading: 'What Is a Certiorari?', content: 'A tax certiorari is a legal challenge to your building\\'s assessed value filed with the NYC Tax Commission. If successful, your building\\'s assessment is reduced, lowering the annual property tax bill. Co-ops that file certiorari challenges achieve average reductions of <strong>$18,000–$35,000/yr</strong> in tax savings.' },
+      { heading: 'When to File', type: 'timeline', steps: [
+        'Review your building\\'s assessed value trend (available in your Tax & Assessment section)',
+        'If assessment has risen 10%+ in 2 years, certiorari is worth exploring',
+        'Engage a tax certiorari attorney (typically on contingency — they take 15–30% of savings)',
+        'Attorney files challenge with NYC Tax Commission by March 1 deadline',
+        'Process takes 1–3 years; refunds are retroactive to filing date'
+      ]},
+      { heading: 'Board Tip', type: 'tip', content: 'Most tax certiorari attorneys work on contingency, so there\\'s no upfront cost to the building. They only get paid if they win. Check your Tax & Assessment section above — BoardIQ flags buildings where a review is recommended based on comparable properties.' }
+    ],
+    buildingCallout: function() {
+      const tax = {{ building.tax_assessment | tojson }};
+      if (!tax) return '';
+      let html = '<div class="edu-callout">📍 <strong>Your building ({{ building.address }})</strong> has an assessed value of <strong>$' + tax.assessed_value.toLocaleString() + '</strong> (' + tax.fiscal_year + ')';
+      if (tax.trend_pct_2yr > 0) html += ', up <strong>' + tax.trend_pct_2yr + '%</strong> over 2 years';
+      html += '.';
+      if (tax.certiorari_recommended) html += ' <strong>BoardIQ recommends a certiorari review for your building.</strong>';
+      html += '</div>';
+      return html;
+    }
+  },
+  contracts: {
+    icon: '📋', title: 'Vendor Contracts — What to Look For', tag: 'Financial',
+    sections: [
+      { heading: 'Key Clauses Every Board Should Understand', content: 'Vendor contracts are the largest controllable expense for most co-ops, yet many boards sign multi-year agreements without understanding key terms. The five clauses below account for the majority of problems boards encounter.' },
+      { heading: 'The 5 Clauses That Matter Most', type: 'timeline', steps: [
+        '<strong>Auto-Renewal:</strong> Many contracts auto-renew for 1–3 years if not cancelled 60–90 days before expiration. Miss the window and you\\'re locked in at escalated rates.',
+        '<strong>Escalation Cap:</strong> Annual price increases should be capped at CPI or a fixed percentage (2–3%). Uncapped escalation clauses can compound to 30%+ increases over 5 years.',
+        '<strong>Scope of Work:</strong> The most common source of disputes. What\\'s included vs. billed as an extra? Get it in writing.',
+        '<strong>Insurance Requirements:</strong> Vendor must carry general liability ($1M+), workers\\' comp, and name your building as additional insured.',
+        '<strong>Termination:</strong> Under what conditions can either party terminate? What are the penalties? 30-day cure periods are standard.'
+      ]},
+      { heading: 'Board Tip', type: 'tip', content: 'Review every contract before it auto-renews. Set calendar reminders for 90 days before each contract\\'s cancellation deadline. BoardIQ tracks these dates in your Contracts section above and alerts you before windows close.' }
+    ],
+    buildingCallout: function() {
+      const expiring = contractItems.filter(c => c.status === 'expiring_soon' || c.status === 'expired');
+      if (expiring.length === 0) return '';
+      return '<div class="edu-callout">📍 <strong>Your building ({{ building.address }})</strong> has <strong>' + expiring.length + ' contract' + (expiring.length === 1 ? '' : 's') + '</strong> that ' + (expiring.length === 1 ? 'is' : 'are') + ' expiring or expired. Review them in your Contracts section above to avoid auto-renewal traps.</div>';
+    }
+  }
+};
+
+function openGuide(key) {
+  const g = eduGuides[key];
+  if (!g) return;
+  const content = document.getElementById('panelContent');
+
+  let html = '<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">' +
+    '<span style="font-size:34px">' + g.icon + '</span>' +
+    '<div><div class="panel-title" style="margin-bottom:0">' + g.title + '</div>' +
+    '<div class="edu-card-tag ' + g.tag.toLowerCase() + '" style="margin-top:6px">' + g.tag + '</div></div></div>';
+
+  // Personalized building callout at the top
+  if (g.buildingCallout) {
+    html += g.buildingCallout();
+  }
+
+  g.sections.forEach(function(s) {
+    html += '<div class="panel-section">' + s.heading + '</div>';
+    if (s.type === 'timeline') {
+      html += '<div style="background:var(--surface2);padding:14px 16px;border-radius:6px;border:1px solid var(--border)">';
+      s.steps.forEach(function(step, i) {
+        html += '<div style="display:flex;gap:12px;margin-bottom:10px">' +
+          '<div style="width:22px;height:22px;border-radius:50%;background:var(--ink);color:white;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px">' + (i+1) + '</div>' +
+          '<div style="font-size:12.5px;color:var(--dim);line-height:1.5">' + step + '</div></div>';
+      });
+      html += '</div>';
+    } else if (s.type === 'tip') {
+      html += '<div style="font-size:13px;color:var(--ink);line-height:1.7;background:#fffbf0;padding:14px 16px;border-radius:6px;border:1px solid var(--yellow-border)">💡 ' + s.content + '</div>';
+    } else {
+      html += '<div style="font-size:13px;color:var(--dim);line-height:1.8;background:var(--surface2);padding:14px 16px;border-radius:6px;border:1px solid var(--border)">' + s.content + '</div>';
+    }
+  });
+
+  // CTA footer
+  html += '<div style="margin-top:24px;padding-top:18px;border-top:1px solid var(--border)">' +
+    '<div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:10px">Related Actions</div>';
+  if (g.complianceLink) {
+    const matchIdx = complianceItems.findIndex(function(c) { return c.law.toLowerCase().includes(g.complianceLink.toLowerCase()); });
+    if (matchIdx >= 0) {
+      html += '<button class="btn-full" style="width:100%;margin-bottom:8px" onclick="closePanel();openPanel(\\'compliance\\',' + matchIdx + ')">View in Compliance Calendar →</button>';
+      html += '<button class="btn-full-out" style="width:100%" onclick="closePanel();openPanel(\\'compliance\\',' + matchIdx + ')">Start BidBoard for This Category →</button>';
+    }
+  }
+  html += '</div>';
+
+  content.innerHTML = html;
+  document.getElementById('overlay').classList.add('open');
+}
+
+function filterEduGuides(cat, el) {
+  document.querySelectorAll('.edu-pill').forEach(function(p) { p.classList.remove('active'); });
+  el.classList.add('active');
+  document.querySelectorAll('.edu-card').forEach(function(card) {
+    card.style.display = (cat === 'all' || card.dataset.cat === cat) ? '' : 'none';
+  });
+}
+
 </script>
 
 <!-- ── Invoice Upload Drawer ──────────────────────────────────────── -->
