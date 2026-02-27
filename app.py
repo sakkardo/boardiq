@@ -1330,6 +1330,23 @@ def dashboard():
     if not building:
         return "No building found", 404
     building = ensure_building_data(building)
+
+    # ── Recompute months_away dynamically so compliance dates never go stale ──
+    now = datetime.now()
+    for dl in building.get("compliance_deadlines", []):
+        raw = dl.get("due_date", "")
+        try:
+            due = datetime.strptime(raw, "%b %Y")
+            diff = (due.year - now.year) * 12 + (due.month - now.month)
+            dl["months_away"] = max(diff, 0)
+            # Auto-upgrade urgency when deadline is imminent
+            if diff <= 3:
+                dl["urgency"] = "HIGH"
+            elif diff <= 6:
+                dl["urgency"] = "HIGH" if dl.get("urgency") == "HIGH" else "MEDIUM"
+        except (ValueError, TypeError):
+            pass  # Leave as-is if due_date format is unexpected
+
     benchmarks = compute_benchmarks(building)
     user = DEMO_USERS.get(session["user_email"], {})
     is_admin = user.get("is_admin", False) or user.get("role") == "admin"

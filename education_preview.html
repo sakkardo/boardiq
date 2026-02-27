@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BoardIQ — Education Tab Preview</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=IBM+Plex+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#f4f1eb;--surface:#fff;--surface2:#f9f7f3;--border:#e5e0d5;--border2:#d4cdc0;
+  --text:#1a1714;--muted:#8a8278;--dim:#6b6560;
+  --green:#1a7a4a;--green-light:#e8f5ee;--green-border:#b8deca;
+  --yellow:#b5720a;--yellow-light:#fef6e6;--yellow-border:#f0d090;
+  --red:#c0392b;--red-light:#fdecea;--red-border:#f0b8b3;
+  --gold:#c4893a;--gold-light:#fdf3e6;--ink:#2c2825;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;min-height:100vh}
+
+/* ── Topbar ── */
+.topbar{position:fixed;top:0;left:0;right:0;height:44px;background:var(--ink);display:flex;align-items:center;justify-content:space-between;padding:0 20px;z-index:200}
+.topbar-left{display:flex;align-items:center;gap:14px}
+.topbar-addr{font-size:13px;color:#fff;font-weight:600}
+.topbar-badge{font-size:10px;color:rgba(255,255,255,.4);background:rgba(255,255,255,.08);padding:2px 8px;border-radius:10px}
+.topbar-signout{font-size:11px;color:rgba(255,255,255,.4);text-decoration:none}
+
+/* ── Sidebar ── */
+.sidebar{position:fixed;left:0;top:44px;bottom:0;width:220px;background:var(--ink);display:flex;flex-direction:column;z-index:100}
+.logo{padding:26px 22px 22px;border-bottom:1px solid rgba(255,255,255,.08)}
+.logo-mark{font-family:'Playfair Display',serif;font-size:22px;color:#fff}
+.logo-mark span{color:var(--gold)}
+.logo-sub{font-size:10px;color:rgba(255,255,255,.3);letter-spacing:2px;text-transform:uppercase;margin-top:3px}
+.nav{padding:14px 0;flex:1}
+.nav-label{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.25);padding:10px 22px 5px}
+.nav-item{display:flex;align-items:center;gap:8px;padding:8px 22px;font-size:12.5px;color:rgba(255,255,255,.5);cursor:pointer;border-left:2px solid transparent;transition:all .15s}
+.nav-item.active{color:#fff;background:rgba(255,255,255,.06);border-left-color:var(--gold)}
+.nav-item:hover{color:rgba(255,255,255,.8)}
+.nav-badge{font-size:9px;font-weight:700;background:var(--red);color:white;border-radius:8px;padding:1px 6px;margin-left:auto}
+
+/* ── Main Content ── */
+.main{margin-left:220px;margin-top:44px;padding:28px 32px 60px}
+.page-header{margin-bottom:24px}
+.page-title{font-family:'Playfair Display',serif;font-size:26px;color:var(--ink);font-weight:600}
+.page-sub{font-size:13px;color:var(--muted);margin-top:4px}
+
+/* ── Category Filters ── */
+.cat-filters{display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap}
+.cat-pill{font-size:12px;font-weight:500;padding:6px 14px;border-radius:20px;border:1px solid var(--border);background:var(--surface);color:var(--dim);cursor:pointer;transition:all .15s}
+.cat-pill:hover{border-color:var(--gold);color:var(--ink)}
+.cat-pill.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+/* ── Guide Cards ── */
+.guide-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:32px}
+.guide-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:22px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.guide-card:hover{border-color:var(--gold);box-shadow:0 2px 12px rgba(0,0,0,.06)}
+.guide-card-icon{font-size:32px;margin-bottom:12px}
+.guide-card-tag{display:inline-block;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:3px 8px;border-radius:4px;margin-bottom:10px}
+.guide-card-tag.compliance{background:var(--red-light);color:var(--red)}
+.guide-card-tag.financial{background:var(--gold-light);color:var(--gold)}
+.guide-card-tag.operations{background:var(--green-light);color:var(--green)}
+.guide-card-tag.governance{background:#eee8f5;color:#6b4fa0}
+.guide-card-title{font-family:'Playfair Display',serif;font-size:17px;color:var(--ink);font-weight:600;margin-bottom:6px;line-height:1.3}
+.guide-card-desc{font-size:12.5px;color:var(--dim);line-height:1.6}
+.guide-card-meta{display:flex;align-items:center;gap:14px;margin-top:14px;padding-top:12px;border-top:1px solid var(--border)}
+.guide-card-meta span{font-size:11px;color:var(--muted)}
+.guide-card-meta .read-time{font-weight:600;color:var(--dim)}
+
+/* ── Featured / Deep-Dive Section ── */
+.featured{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:28px;margin-bottom:24px;display:flex;gap:28px;align-items:flex-start}
+.featured-left{flex:1}
+.featured-badge{display:inline-block;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--gold);background:var(--gold-light);padding:4px 10px;border-radius:4px;margin-bottom:12px}
+.featured-title{font-family:'Playfair Display',serif;font-size:22px;color:var(--ink);font-weight:600;line-height:1.3;margin-bottom:8px}
+.featured-desc{font-size:13px;color:var(--dim);line-height:1.7;margin-bottom:16px}
+.featured-btn{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--gold);cursor:pointer;text-decoration:none;transition:color .15s}
+.featured-btn:hover{color:var(--ink)}
+.featured-right{width:180px;flex-shrink:0;display:flex;flex-direction:column;gap:8px}
+.featured-stat{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center}
+.featured-stat-num{font-family:'IBM Plex Mono',monospace;font-size:20px;font-weight:600;color:var(--ink)}
+.featured-stat-lbl{font-size:10px;color:var(--muted);margin-top:2px}
+
+/* ── FAQ Accordion ── */
+.faq-section{margin-top:32px}
+.faq-title{font-family:'Playfair Display',serif;font-size:18px;color:var(--ink);margin-bottom:14px}
+.faq-item{background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:8px;overflow:hidden}
+.faq-q{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;cursor:pointer;font-size:13px;font-weight:600;color:var(--ink);transition:background .15s}
+.faq-q:hover{background:var(--surface2)}
+.faq-q .arrow{font-size:14px;color:var(--muted);transition:transform .2s}
+.faq-q.open .arrow{transform:rotate(180deg)}
+.faq-a{display:none;padding:0 18px 16px;font-size:12.5px;color:var(--dim);line-height:1.7}
+.faq-a.open{display:block}
+
+/* ── Right Panel (Slide-in) ── */
+.overlay{position:fixed;top:44px;right:-480px;bottom:0;width:480px;background:var(--surface);border-left:1px solid var(--border);z-index:150;transition:right .3s ease;overflow-y:auto;box-shadow:-4px 0 20px rgba(0,0,0,.08)}
+.overlay.open{right:0}
+.panel-close{position:sticky;top:0;background:var(--surface);border-bottom:1px solid var(--border);padding:14px 18px;display:flex;align-items:center;justify-content:space-between;z-index:10}
+.panel-close-btn{font-size:18px;color:var(--muted);cursor:pointer;background:none;border:none;padding:4px}
+.panel-close-btn:hover{color:var(--ink)}
+.panel-body{padding:22px}
+.panel-section{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);font-weight:600;margin:20px 0 8px}
+.panel-content{font-size:13px;color:var(--dim);line-height:1.8;background:var(--surface2);padding:14px 16px;border-radius:6px;border:1px solid var(--border);margin-bottom:4px}
+.panel-tip{font-size:13px;color:var(--ink);line-height:1.7;background:#fffbf0;padding:14px 16px;border-radius:6px;border:1px solid var(--yellow-border)}
+.panel-cta{display:block;width:100%;text-align:center;padding:12px;background:var(--ink);color:#fff;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;margin-top:16px;transition:background .15s}
+.panel-cta:hover{background:#3d3835}
+.panel-cta-outline{display:block;width:100%;text-align:center;padding:12px;background:transparent;color:var(--ink);border:1px solid var(--border);border-radius:6px;font-size:13px;font-weight:600;cursor:pointer;margin-top:8px;transition:all .15s}
+.panel-cta-outline:hover{border-color:var(--gold);color:var(--gold)}
+
+/* Timeline in panel */
+.timeline-step{display:flex;gap:12px;margin-bottom:10px}
+.timeline-dot{width:22px;height:22px;border-radius:50%;background:var(--ink);color:white;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
+.timeline-text{font-size:12.5px;color:var(--dim);line-height:1.5}
+
+/* ── Responsive ── */
+@media (max-width:900px) {
+  .guide-grid{grid-template-columns:1fr}
+  .featured{flex-direction:column}
+  .featured-right{width:100%;flex-direction:row}
+}
+
+/* ── "NEW" indicator on sidebar ── */
+.nav-new{font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;background:var(--gold);color:var(--ink);padding:1px 5px;border-radius:3px;margin-left:auto}
+</style>
+</head>
+<body>
+
+<!-- ── Topbar ── -->
+<header class="topbar">
+  <div class="topbar-left">
+    <span class="topbar-addr">130 East 18th Street</span>
+    <span class="topbar-badge">120 units · Premium</span>
+  </div>
+  <a href="#" class="topbar-signout">Sign Out</a>
+</header>
+
+<!-- ── Sidebar ── -->
+<nav class="sidebar">
+  <div class="logo">
+    <div class="logo-mark">Board<span>IQ</span></div>
+    <div class="logo-sub">Property Intelligence</div>
+  </div>
+  <div class="nav">
+    <div class="nav-label">Intelligence</div>
+    <div class="nav-item" onclick="showSection('dashboard')">◈ &nbsp;Dashboard</div>
+    <div class="nav-item">◎ &nbsp;Savings <span class="nav-badge">3</span></div>
+    <div class="nav-item">⊞ &nbsp;BidBoard</div>
+    <div class="nav-label">Compliance</div>
+    <div class="nav-item">⚑ &nbsp;Compliance Calendar <span class="nav-badge">2</span></div>
+    <div class="nav-item">▤ &nbsp;Contracts</div>
+    <div class="nav-label">Building</div>
+    <div class="nav-item">◷ &nbsp;Tax &amp; Assessment</div>
+    <div class="nav-item">☰ &nbsp;Violations</div>
+    <div class="nav-item">↑ &nbsp;Invoice Upload</div>
+    <div class="nav-label">Resources</div>
+    <div class="nav-item active" onclick="showSection('education')">📖 &nbsp;Education <span class="nav-new">NEW</span></div>
+  </div>
+</nav>
+
+<!-- ── Main Content: Education ── -->
+<div class="main" id="educationSection">
+
+  <div class="page-header">
+    <div class="page-title">Board Education Center</div>
+    <div class="page-sub">Practical guides for NYC co-op and condo board members — understand your obligations, reduce costs, and make informed decisions.</div>
+  </div>
+
+  <!-- Featured Guide -->
+  <div class="featured">
+    <div class="featured-left">
+      <div class="featured-badge">Featured Guide</div>
+      <div class="featured-title">Local Law 97: What Every Board Needs to Know Before 2026</div>
+      <div class="featured-desc">
+        NYC's carbon emissions law will affect buildings over 25,000 sq ft starting in 2025. This guide breaks down the penalty structure, compliance options, and the most cost-effective strategies boards are using — from RECs to heat pump conversions.
+      </div>
+      <a class="featured-btn" onclick="openGuide('ll97')">Read the Full Guide →</a>
+    </div>
+    <div class="featured-right">
+      <div class="featured-stat">
+        <div class="featured-stat-num">$268</div>
+        <div class="featured-stat-lbl">Per ton CO₂ penalty</div>
+      </div>
+      <div class="featured-stat">
+        <div class="featured-stat-num">~$31K</div>
+        <div class="featured-stat-lbl">Avg. annual penalty</div>
+      </div>
+      <div class="featured-stat">
+        <div class="featured-stat-num">84%</div>
+        <div class="featured-stat-lbl">Of boards unaware</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Category Filters -->
+  <div class="cat-filters">
+    <div class="cat-pill active" onclick="filterGuides('all', this)">All Guides</div>
+    <div class="cat-pill" onclick="filterGuides('compliance', this)">Compliance</div>
+    <div class="cat-pill" onclick="filterGuides('financial', this)">Financial</div>
+    <div class="cat-pill" onclick="filterGuides('operations', this)">Operations</div>
+    <div class="cat-pill" onclick="filterGuides('governance', this)">Governance</div>
+  </div>
+
+  <!-- Guide Cards Grid -->
+  <div class="guide-grid" id="guideGrid">
+
+    <div class="guide-card" data-cat="compliance" onclick="openGuide('fisp')">
+      <div class="guide-card-icon">🏗</div>
+      <div class="guide-card-tag compliance">Compliance</div>
+      <div class="guide-card-title">Local Law 11 — FISP Facade Inspections</div>
+      <div class="guide-card-desc">Every 5 years your building's exterior must be inspected. Learn who to hire, what to expect, and how to avoid the most common (and expensive) mistakes.</div>
+      <div class="guide-card-meta">
+        <span class="read-time">8 min read</span>
+        <span>·</span>
+        <span>Updated Jan 2026</span>
+      </div>
+    </div>
+
+    <div class="guide-card" data-cat="compliance" onclick="openGuide('ll97')">
+      <div class="guide-card-icon">🌿</div>
+      <div class="guide-card-tag compliance">Compliance</div>
+      <div class="guide-card-title">Local Law 97 — Carbon Emissions Caps</div>
+      <div class="guide-card-desc">Your building may face annual fines of $268/ton. Understand the penalty formula, compliance strategies, and how to use RECs to reduce your exposure.</div>
+      <div class="guide-card-meta">
+        <span class="read-time">12 min read</span>
+        <span>·</span>
+        <span>Updated Feb 2026</span>
+      </div>
+    </div>
+
+    <div class="guide-card" data-cat="compliance" onclick="openGuide('ll87')">
+      <div class="guide-card-icon">⚡</div>
+      <div class="guide-card-tag compliance">Compliance</div>
+      <div class="guide-card-title">Local Law 87 — Energy Audits</div>
+      <div class="guide-card-desc">Buildings over 50,000 sq ft must conduct energy audits every 10 years. What boards need to know about scoping, selecting an auditor, and acting on results.</div>
+      <div class="guide-card-meta">
+        <span class="read-time">6 min read</span>
+        <span>·</span>
+        <span>Updated Dec 2025</span>
+      </div>
+    </div>
+
+    <div class="guide-card" data-cat="compliance" onclick="openGuide('ll152')">
+      <div class="guide-card-icon">🔧</div>
+      <div class="guide-card-tag compliance">Compliance</div>
+      <div class="guide-card-title">Local Law 152 — Gas Pipe Inspections</div>
+      <div class="guide-card-desc">All exposed gas piping must be inspected every 4 years. A straightforward compliance requirement, but missed deadlines trigger serious consequences.</div>
+      <div class="guide-card-meta">
+        <span class="read-time">5 min read</span>
+        <span>·</span>
+        <span>Updated Nov 2025</span>
+      </div>
+    </div>
+
+    <div class="guide-card" data-cat="financial" onclick="openGuide('bidding')">
+      <div class="guide-card-icon">📊</div>
+      <div class="guide-card-tag financial">Financial</div>
+      <div class="guide-card-title">Competitive Bidding — How to Save 20–40%</div>
+      <div class="guide-card-desc">Most buildings haven't bid their elevator contract in 8+ years. Learn the step-by-step process for running a competitive bid and what savings to expect.</div>
+      <div class="guide-card-meta">
+        <span class="read-time">10 min read</span>
+        <span>·</span>
+        <span>Updated Jan 2026</span>
+      </div>
+    </div>
+
+    <div class="guide-card" data-cat="financial" onclick="openGuide('tax')">
+      <div class="guide-card-icon">🏛</div>
+      <div class="guide-card-tag financial">Financial</div>
+      <div class="guide-card-title">Tax Assessments & Certiorari</div>
+      <div class="guide-card-desc">Is your building over-assessed? Understand how NYC property tax works for co-ops, when to file a certiorari challenge, and what savings are realistic.</div>
+      <div class="guide-card-meta">
+        <span class="read-time">9 min read</span>
+        <span>·</span>
+        <span>Updated Feb 2026</span>
+      </div>
+    </div>
+
+    <div class="guide-card" data-cat="operations" onclick="openGuide('contracts')">
+      <div class="guide-card-icon">📋</div>
+      <div class="guide-card-tag operations">Operations</div>
+      <div class="guide-card-title">Vendor Contracts — What to Look For</div>
+      <div class="guide-card-desc">Key clauses every board should understand: auto-renewals, escalation caps, scope definitions, insurance requirements, and termination provisions.</div>
+      <div class="guide-card-meta">
+        <span class="read-time">7 min read</span>
+        <span>·</span>
+        <span>Updated Dec 2025</span>
+      </div>
+    </div>
+
+    <div class="guide-card" data-cat="operations" onclick="openGuide('elevator')">
+      <div class="guide-card-icon">🛗</div>
+      <div class="guide-card-tag operations">Operations</div>
+      <div class="guide-card-title">Elevator Maintenance & Inspections</div>
+      <div class="guide-card-desc">Annual inspections, 5-year tests, and what to do when your contract expires. The most common vendor category where buildings overpay.</div>
+      <div class="guide-card-meta">
+        <span class="read-time">8 min read</span>
+        <span>·</span>
+        <span>Updated Jan 2026</span>
+      </div>
+    </div>
+
+    <div class="guide-card" data-cat="governance" onclick="openGuide('roles')">
+      <div class="guide-card-icon">👥</div>
+      <div class="guide-card-tag governance">Governance</div>
+      <div class="guide-card-title">Board Roles & Fiduciary Duties</div>
+      <div class="guide-card-desc">What it means to serve on a co-op or condo board. Legal responsibilities, the business judgment rule, and how to protect yourself as a board member.</div>
+      <div class="guide-card-meta">
+        <span class="read-time">11 min read</span>
+        <span>·</span>
+        <span>Updated Oct 2025</span>
+      </div>
+    </div>
+
+    <div class="guide-card" data-cat="governance" onclick="openGuide('meetings')">
+      <div class="guide-card-icon">📝</div>
+      <div class="guide-card-tag governance">Governance</div>
+      <div class="guide-card-title">Running Effective Board Meetings</div>
+      <div class="guide-card-desc">Agenda templates, quorum requirements, executive session rules, and how to make meetings productive instead of painful.</div>
+      <div class="guide-card-meta">
+        <span class="read-time">6 min read</span>
+        <span>·</span>
+        <span>Updated Nov 2025</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- FAQ Section -->
+  <div class="faq-section">
+    <div class="faq-title">Frequently Asked Questions</div>
+
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">
+        What compliance deadlines apply to my building?
+        <span class="arrow">▾</span>
+      </div>
+      <div class="faq-a">
+        It depends on your building's size, age, and type. Most NYC co-ops and condos over 6 stories face Local Law 11 (facade inspections every 5 years), and buildings over 25,000 sq ft face Local Law 97 (carbon emissions). Your BoardIQ compliance calendar shows your specific deadlines personalized to your building's characteristics.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">
+        How do I know if my building is overpaying for vendor services?
+        <span class="arrow">▾</span>
+      </div>
+      <div class="faq-a">
+        BoardIQ benchmarks your costs against similar NYC buildings by size, age, and location. If your per-unit cost for a service category (like elevator maintenance or insurance) is above the 75th percentile, your Savings tab will flag it as an opportunity. Competitively bidding those contracts typically saves 20–40%.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">
+        What is the business judgment rule and how does it protect board members?
+        <span class="arrow">▾</span>
+      </div>
+      <div class="faq-a">
+        The business judgment rule is a legal standard that shields board members from personal liability for decisions made in good faith, with reasonable care, and in the best interest of the building. As long as you can demonstrate that the board followed a reasonable process — getting competitive bids, consulting experts, documenting decisions — courts will generally not second-guess the outcome. BoardIQ helps create this documented trail.
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q" onclick="toggleFaq(this)">
+        Should my building hire a managing agent or self-manage?
+        <span class="arrow">▾</span>
+      </div>
+      <div class="faq-a">
+        Most buildings with 30+ units benefit from professional management. A good managing agent handles day-to-day operations, vendor coordination, compliance filings, and financial reporting. The key is accountability — BoardIQ gives your board visibility into costs, deadlines, and vendor performance so you can hold your managing agent to measurable standards.
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Slide-in Detail Panel ── -->
+<div class="overlay" id="overlay">
+  <div class="panel-close">
+    <span style="font-size:13px;font-weight:600;color:var(--ink)" id="panelLabel">Guide</span>
+    <button class="panel-close-btn" onclick="closePanel()">✕</button>
+  </div>
+  <div class="panel-body" id="panelContent"></div>
+</div>
+
+<script>
+// ── Guide Data ──
+const guides = {
+  fisp: {
+    icon: '🏗',
+    title: 'Local Law 11 — FISP Facade Inspections',
+    tag: 'compliance',
+    sections: [
+      {
+        heading: 'What It Is',
+        content: 'NYC requires all buildings over 6 stories to have a licensed engineer inspect the exterior facade every 5 years under the Facade Inspection Safety Program (FISP). The engineer files a report classifying the facade as <strong>Safe</strong>, <strong>SWARMP</strong> (Safe With Repair & Maintenance Program), or <strong>Unsafe</strong>. If classified Unsafe, repairs must begin immediately.'
+      },
+      {
+        heading: 'Why It Matters to Your Board',
+        content: 'A missed FISP deadline triggers DOB violations starting at <strong>$1,000/month</strong>, and an Unsafe classification can require immediate sidewalk shed installation ($30K–$100K+). The inspection itself is relatively affordable ($14K–$22K for a typical building), but delays cascade into far more expensive problems.'
+      },
+      {
+        heading: 'Who You Need to Hire',
+        content: 'A licensed NYC Professional Engineer (PE) or Registered Architect (RA) with FISP experience. They must be hired <strong>directly by the building</strong>, not through the contractor who will do repairs. This independence is legally required.'
+      },
+      {
+        heading: 'Step-by-Step Timeline',
+        type: 'timeline',
+        steps: [
+          'Hire FISP engineer 12+ months before your cycle deadline',
+          'Engineer conducts rope, scaffold, or drone inspection (2–8 weeks)',
+          'Report preparation and DOB filing (4–6 weeks)',
+          'If SWARMP or Unsafe: repairs required concurrent with filing',
+          'Sidewalk shed installed if unsafe conditions found'
+        ]
+      },
+      {
+        heading: 'Board Tip',
+        type: 'tip',
+        content: '💡 Get 3 quotes from FISP engineers — prices vary 40–60% for the same building. Start early; engineers book up in the 6 months before cycle deadlines.'
+      },
+      {
+        heading: 'Your Building\'s Status',
+        type: 'building-link',
+        content: 'Check your Compliance Calendar to see your specific FISP deadline and cost benchmark based on 23 comparable buildings.'
+      }
+    ]
+  },
+  ll97: {
+    icon: '🌿',
+    title: 'Local Law 97 — Carbon Emissions',
+    tag: 'compliance',
+    sections: [
+      {
+        heading: 'What It Is',
+        content: 'Local Law 97 is NYC\'s landmark climate legislation that caps annual carbon emissions for buildings over 25,000 sq ft. Buildings that exceed their cap pay a penalty of <strong>$268 per metric ton of CO₂</strong> over the limit every year. The first compliance period began in 2024, with stricter caps in 2030.'
+      },
+      {
+        heading: 'Why It Matters to Your Board',
+        content: 'The average NYC co-op that exceeds its cap faces a penalty of approximately <strong>$31,000 per year</strong>. This is not a one-time fine — it recurs annually until emissions are reduced below the cap. For a 120-unit building, that\'s roughly $258 per unit per year added to maintenance.'
+      },
+      {
+        heading: 'Compliance Strategies (Ranked by Cost)',
+        type: 'timeline',
+        steps: [
+          'Renewable Energy Credits (RECs) — can offset up to 30% of penalty at ~$20–40/ton vs. $268/ton penalty',
+          'LED lighting upgrades — typically 2–3 year payback, modest emissions reduction',
+          'Building management system (BMS) optimization — tune existing HVAC, reduce waste',
+          'Heat pump conversion — significant capital ($500K+) but largest emissions reduction',
+          'Full envelope upgrade (insulation, windows) — highest cost, longest payback'
+        ]
+      },
+      {
+        heading: 'Board Tip',
+        type: 'tip',
+        content: '💡 RECs are the lowest-cost first step. Check current REC market pricing before committing to major capital improvements. Many boards are buying RECs for $20–40/ton to offset a $268/ton penalty while they plan longer-term retrofits.'
+      },
+      {
+        heading: 'Filing Requirements',
+        content: 'An annual Building Energy and Emissions Report must be filed through DOB NOW: Energy by May 1st. This requires Energy Star Portfolio Manager benchmarking data for the prior calendar year.'
+      }
+    ]
+  },
+  bidding: {
+    icon: '📊',
+    title: 'Competitive Bidding — How to Save 20–40%',
+    tag: 'financial',
+    sections: [
+      {
+        heading: 'Why Competitive Bidding Matters',
+        content: 'The average NYC co-op hasn\'t competitively bid its elevator contract in <strong>8+ years</strong>. Without regular bidding, prices drift upward through automatic escalation clauses. Buildings that bid their top 3 vendor categories typically identify <strong>$30,000–$60,000 in annual savings</strong>.'
+      },
+      {
+        heading: 'Which Contracts to Bid First',
+        content: 'Start with your highest-cost categories. For most buildings, this means: <strong>elevator maintenance</strong> (often the single largest vendor expense), <strong>insurance</strong>, and <strong>cleaning/superintendent services</strong>. Your BoardIQ Savings tab shows exactly where you\'re above market.'
+      },
+      {
+        heading: 'The Bidding Process',
+        type: 'timeline',
+        steps: [
+          'Identify contracts where your per-unit cost exceeds the 75th percentile',
+          'Write a clear scope of work (BoardIQ generates this automatically)',
+          'Solicit 3–5 qualified bids through BidBoard',
+          'Compare bids on cost, scope, insurance coverage, and references',
+          'Present top 2–3 bids to the board with a recommendation'
+        ]
+      },
+      {
+        heading: 'Board Tip',
+        type: 'tip',
+        content: '💡 Never bid just on price. The cheapest vendor isn\'t always the best value. Check insurance coverage, look for auto-renewal traps, and call 2–3 references. BoardIQ\'s vendor profiles include verified ratings and NYC job counts.'
+      }
+    ]
+  },
+  roles: {
+    icon: '👥',
+    title: 'Board Roles & Fiduciary Duties',
+    tag: 'governance',
+    sections: [
+      {
+        heading: 'Your Legal Responsibility',
+        content: 'As a co-op or condo board member, you have a <strong>fiduciary duty</strong> to act in the best interest of all shareholders/unit owners. This means making informed decisions, avoiding conflicts of interest, and documenting your reasoning — not just getting the outcome right.'
+      },
+      {
+        heading: 'The Business Judgment Rule',
+        content: 'The business judgment rule protects board members who follow a <strong>reasonable process</strong>. Courts will generally not second-guess a board decision if: (1) you gathered relevant information, (2) you considered alternatives, (3) you acted without personal conflicts, and (4) you documented the decision. BoardIQ creates this documentation trail automatically.'
+      },
+      {
+        heading: 'Key Board Roles',
+        type: 'timeline',
+        steps: [
+          'President — chairs meetings, signs contracts, interfaces with managing agent',
+          'Treasurer — oversees finances, reviews monthly statements, leads budget process',
+          'Secretary — maintains records, meeting minutes, corporate documents',
+          'At-Large Members — participate in decisions, serve on committees, represent residents'
+        ]
+      },
+      {
+        heading: 'Board Tip',
+        type: 'tip',
+        content: '💡 The #1 way boards get into legal trouble: making decisions without a documented process. Even if the decision is correct, a shareholder lawsuit can be costly if the board can\'t show they followed a reasonable process. Keep minutes, get competing bids, and consult professionals.'
+      }
+    ]
+  }
+};
+
+// ── Panel Logic ──
+function openGuide(key) {
+  const g = guides[key];
+  if (!g) return;
+
+  let html = `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <span style="font-size:36px">${g.icon}</span>
+      <div>
+        <div style="font-family:'Playfair Display',serif;font-size:20px;color:var(--ink);font-weight:600;line-height:1.3">${g.title}</div>
+        <div class="guide-card-tag ${g.tag}" style="margin-top:6px">${g.tag.charAt(0).toUpperCase() + g.tag.slice(1)}</div>
+      </div>
+    </div>
+  `;
+
+  g.sections.forEach(s => {
+    html += `<div class="panel-section">${s.heading}</div>`;
+    if (s.type === 'timeline') {
+      html += '<div style="background:var(--surface2);padding:14px 16px;border-radius:6px;border:1px solid var(--border)">';
+      s.steps.forEach((step, i) => {
+        html += `<div class="timeline-step">
+          <div class="timeline-dot">${i+1}</div>
+          <div class="timeline-text">${step}</div>
+        </div>`;
+      });
+      html += '</div>';
+    } else if (s.type === 'tip') {
+      html += `<div class="panel-tip">${s.content}</div>`;
+    } else if (s.type === 'building-link') {
+      html += `<div style="background:var(--gold-light);border:1px solid var(--gold);border-radius:6px;padding:14px 16px;font-size:13px;color:var(--ink);line-height:1.7">
+        📍 ${s.content}
+        <button class="panel-cta" style="margin-top:12px" onclick="closePanel()">Go to Compliance Calendar →</button>
+      </div>`;
+    } else {
+      html += `<div class="panel-content">${s.content}</div>`;
+    }
+  });
+
+  // CTA at bottom
+  html += `
+    <div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--border)">
+      <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:10px">Related Actions</div>
+      <button class="panel-cta" onclick="closePanel()">View in Compliance Calendar →</button>
+      <button class="panel-cta-outline" onclick="closePanel()">Start BidBoard for This Category →</button>
+    </div>
+  `;
+
+  document.getElementById('panelLabel').textContent = g.title;
+  document.getElementById('panelContent').innerHTML = html;
+  document.getElementById('overlay').classList.add('open');
+}
+
+function closePanel() {
+  document.getElementById('overlay').classList.remove('open');
+}
+
+// ── Filter Logic ──
+function filterGuides(cat, el) {
+  document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.guide-card').forEach(card => {
+    if (cat === 'all' || card.dataset.cat === cat) {
+      card.style.display = '';
+    } else {
+      card.style.display = 'none';
+    }
+  });
+}
+
+// ── FAQ Toggle ──
+function toggleFaq(el) {
+  const a = el.nextElementSibling;
+  const isOpen = a.classList.contains('open');
+  // Close all
+  document.querySelectorAll('.faq-a').forEach(x => x.classList.remove('open'));
+  document.querySelectorAll('.faq-q').forEach(x => x.classList.remove('open'));
+  if (!isOpen) {
+    el.classList.add('open');
+    a.classList.add('open');
+  }
+}
+
+// ── Close panel on outside click ──
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closePanel(); });
+</script>
+</body>
+</html>
