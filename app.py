@@ -3698,6 +3698,30 @@ table.vt tr.click:hover td{background:var(--surface2)}
 .alert-pill-high{background:#fde2e2;border:1px solid #e8a3a3;color:#8b1a1a;font-size:11.5px;font-weight:600;padding:8px 12px;border-radius:5px;line-height:1.5}
 .alert-pill-medium{background:#fef0d5;border:1px solid #e8c97a;color:#7a5500;font-size:11.5px;font-weight:600;padding:8px 12px;border-radius:5px;line-height:1.5}
 
+/* ── Collapsible Accordion Sections ── */
+.accordion{background:var(--surface);border:1px solid var(--border);border-radius:9px;margin-bottom:16px;overflow:hidden;grid-column:1/-1}
+.accordion-toggle{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;cursor:pointer;transition:background .15s;user-select:none}
+.accordion-toggle:hover{background:var(--surface2)}
+.accordion-left{display:flex;align-items:center;gap:12px}
+.accordion-icon{font-size:20px;width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.accordion-icon-gold{background:var(--gold-light);color:var(--gold)}
+.accordion-icon-green{background:var(--green-light);color:var(--green)}
+.accordion-icon-red{background:var(--red-light);color:var(--red)}
+.accordion-icon-ink{background:#eae6df;color:var(--ink)}
+.accordion-title{font-family:'Playfair Display',serif;font-size:16px;color:var(--ink);font-weight:600}
+.accordion-desc{font-size:12px;color:var(--muted);margin-top:2px;line-height:1.4}
+.accordion-right{display:flex;align-items:center;gap:12px;flex-shrink:0}
+.accordion-badge{font-size:11px;font-weight:700;padding:3px 10px;border-radius:12px;white-space:nowrap}
+.accordion-badge-red{background:rgba(192,57,43,.1);color:var(--red)}
+.accordion-badge-yellow{background:rgba(196,137,58,.12);color:var(--yellow)}
+.accordion-badge-green{background:rgba(26,122,74,.1);color:var(--green)}
+.accordion-badge-blue{background:rgba(59,130,246,.1);color:#3b82f6}
+.accordion-chevron{font-size:14px;color:var(--muted);transition:transform .25s ease}
+.accordion.open .accordion-chevron{transform:rotate(180deg)}
+.accordion-body{max-height:0;overflow:hidden;transition:max-height .35s ease}
+.accordion.open .accordion-body{max-height:5000px}
+.accordion-body-inner{padding:0}
+
 /* ── Mobile Responsive ── */
 @media (max-width:768px){
   .sidebar{display:none}
@@ -4148,12 +4172,25 @@ table.vt tr.click:hover td{background:var(--surface2)}
     </div>
 
     {# ── COMPLIANCE ── #}
-    <div id="complianceSection" class="card full">
-      <div class="ch">
-        <div><div class="ct">Compliance Calendar &amp; Cost Intelligence</div>
-        <div class="csub">Deadlines with projected costs from comparable building data</div></div>
-        <a href="#" class="ca">Full Calendar →</a>
+    <div id="complianceSection" class="accordion" onclick="this.classList.toggle('open')">
+      <div class="accordion-toggle">
+        <div class="accordion-left">
+          <div class="accordion-icon accordion-icon-red">⚑</div>
+          <div>
+            <div class="accordion-title">Compliance Calendar & Cost Intelligence</div>
+            <div class="accordion-desc">Regulatory deadlines with projected costs from comparable building data</div>
+          </div>
+        </div>
+        <div class="accordion-right">
+          {% set high_count = building.compliance_deadlines|selectattr('urgency','eq','HIGH')|list|length %}
+          {% if high_count > 0 %}
+          <span class="accordion-badge accordion-badge-red">{{ high_count }} Urgent</span>
+          {% endif %}
+          <span class="accordion-badge accordion-badge-yellow">{{ building.compliance_deadlines|length }} Deadlines</span>
+          <span class="accordion-chevron">▾</span>
+        </div>
       </div>
+      <div class="accordion-body"><div class="accordion-body-inner" onclick="event.stopPropagation()">
       {% for d in building.compliance_deadlines %}
       <div class="comp-item" onclick="openPanel('compliance', '{{ loop.index0 }}')">
         <div>
@@ -4177,14 +4214,28 @@ table.vt tr.click:hover td{background:var(--surface2)}
         </div>
       </div>
       {% endfor %}
-    </div>
+    </div></div></div>
 
     {# ── BID REQUESTS (BidBoard) ── #}
-    <div id="bidRequestsSection" class="card full" style="padding:0">
-      <div style="padding:20px 22px 14px">
-        <div class="ct">BidBoard — Active Bid Requests</div>
-        <div class="csub">Competitive bids solicited for compliance work and expiring contracts</div>
+    <div id="bidRequestsSection" class="accordion" onclick="this.classList.toggle('open')">
+      <div class="accordion-toggle">
+        <div class="accordion-left">
+          <div class="accordion-icon accordion-icon-ink">⊞</div>
+          <div>
+            <div class="accordion-title">BidBoard — Competitive Bidding</div>
+            <div class="accordion-desc">Request and manage competitive bids from the BoardIQ vendor network</div>
+          </div>
+        </div>
+        <div class="accordion-right">
+          {% if bid_requests|selectattr('status','eq','open')|list|length > 0 %}
+          <span class="accordion-badge accordion-badge-green">{{ bid_requests|selectattr('status','eq','open')|list|length }} Open</span>
+          {% else %}
+          <span class="accordion-badge accordion-badge-blue">No Active Bids</span>
+          {% endif %}
+          <span class="accordion-chevron">▾</span>
+        </div>
       </div>
+      <div class="accordion-body"><div class="accordion-body-inner" onclick="event.stopPropagation()" style="padding:0">
       {% if bid_requests %}
       <div style="padding:0 22px 18px">
         {% for br in bid_requests %}
@@ -4211,18 +4262,34 @@ table.vt tr.click:hover td{background:var(--surface2)}
         <div style="font-size:10.5px;color:var(--muted);margin-top:10px;font-style:italic">Bids typically arrive within 5–7 business days</div>
       </div>
       {% endif %}
-    </div>
+    </div></div></div>
 
     {# ── CONTRACT INTELLIGENCE ── #}
-    <div id="contractsSection" class="card full" style="padding:0">
-      <div style="padding:20px 22px 0">
-        <div class="contracts-header">
+    <div id="contractsSection" class="accordion" onclick="this.classList.toggle('open')">
+      <div class="accordion-toggle">
+        <div class="accordion-left">
+          <div class="accordion-icon accordion-icon-gold">▤</div>
           <div>
-            <div class="ct">Contract Intelligence</div>
-            <div class="csub">{% if is_admin %}Manage vendor contracts · Track expirations · Ensure compliance{% else %}View vendor contracts · Track expirations · Managed by your management company{% endif %}</div>
+            <div class="accordion-title">Contract Intelligence</div>
+            <div class="accordion-desc">{% if is_admin %}Manage vendor contracts, track expirations, ensure compliance{% else %}View vendor contracts, track expirations{% endif %}</div>
           </div>
-          {% if is_admin %}<button class="btn-add-contract" onclick="openContractDrawer()">+ Add Contract</button>{% endif %}
         </div>
+        <div class="accordion-right">
+          {% if contracts_summary.expiring_soon > 0 %}
+          <span class="accordion-badge accordion-badge-yellow">{{ contracts_summary.expiring_soon }} Expiring</span>
+          {% endif %}
+          {% if contracts_summary.missing_docs > 0 %}
+          <span class="accordion-badge accordion-badge-red">{{ contracts_summary.missing_docs }} Missing Docs</span>
+          {% endif %}
+          {% if contracts_summary.expiring_soon == 0 and contracts_summary.missing_docs == 0 %}
+          <span class="accordion-badge accordion-badge-green">{{ contracts_summary.total }} Contracts</span>
+          {% endif %}
+          <span class="accordion-chevron">▾</span>
+        </div>
+      </div>
+      <div class="accordion-body"><div class="accordion-body-inner" onclick="event.stopPropagation()" style="padding:0">
+      <div style="padding:20px 22px 0">
+        {% if is_admin %}<div style="text-align:right;margin-bottom:12px"><button class="btn-add-contract" onclick="openContractDrawer()">+ Add Contract</button></div>{% endif %}
 
         {# Summary strip #}
         <div class="contracts-strip">
@@ -4337,11 +4404,29 @@ table.vt tr.click:hover td{background:var(--surface2)}
         {% else %}<p style="font-size:12px">Contract records are managed by your management company.</p>{% endif %}
       </div>
       {% endif %}
-    </div>
+    </div></div></div>
 
     {# ── BUILDING RECORD ── #}
-    <div id="buildingRecord" class="card full">
-      <div class="ch"><div><div class="ct">Building Record</div><div class="csub">Public data from NYC agencies · refreshed quarterly</div></div></div>
+    <div id="buildingRecord" class="accordion" onclick="this.classList.toggle('open')">
+      <div class="accordion-toggle">
+        <div class="accordion-left">
+          <div class="accordion-icon accordion-icon-ink">◷</div>
+          <div>
+            <div class="accordion-title">Building Record</div>
+            <div class="accordion-desc">Tax assessment, violations, and public data from NYC agencies</div>
+          </div>
+        </div>
+        <div class="accordion-right">
+          {% if building.violations.hpd_open > 0 %}
+          <span class="accordion-badge accordion-badge-red">{{ building.violations.hpd_open }} Open Violations</span>
+          {% endif %}
+          {% if building.tax_assessment.certiorari_recommended %}
+          <span class="accordion-badge accordion-badge-yellow">Review Recommended</span>
+          {% endif %}
+          <span class="accordion-chevron">▾</span>
+        </div>
+      </div>
+      <div class="accordion-body"><div class="accordion-body-inner" onclick="event.stopPropagation()" style="padding:22px">
       <div class="two-mini">
         <div class="mini">
           <div class="mini-title">Tax &amp; Assessment · DOF</div>
@@ -4372,14 +4457,24 @@ table.vt tr.click:hover td{background:var(--surface2)}
           {% endif %}
         </div>
       </div>
-    </div>
+    </div></div></div>
 
     {# ── EDUCATION CENTER ── #}
-    <div id="educationSection" class="card full" style="padding:22px">
-      <div class="edu-header">
-        <div class="edu-title">Board Education Center</div>
-        <div class="edu-sub">Practical guides for NYC co-op and condo board members — understand your obligations, reduce costs, and make informed decisions.</div>
+    <div id="educationSection" class="accordion" onclick="this.classList.toggle('open')">
+      <div class="accordion-toggle">
+        <div class="accordion-left">
+          <div class="accordion-icon accordion-icon-green">📖</div>
+          <div>
+            <div class="accordion-title">Board Education Center</div>
+            <div class="accordion-desc">Compliance guides tailored to your building — LL97, FISP, energy audits, and more</div>
+          </div>
+        </div>
+        <div class="accordion-right">
+          <span class="accordion-badge accordion-badge-green" style="background:var(--gold-light);color:var(--gold)">6 Guides</span>
+          <span class="accordion-chevron">▾</span>
+        </div>
       </div>
+      <div class="accordion-body"><div class="accordion-body-inner" onclick="event.stopPropagation()" style="padding:22px">
 
       <!-- Featured Guide — dynamically rotated based on most urgent deadline -->
       <div class="edu-featured" id="eduFeatured"></div>
@@ -4460,7 +4555,7 @@ table.vt tr.click:hover td{background:var(--surface2)}
 
       </div>
 
-    </div>
+    </div></div></div>
 
   </div>
 </main>
@@ -5203,6 +5298,10 @@ function filterEduGuides(cat, el) {
 function scrollToSection(sectionId, navEl) {
   var el = document.getElementById(sectionId);
   if (!el) return;
+  // If target is an accordion, open it
+  if (el.classList.contains('accordion') && !el.classList.contains('open')) {
+    el.classList.add('open');
+  }
   el.scrollIntoView({behavior:'smooth', block:'start'});
   document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active'); });
   if (navEl) navEl.classList.add('active');
