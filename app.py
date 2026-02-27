@@ -3416,13 +3416,62 @@ table.vt tr.click:hover td{background:var(--surface2)}
 .topbar-signout:hover{background:var(--ink);color:white;border-color:var(--ink);}
 .viol-flag{background:var(--red-light);border:1px solid var(--red-border);border-radius:4px;padding:8px 10px;font-size:11.5px;color:var(--red);font-weight:500;line-height:1.4}
 
+/* ── Peer Group Banner ── */
+.peer-banner{background:var(--ink);border-radius:8px;padding:14px 20px;margin-bottom:20px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.peer-banner-label{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--gold);font-weight:700}
+.peer-banner-desc{font-size:13px;color:rgba(255,255,255,.85);font-weight:500}
+.peer-banner-stat{text-align:center}
+.peer-banner-stat-num{font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:600;color:#fff}
+.peer-banner-stat-lbl{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,.4)}
+.peer-banner-info{font-size:10px;color:rgba(255,255,255,.4);font-style:italic}
+
+/* ── Upload Compact ── */
+.upload-compact{display:flex;align-items:center;gap:10px;padding:12px 20px;border-top:1px solid var(--border);cursor:pointer;transition:background .15s}
+.upload-compact:hover{background:var(--surface2)}
+.upload-compact-icon{font-size:16px;color:var(--muted)}
+.upload-compact-text{font-size:12px;color:var(--dim);font-weight:500}
+.upload-compact-sub{font-size:10px;color:var(--muted)}
+
+/* ── Education Relevance Indicator ── */
+.edu-card-relevant{position:relative}
+.edu-card-relevant::after{content:'';position:absolute;top:12px;right:12px;width:8px;height:8px;border-radius:50%;background:var(--gold);box-shadow:0 0 0 2px var(--gold-light)}
+.edu-relevance-tag{display:inline-flex;align-items:center;gap:4px;font-size:9.5px;font-weight:600;color:var(--gold);background:var(--gold-light);padding:2px 8px;border-radius:10px;margin-left:8px}
+
+/* ── Improved Contrast ── */
+.alert-pill-high{background:#fde2e2;border:1px solid #e8a3a3;color:#8b1a1a;font-size:11.5px;font-weight:600;padding:8px 12px;border-radius:5px;line-height:1.5}
+.alert-pill-medium{background:#fef0d5;border:1px solid #e8c97a;color:#7a5500;font-size:11.5px;font-weight:600;padding:8px 12px;border-radius:5px;line-height:1.5}
+
+/* ── Mobile Responsive ── */
+@media (max-width:768px){
+  .sidebar{display:none}
+  .main{margin-left:0!important;padding:16px 14px 40px!important;margin-top:44px}
+  .topbar{padding:0 14px}
+  .strip{grid-template-columns:1fr 1fr;gap:1px}
+  .grid{grid-template-columns:1fr}
+  .edu-grid{grid-template-columns:1fr}
+  .edu-featured{flex-direction:column}
+  .edu-feat-stats{width:100%;flex-direction:row;justify-content:center;gap:12px}
+  .contracts-strip{grid-template-columns:repeat(3,1fr)}
+  .stat-grid{grid-template-columns:1fr 1fr}
+  .panel{width:100vw!important;max-width:100vw!important}
+  .peer-banner{flex-direction:column;text-align:center;gap:10px}
+  .peer-banner .peer-banner-stat{display:inline-block;margin:0 10px}
+  .page-header{flex-direction:column;align-items:flex-start;gap:8px}
+  .page-title{font-size:22px}
+}
+@media (min-width:769px) and (max-width:1024px){
+  .sidebar{width:180px}
+  .main{margin-left:180px}
+  .panel{width:380px!important}
+}
+
 /* ── Education Center ── */
 .edu-header{margin-bottom:22px}
 .edu-title{font-family:'Playfair Display',serif;font-size:22px;color:var(--ink);font-weight:600}
 .edu-sub{font-size:12.5px;color:var(--muted);margin-top:3px;line-height:1.5}
 .edu-featured{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:24px;margin-bottom:20px;display:flex;gap:24px;align-items:flex-start}
 .edu-feat-left{flex:1}
-.edu-feat-badge{display:inline-block;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--gold);background:var(--gold-light);padding:3px 9px;border-radius:4px;margin-bottom:10px}
+.edu-feat-badge{display:inline-block;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#7a5212;background:var(--gold-light);padding:3px 9px;border-radius:4px;margin-bottom:10px}
 .edu-feat-title{font-family:'Playfair Display',serif;font-size:18px;color:var(--ink);font-weight:600;line-height:1.3;margin-bottom:6px}
 .edu-feat-desc{font-size:12.5px;color:var(--dim);line-height:1.65;margin-bottom:14px}
 .edu-feat-link{font-size:12.5px;font-weight:600;color:var(--gold);cursor:pointer;text-decoration:none;transition:color .15s}
@@ -3492,8 +3541,8 @@ table.vt tr.click:hover td{background:var(--surface2)}
 
 .cc-alerts{padding:0 18px 10px;display:flex;flex-wrap:wrap;gap:5px}
 .cc-alert{font-size:10.5px;font-weight:600;padding:4px 9px;border-radius:3px}
-.cc-alert.HIGH{background:var(--red-light);color:var(--red);border:1px solid var(--red-border)}
-.cc-alert.MEDIUM{background:var(--yellow-light);color:var(--yellow);border:1px solid var(--yellow-border)}
+.cc-alert.HIGH{background:#fde2e2;color:#8b1a1a;border:1px solid #e8a3a3}
+.cc-alert.MEDIUM{background:#fef0d5;color:#7a5500;border:1px solid #e8c97a}
 
 .cc-footer{display:flex;align-items:center;gap:8px;padding:10px 18px;border-top:1px solid var(--border);background:var(--surface2)}
 .cc-doc-status{font-size:11px;font-weight:600;padding:4px 10px;border-radius:12px;display:inline-flex;align-items:center;gap:4px}
@@ -3641,28 +3690,28 @@ table.vt tr.click:hover td{background:var(--surface2)}
     <a href="/portfolio" class="nav-item" style="text-decoration:none;color:var(--gold);margin-bottom:8px;display:block;font-weight:600">← &nbsp;Portfolio</a>
     {% endif %}
     <div class="nav-label">Intelligence</div>
-    <div class="nav-item active">◈ &nbsp;Dashboard</div>
-    <div class="nav-item">◎ &nbsp;Savings
+    <div class="nav-item active" data-section="dashboardTop" onclick="scrollToSection('dashboardTop',this)">◈ &nbsp;Dashboard</div>
+    <div class="nav-item" data-section="vendorSection" onclick="scrollToSection('vendorSection',this)">◎ &nbsp;Savings
       {% if benchmarks.above_market_count > 0 %}
       <span class="nav-badge">{{ benchmarks.above_market_count }}</span>{% endif %}
     </div>
-    <div class="nav-item" onclick="document.getElementById('bidRequestsSection').scrollIntoView({behavior:'smooth',block:'start'})">⊞ &nbsp;BidBoard
+    <div class="nav-item" data-section="bidRequestsSection" onclick="scrollToSection('bidRequestsSection',this)">⊞ &nbsp;BidBoard
       {% if bid_requests|selectattr('status','eq','open')|list|length > 0 %}<span class="nav-badge">{{ bid_requests|selectattr('status','eq','open')|list|length }}</span>{% endif %}
     </div>
     <div class="nav-label">Compliance</div>
-    <div class="nav-item">⚑ &nbsp;Compliance Calendar
+    <div class="nav-item" data-section="complianceSection" onclick="scrollToSection('complianceSection',this)">⚑ &nbsp;Compliance Calendar
       <span class="nav-badge">{{ building.compliance_deadlines|selectattr('urgency','eq','HIGH')|list|length }}</span>
     </div>
-    <div class="nav-item" onclick="document.getElementById('contractsSection').scrollIntoView({behavior:'smooth',block:'start'})">▤ &nbsp;Contracts
+    <div class="nav-item" data-section="contractsSection" onclick="scrollToSection('contractsSection',this)">▤ &nbsp;Contracts
       {% if contracts_summary.expiring_soon + contracts_summary.expired + contracts_summary.missing_docs > 0 %}
       <span class="nav-badge">{{ contracts_summary.expiring_soon + contracts_summary.expired + contracts_summary.missing_docs }}</span>{% endif %}
     </div>
     <div class="nav-label">Building</div>
-    <div class="nav-item">◷ &nbsp;Tax &amp; Assessment</div>
-    <div class="nav-item">☰ &nbsp;Violations</div>
+    <div class="nav-item" data-section="buildingRecord" onclick="scrollToSection('buildingRecord',this)">◷ &nbsp;Tax &amp; Assessment</div>
+    <div class="nav-item" data-section="buildingRecord" onclick="scrollToSection('buildingRecord',this)">☰ &nbsp;Violations</div>
     <a href="/upload" class="nav-item" style="text-decoration:none;color:rgba(255,255,255,.5)">↑ &nbsp;Invoice Upload</a>
     <div class="nav-label">Resources</div>
-    <div class="nav-item" onclick="document.getElementById('educationSection').scrollIntoView({behavior:'smooth',block:'start'})">📖 &nbsp;Education
+    <div class="nav-item" data-section="educationSection" onclick="scrollToSection('educationSection',this)">📖 &nbsp;Education
       <span style="font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;background:var(--gold);color:var(--ink);padding:1px 5px;border-radius:3px;margin-left:auto">NEW</span>
     </div>
   </div>
@@ -3691,7 +3740,7 @@ table.vt tr.click:hover td{background:var(--surface2)}
 </nav>
 
 <main class="main">
-  <div class="page-header">
+  <div id="dashboardTop" class="page-header">
     <div>
       <div class="page-title">Building Intelligence</div>
       <div class="page-sub">{{ building.address }} &nbsp;·&nbsp; {{ building.managing_agent }} &nbsp;·&nbsp; Peer group: {{ benchmarks.peer_group.peer_building_count }} comparable buildings</div>
@@ -3736,17 +3785,18 @@ table.vt tr.click:hover td{background:var(--surface2)}
   </div>
 
   {# ── PEER GROUP INFO ── #}
-  <div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:12px 18px;margin-bottom:18px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
-    <div style="font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);font-weight:600">Peer Group</div>
-    <div style="font-size:13px;color:var(--ink);font-weight:500">{{ benchmarks.peer_group.description }}</div>
-    <div style="display:flex;gap:14px;margin-left:auto">
-      <div style="text-align:center"><div style="font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:600;color:var(--ink)">{{ building.units }}</div><div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--muted)">Units</div></div>
-      <div style="text-align:center"><div style="font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:600;color:var(--ink)">{{ building.year_built }}</div><div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--muted)">Built</div></div>
-      <div style="text-align:center"><div style="font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:600;color:var(--ink)">{{ building.floors }}</div><div style="font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--muted)">Floors</div></div>
+  <div class="peer-banner">
+    <div class="peer-banner-label">Peer Group Benchmark</div>
+    <div class="peer-banner-desc">{{ benchmarks.peer_group.description }}</div>
+    <div style="display:flex;gap:16px;margin-left:auto">
+      <div class="peer-banner-stat"><div class="peer-banner-stat-num">{{ building.units }}</div><div class="peer-banner-stat-lbl">Units</div></div>
+      <div class="peer-banner-stat"><div class="peer-banner-stat-num">{{ building.year_built }}</div><div class="peer-banner-stat-lbl">Built</div></div>
+      <div class="peer-banner-stat"><div class="peer-banner-stat-num">{{ building.floors }}</div><div class="peer-banner-stat-lbl">Floors</div></div>
     </div>
+    <div class="peer-banner-info">All "Above Market" and "Below Market" comparisons are relative to this peer group</div>
   </div>
 
-  <div class="grid">
+  <div id="vendorSection" class="grid">
 
     {# ── VENDOR TABLE ── #}
     <div class="card">
@@ -3828,20 +3878,20 @@ table.vt tr.click:hover td{background:var(--surface2)}
       </div>
       {% endfor %}
 
-      {# Upload zone #}
-      <div class="upload-zone" onclick="document.getElementById('csvInput').click()">
-        <div class="upload-label">Upload Invoice Data</div>
-        <div class="upload-sub">CSV or Excel from Yardi / AvidXchange / manual export</div>
+      {# Upload zone — compact to preserve savings impact #}
+      <div class="upload-compact" onclick="document.getElementById('csvInput').click()">
+        <div class="upload-compact-icon">↑</div>
+        <div>
+          <div class="upload-compact-text">Upload Invoice Data</div>
+          <div class="upload-compact-sub">CSV / Excel from Yardi, AvidXchange, or manual export</div>
+        </div>
         <input type="file" id="csvInput" accept=".csv,.xlsx,.xls" style="display:none" onchange="uploadInvoices(this)">
       </div>
       <div class="upload-result" id="uploadResult"></div>
-      <div style="padding:0 20px 14px;text-align:center">
-        <a href="/api/sample-csv" style="font-size:11px;color:var(--muted)">↓ Download sample CSV format</a>
-      </div>
     </div>
 
     {# ── COMPLIANCE ── #}
-    <div class="card full">
+    <div id="complianceSection" class="card full">
       <div class="ch">
         <div><div class="ct">Compliance Calendar &amp; Cost Intelligence</div>
         <div class="csub">Deadlines with projected costs from comparable building data</div></div>
@@ -3897,8 +3947,11 @@ table.vt tr.click:hover td{background:var(--surface2)}
         {% endfor %}
       </div>
       {% else %}
-      <div style="padding:16px 22px 22px;font-size:13px;color:var(--muted);text-align:center">
-        No active bid requests. Click <strong>Start BidBoard</strong> on a compliance item or expiring contract to solicit competitive bids.
+      <div style="padding:20px 22px;text-align:center">
+        <div style="font-size:28px;margin-bottom:8px;opacity:.4">⊞</div>
+        <div style="font-size:13px;color:var(--muted);margin-bottom:6px">No active bid requests</div>
+        <div style="font-size:11.5px;color:var(--dim);line-height:1.6;max-width:360px;margin:0 auto">Click <strong>Start BidBoard</strong> on a compliance item or expiring contract to solicit competitive bids from the BoardIQ vendor network.</div>
+        <div style="font-size:10.5px;color:var(--muted);margin-top:10px;font-style:italic">Bids typically arrive within 5–7 business days</div>
       </div>
       {% endif %}
     </div>
@@ -4030,7 +4083,7 @@ table.vt tr.click:hover td{background:var(--surface2)}
     </div>
 
     {# ── BUILDING RECORD ── #}
-    <div class="card full">
+    <div id="buildingRecord" class="card full">
       <div class="ch"><div><div class="ct">Building Record</div><div class="csub">Public data from NYC agencies · refreshed quarterly</div></div></div>
       <div class="two-mini">
         <div class="mini">
@@ -4071,32 +4124,8 @@ table.vt tr.click:hover td{background:var(--surface2)}
         <div class="edu-sub">Practical guides for NYC co-op and condo board members — understand your obligations, reduce costs, and make informed decisions.</div>
       </div>
 
-      <!-- Featured Guide -->
-      <div class="edu-featured">
-        <div class="edu-feat-left">
-          <div class="edu-feat-badge">Featured Guide</div>
-          <div class="edu-feat-title">Local Law 97: What Every Board Needs to Know</div>
-          <div class="edu-feat-desc">
-            NYC's carbon emissions law caps buildings over 25,000 sq ft. This guide breaks down the penalty structure,
-            compliance options, and cost-effective strategies boards are using — from RECs to heat pump conversions.
-          </div>
-          <a class="edu-feat-link" onclick="openGuide('ll97')">Read the Full Guide →</a>
-        </div>
-        <div class="edu-feat-stats">
-          <div class="edu-feat-stat">
-            <div class="edu-feat-stat-num">$268</div>
-            <div class="edu-feat-stat-lbl">Per ton CO₂ penalty</div>
-          </div>
-          <div class="edu-feat-stat">
-            <div class="edu-feat-stat-num">~$31K</div>
-            <div class="edu-feat-stat-lbl">Avg. annual penalty</div>
-          </div>
-          <div class="edu-feat-stat">
-            <div class="edu-feat-stat-num">84%</div>
-            <div class="edu-feat-stat-lbl">Of boards unaware</div>
-          </div>
-        </div>
-      </div>
+      <!-- Featured Guide — dynamically rotated based on most urgent deadline -->
+      <div class="edu-featured" id="eduFeatured"></div>
 
       <!-- Category Filters -->
       <div class="edu-pills">
@@ -4108,7 +4137,7 @@ table.vt tr.click:hover td{background:var(--surface2)}
       <!-- Guide Cards Grid -->
       <div class="edu-grid" id="eduGrid">
 
-        <div class="edu-card" data-cat="compliance" onclick="openGuide('fisp')">
+        <div class="edu-card" id="eduCard-fisp" data-cat="compliance" onclick="openGuide('fisp')">
           <div class="edu-card-icon">🏗</div>
           <div class="edu-card-tag compliance">Compliance</div>
           <div class="edu-card-title">Local Law 11 — FISP Facade Inspections</div>
@@ -4116,7 +4145,7 @@ table.vt tr.click:hover td{background:var(--surface2)}
           <div class="edu-card-meta"><span class="read-time">8 min read</span><span>·</span><span>Updated Jan 2026</span></div>
         </div>
 
-        <div class="edu-card" data-cat="compliance" onclick="openGuide('ll97')">
+        <div class="edu-card" id="eduCard-ll97" data-cat="compliance" onclick="openGuide('ll97')">
           <div class="edu-card-icon">🌿</div>
           <div class="edu-card-tag compliance">Compliance</div>
           <div class="edu-card-title">Local Law 97 — Carbon Emissions Caps</div>
@@ -4124,7 +4153,7 @@ table.vt tr.click:hover td{background:var(--surface2)}
           <div class="edu-card-meta"><span class="read-time">12 min read</span><span>·</span><span>Updated Feb 2026</span></div>
         </div>
 
-        <div class="edu-card" data-cat="compliance" onclick="openGuide('ll87')">
+        <div class="edu-card" id="eduCard-ll87" data-cat="compliance" onclick="openGuide('ll87')">
           <div class="edu-card-icon">⚡</div>
           <div class="edu-card-tag compliance">Compliance</div>
           <div class="edu-card-title">Local Law 87 — Energy Audits</div>
@@ -4132,7 +4161,7 @@ table.vt tr.click:hover td{background:var(--surface2)}
           <div class="edu-card-meta"><span class="read-time">6 min read</span><span>·</span><span>Updated Dec 2025</span></div>
         </div>
 
-        <div class="edu-card" data-cat="compliance" onclick="openGuide('ll152')">
+        <div class="edu-card" id="eduCard-ll152" data-cat="compliance" onclick="openGuide('ll152')">
           <div class="edu-card-icon">🔧</div>
           <div class="edu-card-tag compliance">Compliance</div>
           <div class="edu-card-title">Local Law 152 — Gas Pipe Inspections</div>
@@ -4140,7 +4169,7 @@ table.vt tr.click:hover td{background:var(--surface2)}
           <div class="edu-card-meta"><span class="read-time">5 min read</span><span>·</span><span>Updated Nov 2025</span></div>
         </div>
 
-        <div class="edu-card" data-cat="compliance" onclick="openGuide('elevator')">
+        <div class="edu-card" id="eduCard-elevator" data-cat="compliance" onclick="openGuide('elevator')">
           <div class="edu-card-icon">🛗</div>
           <div class="edu-card-tag compliance">Compliance</div>
           <div class="edu-card-title">Elevator Inspections & Maintenance</div>
@@ -4148,7 +4177,7 @@ table.vt tr.click:hover td{background:var(--surface2)}
           <div class="edu-card-meta"><span class="read-time">8 min read</span><span>·</span><span>Updated Jan 2026</span></div>
         </div>
 
-        <div class="edu-card" data-cat="financial" onclick="openGuide('bidding')">
+        <div class="edu-card" id="eduCard-bidding" data-cat="financial" onclick="openGuide('bidding')">
           <div class="edu-card-icon">📊</div>
           <div class="edu-card-tag financial">Financial</div>
           <div class="edu-card-title">Competitive Bidding — How to Save 20–40%</div>
@@ -4156,7 +4185,7 @@ table.vt tr.click:hover td{background:var(--surface2)}
           <div class="edu-card-meta"><span class="read-time">10 min read</span><span>·</span><span>Updated Jan 2026</span></div>
         </div>
 
-        <div class="edu-card" data-cat="financial" onclick="openGuide('tax')">
+        <div class="edu-card" id="eduCard-tax" data-cat="financial" onclick="openGuide('tax')">
           <div class="edu-card-icon">🏛</div>
           <div class="edu-card-tag financial">Financial</div>
           <div class="edu-card-title">Tax Assessments & Certiorari</div>
@@ -4164,7 +4193,7 @@ table.vt tr.click:hover td{background:var(--surface2)}
           <div class="edu-card-meta"><span class="read-time">9 min read</span><span>·</span><span>Updated Feb 2026</span></div>
         </div>
 
-        <div class="edu-card" data-cat="financial" onclick="openGuide('contracts')">
+        <div class="edu-card" id="eduCard-contracts" data-cat="financial" onclick="openGuide('contracts')">
           <div class="edu-card-icon">📋</div>
           <div class="edu-card-tag financial">Financial</div>
           <div class="edu-card-title">Vendor Contracts — What to Look For</div>
@@ -4912,6 +4941,142 @@ function filterEduGuides(cat, el) {
     card.style.display = (cat === 'all' || card.dataset.cat === cat) ? '' : 'none';
   });
 }
+
+// ── Sidebar scroll-to-section + scroll spy ─────────────────────────
+function scrollToSection(sectionId, navEl) {
+  var el = document.getElementById(sectionId);
+  if (!el) return;
+  el.scrollIntoView({behavior:'smooth', block:'start'});
+  document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active'); });
+  if (navEl) navEl.classList.add('active');
+}
+
+(function initScrollSpy() {
+  var sections = ['dashboardTop','vendorSection','bidRequestsSection','complianceSection','contractsSection','buildingRecord','educationSection'];
+  var ticking = false;
+  window.addEventListener('scroll', function() {
+    if (!ticking) {
+      window.requestAnimationFrame(function() {
+        var scrollY = window.scrollY + 120;
+        var activeId = 'dashboardTop';
+        sections.forEach(function(id) {
+          var el = document.getElementById(id);
+          if (el && el.offsetTop <= scrollY) activeId = id;
+        });
+        document.querySelectorAll('.nav-item[data-section]').forEach(function(n) {
+          n.classList.toggle('active', n.dataset.section === activeId);
+        });
+        ticking = false;
+      });
+      ticking = true;
+    }
+  });
+})();
+
+// ── Education: building-relevance indicators ─────────────────────────
+(function markRelevantGuides() {
+  Object.keys(eduGuides).forEach(function(key) {
+    var g = eduGuides[key];
+    if (g.buildingCallout && g.buildingCallout() !== '') {
+      var card = document.getElementById('eduCard-' + key);
+      if (card) {
+        card.classList.add('edu-card-relevant');
+        var meta = card.querySelector('.edu-card-meta');
+        if (meta) {
+          var tag = document.createElement('span');
+          tag.className = 'edu-relevance-tag';
+          tag.innerHTML = '● Relevant to your building';
+          meta.appendChild(tag);
+        }
+      }
+    }
+  });
+})();
+
+// ── Education: dynamic featured guide rotation ───────────────────────
+(function rotateFeaturedGuide() {
+  var featuredData = {
+    fisp: {title:'Local Law 11 — FISP Facade Inspections',desc:'NYC requires facade inspections every 5 years. Learn who to hire, expected costs, and how to avoid the most common — and expensive — mistakes.',stats:[{num:'$14K–$22K',lbl:'Typical inspection cost'},{num:'$1,000/mo',lbl:'Penalty for late filing'},{num:'5 years',lbl:'Inspection cycle'}]},
+    ll97: {title:'Local Law 97: What Every Board Needs to Know',desc:'NYC\\'s carbon emissions law caps buildings over 25,000 sq ft. This guide breaks down the penalty structure, compliance options, and cost-effective strategies boards are using.',stats:[{num:'$268',lbl:'Per ton CO\\u2082 penalty'},{num:'~$31K',lbl:'Avg. annual penalty'},{num:'84%',lbl:'Of boards unaware'}]},
+    ll87: {title:'Local Law 87 — Energy Audits & Retro-Commissioning',desc:'Buildings over 50,000 sq ft must conduct energy audits every 10 years. Understand scoping, auditor selection, and how results connect to LL97 compliance.',stats:[{num:'$3K–$5K',lbl:'Annual fine if missed'},{num:'10 years',lbl:'Audit cycle'},{num:'15–25%',lbl:'Typical energy savings'}]},
+    ll152: {title:'Local Law 152 — Gas Pipe Inspections',desc:'All exposed gas piping must be inspected every 4 years. A straightforward requirement, but missed deadlines can escalate to gas shutoffs affecting every unit.',stats:[{num:'4 years',lbl:'Inspection cycle'},{num:'$10K+',lbl:'Violation penalties'},{num:'1–2 days',lbl:'Typical inspection time'}]},
+    elevator: {title:'Elevator Inspections & Maintenance',desc:'Annual inspections, 5-year tests, and the most common vendor category where buildings overpay. Learn when and how to competitively bid your elevator contract.',stats:[{num:'20–35%',lbl:'Savings from rebid'},{num:'8+ years',lbl:'Avg time since last bid'},{num:'#1',lbl:'Over-charged category'}]}
+  };
+  // Find the compliance item with fewest months_away
+  var urgent = null;
+  var urgentKey = 'll97'; // default fallback
+  complianceItems.forEach(function(c) {
+    if (!urgent || c.months_away < urgent.months_away) {
+      urgent = c;
+    }
+  });
+  if (urgent) {
+    var lawLower = urgent.law.toLowerCase();
+    if (lawLower.includes('11') || lawLower.includes('fisp')) urgentKey = 'fisp';
+    else if (lawLower.includes('97') || lawLower.includes('carbon')) urgentKey = 'll97';
+    else if (lawLower.includes('87') || lawLower.includes('energy')) urgentKey = 'll87';
+    else if (lawLower.includes('152') || lawLower.includes('gas')) urgentKey = 'll152';
+    else if (lawLower.includes('elevator')) urgentKey = 'elevator';
+  }
+  // Also check expiring contracts
+  var urgentContract = contractItems.find(function(c) { return c.status === 'expired' || c.status === 'expiring_soon'; });
+  if (urgentContract && (!urgent || urgent.months_away > 3)) {
+    urgentKey = 'contracts';
+    featuredData.contracts = {title:'Vendor Contracts — What to Look For',desc:'You have expiring or expired contracts that need attention. Understand auto-renewals, escalation caps, and termination provisions before they cost you.',stats:[{num:contractItems.filter(function(c){return c.status==='expired'}).length.toString(),lbl:'Expired contracts'},{num:contractItems.filter(function(c){return c.status==='expiring_soon'}).length.toString(),lbl:'Expiring soon'},{num:'60–90 days',lbl:'Typical cancel notice'}]};
+  }
+  var fd = featuredData[urgentKey];
+  if (!fd) { urgentKey = 'll97'; fd = featuredData.ll97; }
+  var container = document.getElementById('eduFeatured');
+  if (!container || !fd) return;
+  container.innerHTML = '<div class="edu-feat-left">' +
+    '<div class="edu-feat-badge">Featured Guide' + (urgent ? ' · Most Urgent Deadline' : '') + '</div>' +
+    '<div class="edu-feat-title">' + fd.title + '</div>' +
+    '<div class="edu-feat-desc">' + fd.desc + '</div>' +
+    '<a class="edu-feat-link" onclick="openGuide(\\'' + urgentKey + '\\')">Read the Full Guide \\u2192</a>' +
+    '</div><div class="edu-feat-stats">' +
+    fd.stats.map(function(s){ return '<div class="edu-feat-stat"><div class="edu-feat-stat-num">' + s.num + '</div><div class="edu-feat-stat-lbl">' + s.lbl + '</div></div>'; }).join('') +
+    '</div>';
+})();
+
+// ── Vendor Panel: enriched with more context ────────────────────────
+// Override the vendor branch to add related contract + guide links
+var _origOpenPanel = openPanel;
+openPanel = function(type, idx) {
+  _origOpenPanel(type, idx);
+  if (type === 'vendor') {
+    var bm = vendorBenchmarks[idx];
+    if (!bm || !bm.per_unit) return;
+    var content = document.getElementById('panelContent');
+    // Find related contract
+    var relatedContract = contractItems.find(function(c) { return c.category === bm.category; });
+    // Find related education guide
+    var guideMap = {ELEVATOR_MAINTENANCE:'elevator',CLEANING:'bidding',PLUMBING:'bidding',PROPERTY_MANAGEMENT:'bidding',PEST_CONTROL:'bidding',EXTERMINATING:'bidding',INSURANCE:'bidding',SUPERINTENDENT:'bidding',SECURITY:'bidding'};
+    var guideKey = guideMap[bm.category] || 'bidding';
+    // Add enrichment section at the bottom
+    var enrichHTML = '<div style="margin-top:18px;border-top:1px solid var(--border);padding-top:14px">';
+    enrichHTML += '<div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:10px">Additional Context</div>';
+    // Spend context
+    enrichHTML += '<div style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:12px;margin-bottom:8px;font-size:12px;color:var(--dim);line-height:1.6">';
+    enrichHTML += '<strong>Peer comparison:</strong> Among ' + {{ benchmarks.peer_group.peer_building_count }} + ' comparable {{ benchmarks.peer_group.era }} buildings, the median spend for ' + bm.category_label + ' is <strong>$' + (bm.network_median * buildingUnits).toLocaleString() + '/yr</strong> ($' + bm.network_median + '/unit). ';
+    enrichHTML += 'Your spend of $' + (bm.annual_spend||0).toLocaleString() + '/yr places you at the <strong>' + bm.percentile + 'th percentile</strong>.';
+    if (bm.last_bid_year) {
+      var yearsSince = new Date().getFullYear() - bm.last_bid_year;
+      enrichHTML += ' Last competitive bid was <strong>' + yearsSince + ' year' + (yearsSince !== 1 ? 's' : '') + ' ago</strong>.';
+    }
+    enrichHTML += '</div>';
+    // Related contract link
+    if (relatedContract) {
+      var rcIdx = contractItems.indexOf(relatedContract);
+      enrichHTML += '<div style="display:flex;gap:8px;margin-bottom:8px">';
+      enrichHTML += '<button class="btn-full-out" style="flex:1;font-size:11px" onclick="closePanel();setTimeout(function(){openPanel(\\'contract\\',' + rcIdx + ')},300)">View Related Contract (' + relatedContract.vendor_name + ') \\u2192</button>';
+      enrichHTML += '</div>';
+    }
+    // Education guide link
+    enrichHTML += '<button class="btn-full-out" style="width:100%;font-size:11px" onclick="closePanel();setTimeout(function(){openGuide(\\'' + guideKey + '\\')},300)">Read: ' + (eduGuides[guideKey] ? eduGuides[guideKey].title : 'Competitive Bidding Guide') + ' \\u2192</button>';
+    enrichHTML += '</div>';
+    content.innerHTML += enrichHTML;
+  }
+};
 
 </script>
 
