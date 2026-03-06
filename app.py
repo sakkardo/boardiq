@@ -3649,6 +3649,23 @@ table.vt tr.click:hover td{background:var(--surface2)}
 .pill-red{background:var(--red-light);color:var(--red);border:1px solid var(--red-border)}
 .pill-yellow{background:var(--yellow-light);color:var(--yellow);border:1px solid var(--yellow-border)}
 .pill-green{background:var(--green-light);color:var(--green);border:1px solid var(--green-border)}
+/* ── Vendor Context Panel ── */
+.vctx{max-height:0;overflow:hidden;transition:max-height .35s ease;background:var(--surface2)}
+.vctx.open{max-height:600px}
+.vctx-inner{padding:16px 18px 18px}
+.vctx-summary{font-size:13px;font-weight:600;color:var(--ink);margin-bottom:14px;line-height:1.5}
+.vctx-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.vctx-card{background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:12px 14px}
+.vctx-card-icon{font-size:14px;margin-bottom:6px}
+.vctx-card-label{font-size:9px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:6px}
+.vctx-card-text{font-size:12px;color:var(--dim);line-height:1.6}
+.vctx-toggle{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;color:var(--gold);cursor:pointer;font-weight:600;padding:3px 0;margin-top:5px;border:none;background:none;font-family:inherit}
+.vctx-toggle:hover{color:#a06e2a}
+.vctx-chevron{font-size:9px;transition:transform .25s}
+.vctx-toggle.open .vctx-chevron{transform:rotate(180deg)}
+.vctx-row td{background:transparent}
+.vctx-row:hover{background:transparent!important}
+@media(max-width:768px){.vctx-grid{grid-template-columns:1fr}}
 .savings-hdr{padding:14px 20px;border-bottom:1px solid var(--border);background:linear-gradient(135deg,#fdf6ec 0%,var(--surface) 100%)}
 .savings-lbl{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
 .savings-val{font-family:'Playfair Display',serif;font-size:32px;color:var(--gold);letter-spacing:-1px;line-height:1}
@@ -4153,8 +4170,35 @@ body.sidebar-open .sidebar-overlay{display:block}
                 {% elif status == 'yellow' %}<span class="pill pill-yellow">↑ Slightly Above</span>
                 {% else %}<span class="pill pill-green">✓ {% if pct < 40 %}Below{% else %}At{% endif %} Market</span>{% endif %}
               </div>
+              {% if bm.context %}<button class="vctx-toggle" onclick="event.stopPropagation();toggleVctx('vctx-{{ loop.index0 }}',this)">Why this benchmark? <span class="vctx-chevron">▾</span></button>{% endif %}
             </td>
           </tr>
+          {% if bm.context %}
+          <tr class="vctx-row"><td colspan="4" style="padding:0;border:none">
+            <div class="vctx" id="vctx-{{ loop.index0 }}">
+              <div class="vctx-inner">
+                <div class="vctx-summary">{{ bm.context.summary }}</div>
+                <div class="vctx-grid">
+                  <div class="vctx-card">
+                    <div class="vctx-card-icon">🏢</div>
+                    <div class="vctx-card-label">Building Profile</div>
+                    <div class="vctx-card-text">{{ bm.context.building_note }}</div>
+                  </div>
+                  <div class="vctx-card">
+                    <div class="vctx-card-icon">📅</div>
+                    <div class="vctx-card-label">Contract Age</div>
+                    <div class="vctx-card-text">{{ bm.context.contract_note }}</div>
+                  </div>
+                  <div class="vctx-card">
+                    <div class="vctx-card-icon">📊</div>
+                    <div class="vctx-card-label">Peer Comparison</div>
+                    <div class="vctx-card-text">{{ bm.context.peer_note }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </td></tr>
+          {% endif %}
           {% endif %}
           {% endfor %}
         </tbody>
@@ -4659,6 +4703,20 @@ async function closeBidRequest(requestId, btn) {
     if (d.ok) { location.reload(); }
     else { alert(d.error || 'Error'); if (btn) btn.disabled = false; }
   } catch(e) { alert('Network error'); if (btn) btn.disabled = false; }
+}
+
+function toggleVctx(id, btn) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const wasOpen = el.classList.contains('open');
+  // Close all open context panels
+  document.querySelectorAll('.vctx.open').forEach(v => v.classList.remove('open'));
+  document.querySelectorAll('.vctx-toggle.open').forEach(b => b.classList.remove('open'));
+  // Toggle the clicked one (if it wasn't already open)
+  if (!wasOpen) {
+    el.classList.add('open');
+    if (btn) btn.classList.add('open');
+  }
 }
 
 function openPanel(type, idx) {

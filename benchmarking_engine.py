@@ -382,6 +382,167 @@ def get_status(percentile: int) -> dict:
                 "color": "green", "icon": "✓", "action_recommended": False}
 
 
+# ── Category-specific market context ──────────────────────────────────────────
+CATEGORY_MARKET_CONTEXT = {
+    "ELEVATOR_MAINTENANCE": {
+        "inflation": "Elevator maintenance costs in NYC have risen 3–5% annually since 2020, driven by labor shortages and parts supply constraints.",
+        "scope_note": "Full-service contracts (parts + labor + callbacks) typically run 25–40% more than maintenance-only agreements.",
+    },
+    "INSURANCE": {
+        "inflation": "NYC building insurance premiums have increased 8–15% annually since 2022, with coastal and older buildings seeing the steepest hikes.",
+        "scope_note": "Premiums vary significantly by construction type, claims history, and coverage limits. Buildings with recent claims often pay a surcharge for 3–5 years.",
+    },
+    "CLEANING": {
+        "inflation": "Janitorial costs have risen 4–6% annually in NYC, largely due to minimum wage increases and staffing competition.",
+        "scope_note": "Costs depend heavily on whether the building has a doorman, the number of common area floors, and cleaning frequency (daily vs. 3x/week).",
+    },
+    "BOILER_MAINTENANCE": {
+        "inflation": "Boiler maintenance costs have been relatively stable, rising 2–4% annually, though emergency repair callouts have increased.",
+        "scope_note": "Steam systems (common in pre-war buildings) are more expensive to maintain than hot water systems. Dual-boiler setups add cost.",
+    },
+    "EXTERMINATING": {
+        "inflation": "Pest control pricing has remained fairly flat at 2–3% annual increases in the NYC market.",
+        "scope_note": "Monthly service contracts cost more than quarterly but provide better coverage. Older buildings with more entry points typically need more frequent treatment.",
+    },
+    "WATER_TREATMENT": {
+        "inflation": "Water treatment costs have risen 5–7% annually since NYC strengthened Legionella testing requirements in 2020.",
+        "scope_note": "Buildings with cooling towers require more frequent testing and treatment. Compliance requirements under Local Law 77 drive minimum service levels.",
+    },
+    "WASTE_REMOVAL": {
+        "inflation": "Waste removal costs in NYC have increased 3–5% annually, with recycling compliance adding incremental costs.",
+        "scope_note": "Pricing depends on pickup frequency, number of waste streams (trash, recycling, organics), and whether the building has a compactor.",
+    },
+    "MANAGEMENT_FEE": {
+        "inflation": "Management fees have risen 3–5% annually in NYC, with a trend toward higher fees for buildings requiring more hands-on oversight.",
+        "scope_note": "Fees vary based on services included (bookkeeping, violation management, capital project oversight) and whether staff supervision is bundled.",
+    },
+    "SECURITY": {
+        "inflation": "Security and doorman costs have risen 5–8% annually, driven by union contract increases and 24/7 coverage demands.",
+        "scope_note": "The biggest cost driver is hours of coverage — a 24/7 lobby attendant costs roughly 3x more than a 12-hour daytime-only post.",
+    },
+    "PLUMBING_REPAIRS": {
+        "inflation": "Plumbing costs have risen 4–6% annually in NYC due to aging infrastructure and licensed plumber shortages.",
+        "scope_note": "Pre-war buildings with original cast iron or galvanized risers typically incur higher ongoing costs than buildings with updated copper or PVC systems.",
+    },
+    "ELECTRICAL": {
+        "inflation": "Electrical maintenance costs have risen 3–5% annually, with older buildings facing higher costs for panel upgrades and code compliance.",
+        "scope_note": "Buildings with original knob-and-tube or aluminum wiring face higher maintenance costs and may need system upgrades.",
+    },
+    "FIRE_SAFETY": {
+        "inflation": "Fire safety costs have risen 4–6% annually as NYC has tightened inspection and testing requirements.",
+        "scope_note": "Buildings with sprinkler systems, standpipes, and modern alarm panels have higher baseline costs but better compliance profiles.",
+    },
+    "HVAC_MAINTENANCE": {
+        "inflation": "HVAC maintenance costs have risen 3–5% annually, with energy efficiency retrofits adding one-time costs that reduce long-term spend.",
+        "scope_note": "Steam heating systems (common in pre-war buildings) are typically more expensive to maintain than forced air or heat pump systems.",
+    },
+    "PAINTING": {
+        "inflation": "Painting costs have risen 3–4% annually in NYC, with lead paint abatement in pre-war buildings adding significant cost.",
+        "scope_note": "Common area painting frequency (every 3–5 years) and hallway square footage are the primary cost drivers.",
+    },
+    "LANDSCAPING": {
+        "inflation": "Landscaping costs have risen 2–4% annually, remaining one of the more stable building expense categories.",
+        "scope_note": "Costs vary widely based on whether the building has outdoor common areas, a garden, or roof deck requiring maintenance.",
+    },
+    "ROOFING": {
+        "inflation": "Roofing costs have risen 5–8% annually due to material cost increases and stricter waterproofing standards.",
+        "scope_note": "Flat roofs (typical in NYC) require more frequent inspection and patching than pitched roofs. Membrane age is the biggest cost predictor.",
+    },
+    "SUPPLIES": {
+        "inflation": "Building supply costs have risen 3–5% annually, tracking general inflation.",
+        "scope_note": "Bulk purchasing and vendor consolidation can reduce costs 10–15%. Buildings with on-site storage capacity have more flexibility.",
+    },
+}
+
+
+def generate_vendor_context(category: str, building_spend: float, peer_median: float,
+                             percentile: int, units: int, is_prewar: bool,
+                             peer_group: dict, last_bid_year=None,
+                             factors=None) -> dict:
+    """Generate layered context explaining why a vendor benchmark is high, low, or at market."""
+    from datetime import datetime
+    current_year = datetime.now().year
+
+    # ── Layer A: Building Characteristics ──
+    era_label = "pre-war" if is_prewar else "post-war"
+    size_label = peer_group.get("size_label", f"{units} units")
+    building_notes = []
+
+    if is_prewar:
+        building_notes.append(f"As a pre-war building (built before 1945), older infrastructure often drives higher {BASELINE_BENCHMARKS.get(category, {}).get('description', 'service').lower()} costs.")
+    if units >= 100:
+        building_notes.append(f"At {units} units, your building is on the larger end, which can increase scope and baseline costs.")
+    elif units <= 50:
+        building_notes.append(f"Smaller buildings ({units} units) sometimes pay more per unit because fixed costs are spread across fewer residents.")
+
+    if factors:
+        building_notes.append(f"Key factors that affect this category: {', '.join(factors[:3]).lower()}.")
+
+    building_note = " ".join(building_notes) if building_notes else f"Your building profile ({units} units, {era_label}) is typical for this peer group."
+
+    # ── Layer B: Contract Age & Market Timing ──
+    market_ctx = CATEGORY_MARKET_CONTEXT.get(category, {})
+    contract_notes = []
+
+    if last_bid_year:
+        years_ago = current_year - int(last_bid_year)
+        if years_ago >= 5:
+            contract_notes.append(f"This contract was last competitively bid in {last_bid_year} — {years_ago} years ago. Contracts this old frequently carry pricing that no longer reflects current market conditions.")
+        elif years_ago >= 3:
+            contract_notes.append(f"Last bid in {last_bid_year} ({years_ago} years ago). Market rates may have shifted since then.")
+        else:
+            contract_notes.append(f"This contract was recently bid in {last_bid_year}, so pricing should reflect current market rates.")
+    else:
+        contract_notes.append("No competitive bid date on file for this contract.")
+
+    if market_ctx.get("inflation"):
+        contract_notes.append(market_ctx["inflation"])
+
+    contract_note = " ".join(contract_notes)
+
+    # ── Layer C: Peer Comparison Detail ──
+    delta = round(((building_spend - peer_median) / peer_median) * 100) if peer_median > 0 else 0
+    peer_count = peer_group.get("peer_building_count", 0)
+    cluster_label = peer_group.get("cluster_label", "your area")
+
+    if abs(delta) <= 10:
+        position_note = f"Your per-unit cost is within 10% of the peer median — this is in line with comparable buildings."
+    elif delta > 0:
+        position_note = f"Your per-unit cost is {delta}% above the peer median."
+        if market_ctx.get("scope_note"):
+            position_note += f" {market_ctx['scope_note']}"
+    else:
+        position_note = f"Your per-unit cost is {abs(delta)}% below the peer median — this is competitive pricing for your peer group."
+
+    peer_note = (
+        f"Compared to {peer_count} {era_label} buildings with {size_label} in {cluster_label}, "
+        f"the median cost is ${peer_median:,.0f}/unit. {position_note}"
+    )
+
+    # ── Summary headline ──
+    summary_parts = []
+    if last_bid_year and (current_year - int(last_bid_year)) >= 5:
+        summary_parts.append(f"contract last bid {current_year - int(last_bid_year)} years ago")
+    if is_prewar:
+        summary_parts.append("pre-war building")
+    if abs(delta) > 10:
+        direction = "above" if delta > 0 else "below"
+        summary_parts.append(f"{abs(delta)}% {direction} {peer_count} similar buildings")
+    elif abs(delta) <= 10:
+        summary_parts.append(f"in line with {peer_count} similar buildings")
+
+    summary = ". ".join(s.capitalize() for s in summary_parts) + "." if summary_parts else "Pricing is within expected range for your building profile."
+
+    return {
+        "summary": summary,
+        "building_note": building_note,
+        "contract_note": contract_note,
+        "peer_note": peer_note,
+        "delta_pct": delta,
+        "scope_note": market_ctx.get("scope_note", ""),
+    }
+
+
 def benchmark_building(vendor_summary: dict, units: int = 100,
                         last_bid_years: Optional[dict] = None,
                         neighborhood: str = "Upper West Side",
@@ -463,6 +624,19 @@ def benchmark_building(vendor_summary: dict, units: int = 100,
             from datetime import datetime
             years_since_bid = datetime.now().year - int(last_bid_year)
 
+        # Generate context explanation for this vendor
+        context = generate_vendor_context(
+            category=category,
+            building_spend=building_spend,
+            peer_median=p50,
+            percentile=percentile,
+            units=units,
+            is_prewar=is_prewar,
+            peer_group=peer_group,
+            last_bid_year=last_bid_year,
+            factors=baseline.get("factors"),
+        )
+
         results.append({
             "category": category,
             "category_label": baseline["description"],
@@ -487,6 +661,7 @@ def benchmark_building(vendor_summary: dict, units: int = 100,
             "factors": baseline["factors"],
             "years_since_bid": years_since_bid,
             "last_bid_year": last_bid_year,
+            "context": context,
         })
 
     # Sort: above market first, then by savings
