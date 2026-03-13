@@ -1346,6 +1346,7 @@ def request_access():
 
         resend_key = os.environ.get("RESEND_API_KEY")
         if resend_key:
+            app.logger.info(f"[ACCESS] Sending email via Resend (key starts with {resend_key[:8]}...)")
             payload = json.dumps({
                 "from": "BoardIQ <onboarding@resend.dev>",
                 "to": ["jake.sirotkin@gmail.com"],
@@ -1361,9 +1362,13 @@ def request_access():
                 },
             )
             try:
-                urllib.request.urlopen(req, timeout=10)
+                resp = urllib.request.urlopen(req, timeout=10)
+                resp_body = resp.read().decode()
+                app.logger.info(f"[ACCESS] Resend response: {resp.status} {resp_body}")
             except Exception as e:
-                app.logger.error(f"Email send failed: {e}")
+                app.logger.error(f"[ACCESS] Email send failed: {e}")
+        else:
+            app.logger.error("[ACCESS] RESEND_API_KEY not set")
     except Exception as e:
         app.logger.error(f"Request access error: {e}")
 
