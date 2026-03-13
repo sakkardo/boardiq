@@ -1328,34 +1328,37 @@ def logout():
 
 @app.route("/request-access", methods=["POST"])
 def request_access():
-    name = request.form.get("name", "").strip()
-    email = request.form.get("email", "").strip()
-    if not name or not email:
-        return redirect(url_for("login"))
+    try:
+        name = request.form.get("name", "").strip()
+        email = request.form.get("email", "").strip()
+        if not name or not email:
+            return redirect(url_for("login"))
 
-    credentials_table = "\n".join(
-        f"  {u_email}  /  {u['password']}  ({u.get('role','board')})"
-        for u_email, u in DEMO_USERS.items()
-    )
-    body = (
-        f"New BoardIQ demo access request:\n\n"
-        f"Name: {name}\n"
-        f"Email: {email}\n\n"
-        f"--- Demo Credentials Reference ---\n{credentials_table}\n"
-    )
+        credentials_table = "\n".join(
+            f"  {u_email}  /  {u.get('password','')}  ({u.get('role','board')})"
+            for u_email, u in DEMO_USERS.items()
+        )
+        body = (
+            f"New BoardIQ demo access request:\n\n"
+            f"Name: {name}\n"
+            f"Email: {email}\n\n"
+            f"--- Demo Credentials Reference ---\n{credentials_table}\n"
+        )
 
-    gmail_pw = os.environ.get("GMAIL_APP_PASSWORD")
-    if gmail_pw:
-        msg = MIMEText(body)
-        msg["Subject"] = f"BoardIQ Demo Request from {name}"
-        msg["From"] = "jake.sirotkin@gmail.com"
-        msg["To"] = "jake.sirotkin@gmail.com"
-        try:
-            with smtplib.SMTP_SSL("smtp.gmail.com", 465) as srv:
-                srv.login("jake.sirotkin@gmail.com", gmail_pw)
-                srv.send_message(msg)
-        except Exception:
-            pass  # fail silently, don't expose errors to requester
+        gmail_pw = os.environ.get("GMAIL_APP_PASSWORD")
+        if gmail_pw:
+            msg = MIMEText(body)
+            msg["Subject"] = f"BoardIQ Demo Request from {name}"
+            msg["From"] = "jake.sirotkin@gmail.com"
+            msg["To"] = "jake.sirotkin@gmail.com"
+            try:
+                with smtplib.SMTP_SSL("smtp.gmail.com", 465) as srv:
+                    srv.login("jake.sirotkin@gmail.com", gmail_pw)
+                    srv.send_message(msg)
+            except Exception as e:
+                app.logger.error(f"Email send failed: {e}")
+    except Exception as e:
+        app.logger.error(f"Request access error: {e}")
 
     return redirect(url_for("login", requested=1))
 
