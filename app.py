@@ -23,8 +23,7 @@ import json
 import csv
 import io
 import re
-import smtplib
-from email.mime.text import MIMEText
+import urllib.request
 from datetime import datetime
 from functools import wraps
 
@@ -1345,16 +1344,24 @@ def request_access():
             f"--- Demo Credentials Reference ---\n{credentials_table}\n"
         )
 
-        gmail_pw = os.environ.get("GMAIL_APP_PASSWORD")
-        if gmail_pw:
-            msg = MIMEText(body)
-            msg["Subject"] = f"BoardIQ Demo Request from {name}"
-            msg["From"] = "jake.sirotkin@gmail.com"
-            msg["To"] = "jake.sirotkin@gmail.com"
+        resend_key = os.environ.get("RESEND_API_KEY")
+        if resend_key:
+            payload = json.dumps({
+                "from": "BoardIQ <onboarding@resend.dev>",
+                "to": ["jake.sirotkin@gmail.com"],
+                "subject": f"BoardIQ Demo Request from {name}",
+                "text": body,
+            }).encode()
+            req = urllib.request.Request(
+                "https://api.resend.com/emails",
+                data=payload,
+                headers={
+                    "Authorization": f"Bearer {resend_key}",
+                    "Content-Type": "application/json",
+                },
+            )
             try:
-                with smtplib.SMTP_SSL("smtp.gmail.com", 465) as srv:
-                    srv.login("jake.sirotkin@gmail.com", gmail_pw)
-                    srv.send_message(msg)
+                urllib.request.urlopen(req, timeout=10)
             except Exception as e:
                 app.logger.error(f"Email send failed: {e}")
     except Exception as e:
