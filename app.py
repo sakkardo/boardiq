@@ -3313,12 +3313,8 @@ body{background:var(--bg);font-family:'Plus Jakarta Sans',sans-serif;color:var(-
 .login-btn{width:100%;background:var(--ink);color:var(--white);font-family:inherit;font-size:14px;font-weight:600;padding:13px;border:none;border-radius:6px;cursor:pointer;margin-top:4px;transition:background 0.15s}
 .login-btn:hover{background:#1a1714}
 .error-msg{background:#fdecea;color:var(--red);border:1px solid #f0b8b3;border-radius:6px;padding:10px 14px;font-size:13px;margin-bottom:14px}
-.demo-accounts{margin-top:18px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px 16px;font-size:11.5px;color:var(--ink-muted);line-height:1.7}
-.demo-accounts strong{color:var(--ink);font-weight:600}
-.demo-accounts .role-tag{display:inline-block;font-size:9px;letter-spacing:0.8px;text-transform:uppercase;font-weight:700;padding:1px 6px;border-radius:3px;margin-left:4px}
-.demo-accounts .role-board{background:var(--gold-light);color:var(--gold)}
-.demo-accounts .role-admin{background:var(--green-light);color:var(--green)}
-.demo-accounts .role-vendor{background:#e8e2f0;color:#6b4d9e}
+.request-access-btn{display:block;text-align:center;margin-top:18px;padding:12px 20px;background:var(--bg);border:1.5px solid var(--gold);border-radius:8px;color:var(--gold);font-size:13px;font-weight:600;text-decoration:none;letter-spacing:0.3px;transition:all 0.2s}
+.request-access-btn:hover{background:var(--gold);color:#fff}
 .login-card .vendor-link{display:block;text-align:center;margin-top:14px;font-size:12px;color:var(--ink-muted)}
 .login-card .vendor-link a{color:var(--gold);font-weight:600;text-decoration:none}
 .login-card .vendor-link a:hover{text-decoration:underline}
@@ -3436,12 +3432,7 @@ body{background:var(--bg);font-family:'Plus Jakarta Sans',sans-serif;color:var(-
         <input type="password" name="password" placeholder="••••••••" required>
         <button type="submit" class="login-btn">Sign In &rarr;</button>
       </form>
-      <div class="demo-accounts">
-        <strong>Demo Accounts</strong><br>
-        board@130e18.com &middot; demo1234 <span class="role-tag role-board">Board</span><br>
-        admin@boardiq.com &middot; admin <span class="role-tag role-admin">Admin</span><br>
-        vendor@schindler.com &middot; demo1234 <span class="role-tag role-vendor">Vendor</span>
-      </div>
+      <a href="mailto:jake.sirotkin@gmail.com?subject=BoardIQ%20Demo%20Access%20Request&body=Hi%20Jake%2C%0A%0AI%27d%20like%20to%20request%20access%20to%20the%20BoardIQ%20demo.%0A%0AMy%20name%3A%20%0AMy%20email%3A%20%0A%0AThanks!" class="request-access-btn">Request Demo Access &rarr;</a>
       <div class="vendor-link">Are you a vendor? <a href="/vendor/register">Join the Vendor Network &rarr;</a></div>
     </div>
   </div>
