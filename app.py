@@ -23,6 +23,8 @@ import json
 import csv
 import io
 import re
+import smtplib
+from email.mime.text import MIMEText
 from datetime import datetime
 from functools import wraps
 
@@ -1312,6 +1314,7 @@ def login():
 
     return render_template_string(LOGIN_HTML,
         error=error,
+        requested=request.args.get("requested"),
         total_buildings=total_buildings,
         total_units=f"{total_units:,}",
         total_vendor_spend=total_vendor_spend,
@@ -1322,6 +1325,39 @@ def login():
 def logout():
     session.clear()
     return redirect(url_for("login"))
+
+@app.route("/request-access", methods=["POST"])
+def request_access():
+    name = request.form.get("name", "").strip()
+    email = request.form.get("email", "").strip()
+    if not name or not email:
+        return redirect(url_for("login"))
+
+    credentials_table = "\n".join(
+        f"  {u_email}  /  {u['password']}  ({u.get('role','board')})"
+        for u_email, u in DEMO_USERS.items()
+    )
+    body = (
+        f"New BoardIQ demo access request:\n\n"
+        f"Name: {name}\n"
+        f"Email: {email}\n\n"
+        f"--- Demo Credentials Reference ---\n{credentials_table}\n"
+    )
+
+    gmail_pw = os.environ.get("GMAIL_APP_PASSWORD")
+    if gmail_pw:
+        msg = MIMEText(body)
+        msg["Subject"] = f"BoardIQ Demo Request from {name}"
+        msg["From"] = "jake.sirotkin@gmail.com"
+        msg["To"] = "jake.sirotkin@gmail.com"
+        try:
+            with smtplib.SMTP_SSL("smtp.gmail.com", 465) as srv:
+                srv.login("jake.sirotkin@gmail.com", gmail_pw)
+                srv.send_message(msg)
+        except Exception:
+            pass  # fail silently, don't expose errors to requester
+
+    return redirect(url_for("login", requested=1))
 
 @app.route("/dashboard")
 @login_required
@@ -3313,8 +3349,12 @@ body{background:var(--bg);font-family:'Plus Jakarta Sans',sans-serif;color:var(-
 .login-btn{width:100%;background:var(--ink);color:var(--white);font-family:inherit;font-size:14px;font-weight:600;padding:13px;border:none;border-radius:6px;cursor:pointer;margin-top:4px;transition:background 0.15s}
 .login-btn:hover{background:#1a1714}
 .error-msg{background:#fdecea;color:var(--red);border:1px solid #f0b8b3;border-radius:6px;padding:10px 14px;font-size:13px;margin-bottom:14px}
-.request-access-btn{display:block;text-align:center;margin-top:18px;padding:12px 20px;background:var(--bg);border:1.5px solid var(--gold);border-radius:8px;color:var(--gold);font-size:13px;font-weight:600;text-decoration:none;letter-spacing:0.3px;transition:all 0.2s}
+.request-access-section{margin-top:18px;border-top:1px solid var(--border);padding-top:16px}
+.request-label{font-size:12px;color:var(--ink-muted);text-align:center;margin-bottom:10px}
+.request-form input{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:13px;margin-bottom:8px;box-sizing:border-box}
+.request-access-btn{width:100%;background:var(--bg);border:1.5px solid var(--gold);border-radius:6px;color:var(--gold);font-family:inherit;font-size:13px;font-weight:600;padding:11px;cursor:pointer;transition:all 0.2s}
 .request-access-btn:hover{background:var(--gold);color:#fff}
+.success-msg{margin-top:18px;background:#eaf7ed;color:var(--green);border:1px solid #b5dfbd;border-radius:6px;padding:12px 14px;font-size:13px;text-align:center}
 .login-card .vendor-link{display:block;text-align:center;margin-top:14px;font-size:12px;color:var(--ink-muted)}
 .login-card .vendor-link a{color:var(--gold);font-weight:600;text-decoration:none}
 .login-card .vendor-link a:hover{text-decoration:underline}
@@ -3432,7 +3472,18 @@ body{background:var(--bg);font-family:'Plus Jakarta Sans',sans-serif;color:var(-
         <input type="password" name="password" placeholder="••••••••" required>
         <button type="submit" class="login-btn">Sign In &rarr;</button>
       </form>
-      <a href="mailto:jake.sirotkin@gmail.com?subject=BoardIQ%20Demo%20Access%20Request&body=Hi%20Jake%2C%0A%0AI%27d%20like%20to%20request%20access%20to%20the%20BoardIQ%20demo.%0A%0AMy%20name%3A%20%0AMy%20email%3A%20%0A%0AThanks!" class="request-access-btn">Request Demo Access &rarr;</a>
+      {% if requested %}
+      <div class="success-msg">Access request sent! You'll receive credentials shortly.</div>
+      {% else %}
+      <div class="request-access-section">
+        <div class="request-label">Don't have an account?</div>
+        <form method="POST" action="/request-access" class="request-form">
+          <input type="text" name="name" placeholder="Your name" required>
+          <input type="email" name="email" placeholder="Your email" required>
+          <button type="submit" class="request-access-btn">Request Demo Access &rarr;</button>
+        </form>
+      </div>
+      {% endif %}
       <div class="vendor-link">Are you a vendor? <a href="/vendor/register">Join the Vendor Network &rarr;</a></div>
     </div>
   </div>
