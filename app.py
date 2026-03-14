@@ -1348,7 +1348,7 @@ def request_access():
         if resend_key:
             app.logger.info(f"[ACCESS] Sending email via Resend (key starts with {resend_key[:8]}...)")
             payload = json.dumps({
-                "from": "BoardIQ <onboarding@resend.dev>",
+                "from": "BoardIQ <access@mybuildingiq.com>",
                 "to": ["jake.sirotkin@gmail.com"],
                 "subject": f"BoardIQ Demo Request from {name}",
                 "text": body,
