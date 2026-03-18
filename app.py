@@ -33,6 +33,7 @@ from flask import (Flask, render_template_string, request, jsonify,
                    session, redirect, url_for, flash)
 from invoice_pipeline import InvoiceProcessor, create_sample_csv, CATEGORIES
 from benchmarking_engine import benchmark_building, NETWORK_BENCHMARKS
+from yardi_import import parse_yardi_expense_report, load_portfolio_csv
 import db as boardiq_db
 
 app = Flask(__name__)
@@ -300,6 +301,7 @@ BUILDINGS_DB = {
     },
     "bbl_1009270001": {
         "id": "bbl_1009270001",
+        "yardi_property_code": "148",
         "address": "130 East 18th Street",
         "borough": "Manhattan",
         "neighborhood": "Gramercy Park",
@@ -454,6 +456,36 @@ if BBL_NORMALIZE:
 # ── Initialize database and load persisted data ─────────────────────────────
 _db_available = boardiq_db.init_db()
 _load_persisted_vendor_data()
+
+# ── Load Yardi portfolio data (real vendor expenses from expense distribution reports) ─
+YARDI_PORTFOLIO = {}   # property_code -> [vendor_dict, ...]
+def _load_yardi_portfolio():
+    """Load consolidated Yardi expense data and inject into BUILDINGS_DB."""
+    csv_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "yardi_portfolio_data.csv")
+    if not os.path.exists(csv_path):
+        print("[BoardIQ] No yardi_portfolio_data.csv found — skipping Yardi import")
+        return
+    try:
+        portfolio = load_portfolio_csv(csv_path)
+        YARDI_PORTFOLIO.update(portfolio)
+        # Inject vendor data into buildings that have a yardi_property_code
+        injected = 0
+        for bbl, bldg in BUILDINGS_DB.items():
+            pc = bldg.get("yardi_property_code")
+            if pc and pc in portfolio:
+                units = bldg.get("units", 1)
+                vendor_data = []
+                for v in portfolio[pc]:
+                    vd = dict(v)
+                    vd["per_unit"] = round(vd["annual"] / units) if units else 0
+                    vendor_data.append(vd)
+                bldg["vendor_data"] = vendor_data
+                injected += 1
+        print(f"[BoardIQ] Loaded Yardi portfolio: {len(portfolio)} properties, injected vendor data into {injected} buildings")
+    except Exception as e:
+        print(f"[BoardIQ] Warning: Could not load Yardi data: {e}")
+
+_load_yardi_portfolio()
 
 # ── Auth (simple demo auth — swap for real auth in production) ───────────────
 DEMO_USERS = {
@@ -1463,6 +1495,44 @@ def api_building(bbl):
         return jsonify({"error": "Building not found"}), 404
     benchmarks = compute_benchmarks(building)
     return jsonify({"building": building, "benchmarks": benchmarks})
+
+@app.route("/api/import-yardi", methods=["POST"])
+@login_required
+def import_yardi():
+    """Accept Yardi Expense Distribution .xlsx upload and import vendor data."""
+    if "file" not in request.files:
+        return jsonify({"ok": False, "error": "No file uploaded"}), 400
+    f = request.files["file"]
+    if not f.filename.endswith(".xlsx"):
+        return jsonify({"ok": False, "error": "Please upload an .xlsx file"}), 400
+    try:
+        result = parse_yardi_expense_report(f)
+        if not result["vendor_data"]:
+            return jsonify({"ok": False, "error": "No benchmarkable expense data found in this file"}), 400
+        # Find current building
+        bbl = session.get("current_building")
+        if not bbl or bbl not in BUILDINGS_DB:
+            return jsonify({"ok": False, "error": "No building selected"}), 400
+        building = BUILDINGS_DB[bbl]
+        units = building.get("units", 1)
+        # Calculate per_unit and update building
+        for v in result["vendor_data"]:
+            v["per_unit"] = round(v["annual"] / units) if units else 0
+        building["vendor_data"] = result["vendor_data"]
+        if result["property_code"]:
+            building["yardi_property_code"] = result["property_code"]
+        # Persist
+        boardiq_db.save_building_vendor_data(bbl, building["vendor_data"])
+        return jsonify({
+            "ok": True,
+            "property_code": result["property_code"],
+            "building_name": result["building_name"],
+            "vendors_imported": len(result["vendor_data"]),
+            "categories": list(set(v["category_label"] for v in result["vendor_data"])),
+            "total_benchmarkable": sum(v["annual"] for v in result["vendor_data"]),
+        })
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
 
 @app.route("/api/upload-invoices", methods=["POST"])
 @login_required
@@ -4296,13 +4366,23 @@ body.sidebar-open .sidebar-overlay{display:block}
       {% endfor %}
 
       {# Upload zone — compact to preserve savings impact #}
-      <div class="upload-compact" onclick="document.getElementById('csvInput').click()">
-        <div class="upload-compact-icon">↑</div>
-        <div>
-          <div class="upload-compact-text">Upload Invoice Data</div>
-          <div class="upload-compact-sub">CSV / Excel from Yardi, AvidXchange, or manual export</div>
+      <div style="display:flex;gap:8px">
+        <div class="upload-compact" style="flex:1" onclick="document.getElementById('yardiInput').click()">
+          <div class="upload-compact-icon" style="color:var(--gold)">⬡</div>
+          <div>
+            <div class="upload-compact-text">Import from Yardi</div>
+            <div class="upload-compact-sub">Expense Distribution Report (.xlsx)</div>
+          </div>
+          <input type="file" id="yardiInput" accept=".xlsx" style="display:none" onchange="importYardi(this)">
         </div>
-        <input type="file" id="csvInput" accept=".csv,.xlsx,.xls" style="display:none" onchange="uploadInvoices(this)">
+        <div class="upload-compact" style="flex:1" onclick="document.getElementById('csvInput').click()">
+          <div class="upload-compact-icon">↑</div>
+          <div>
+            <div class="upload-compact-text">Upload Invoices</div>
+            <div class="upload-compact-sub">CSV / Excel / PDF</div>
+          </div>
+          <input type="file" id="csvInput" accept=".csv,.xlsx,.xls,.pdf" style="display:none" onchange="uploadInvoices(this)">
+        </div>
       </div>
       <div class="upload-result" id="uploadResult"></div>
     </div>
@@ -5199,6 +5279,29 @@ async function uploadInvoices(input) {
   } catch(e) {
     resultEl.textContent = 'Upload failed — check console.';
   }
+}
+
+async function importYardi(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const formData = new FormData();
+  formData.append('file', file);
+  const resultEl = document.getElementById('uploadResult');
+  resultEl.style.display = 'block';
+  resultEl.innerHTML = '<span style="color:var(--gold)">⏳ Importing Yardi expense data...</span>';
+  try {
+    const resp = await fetch('/api/import-yardi', {method:'POST', body:formData});
+    const data = await resp.json();
+    if (data.ok) {
+      resultEl.innerHTML = '<span style="color:var(--green)">✓ Imported ' + data.vendors_imported + ' vendor categories · $' + Math.round(data.total_benchmarkable).toLocaleString() + ' benchmarked</span>';
+      setTimeout(() => location.reload(), 1500);
+    } else {
+      resultEl.innerHTML = '<span style="color:var(--red)">Error: ' + (data.error || 'Unknown error') + '</span>';
+    }
+  } catch(e) {
+    resultEl.innerHTML = '<span style="color:var(--red)">Import failed — check console.</span>';
+  }
+  input.value = '';
 }
 
 // ── Education Center ─────────────────────────────────────────────────
