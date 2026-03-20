@@ -23,7 +23,6 @@ import json
 import csv
 import io
 import re
-import urllib.request
 from datetime import datetime
 from functools import wraps
 
@@ -33,7 +32,7 @@ from flask import (Flask, render_template_string, request, jsonify,
                    session, redirect, url_for, flash)
 from invoice_pipeline import InvoiceProcessor, create_sample_csv, CATEGORIES
 from benchmarking_engine import benchmark_building, NETWORK_BENCHMARKS
-from yardi_import import parse_yardi_expense_report, load_portfolio_csv
+from yardi_import import parse_yardi_expense_report, parse_multi_building_report
 import db as boardiq_db
 
 app = Flask(__name__)
@@ -55,6 +54,23 @@ def _load_century_buildings():
         return {}
 
 CENTURY_BUILDINGS = _load_century_buildings()
+
+# ── Load Madison Realty Capital buildings ─────────────────────────────────────
+def _load_mrc_buildings():
+    try:
+        import importlib.util
+        _dir = os.path.dirname(os.path.abspath(__file__))
+        _path = os.path.join(_dir, "mrc_buildings.py")
+        spec = importlib.util.spec_from_file_location("mrc_buildings", _path)
+        m = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(m)
+        print(f"[BoardIQ] Loaded {len(m.MRC_BUILDINGS)} MRC buildings")
+        return m.MRC_BUILDINGS
+    except Exception as e:
+        print(f"[BoardIQ] Warning: Could not load mrc_buildings.py: {e}")
+        return {}
+
+MRC_BUILDINGS = _load_mrc_buildings()
 
 # ── Vendor data persistence (PostgreSQL with JSON file fallback) ─────────────
 _VENDOR_DATA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "vendor_data.json")
@@ -301,7 +317,6 @@ BUILDINGS_DB = {
     },
     "bbl_1009270001": {
         "id": "bbl_1009270001",
-        "yardi_property_code": "148",
         "address": "130 East 18th Street",
         "borough": "Manhattan",
         "neighborhood": "Gramercy Park",
@@ -453,39 +468,24 @@ if BBL_NORMALIZE:
     for _c, _d in BBL_NORMALIZE.items():
         print(f"  {_c} → {_d}")
 
+# ── Merge MRC buildings into main DB ─────────────────────────────────────────
+for _mkey, _mbldg in MRC_BUILDINGS.items():
+    _maddr = _norm_addr(_mbldg.get("address", ""))
+    if _maddr in _DEMO_ADDR_TO_BBL:
+        BBL_NORMALIZE[_mkey] = _DEMO_ADDR_TO_BBL[_maddr]
+    else:
+        BUILDINGS_DB[_mkey] = _mbldg
+
+# Also add MRC keys that map to demo buildings
+for _mkey, _demo_bbl in list(BBL_NORMALIZE.items()):
+    if _mkey.startswith("mrc_"):
+        BUILDINGS_DB[_mkey] = BUILDINGS_DB[_demo_bbl]
+
+print(f"[BoardIQ] Merged MRC buildings ({len(MRC_BUILDINGS)} total)")
+
 # ── Initialize database and load persisted data ─────────────────────────────
 _db_available = boardiq_db.init_db()
 _load_persisted_vendor_data()
-
-# ── Load Yardi portfolio data (real vendor expenses from expense distribution reports) ─
-YARDI_PORTFOLIO = {}   # property_code -> [vendor_dict, ...]
-def _load_yardi_portfolio():
-    """Load consolidated Yardi expense data and inject into BUILDINGS_DB."""
-    csv_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "yardi_portfolio_data.csv")
-    if not os.path.exists(csv_path):
-        print("[BoardIQ] No yardi_portfolio_data.csv found — skipping Yardi import")
-        return
-    try:
-        portfolio = load_portfolio_csv(csv_path)
-        YARDI_PORTFOLIO.update(portfolio)
-        # Inject vendor data into buildings that have a yardi_property_code
-        injected = 0
-        for bbl, bldg in BUILDINGS_DB.items():
-            pc = bldg.get("yardi_property_code")
-            if pc and pc in portfolio:
-                units = bldg.get("units", 1)
-                vendor_data = []
-                for v in portfolio[pc]:
-                    vd = dict(v)
-                    vd["per_unit"] = round(vd["annual"] / units) if units else 0
-                    vendor_data.append(vd)
-                bldg["vendor_data"] = vendor_data
-                injected += 1
-        print(f"[BoardIQ] Loaded Yardi portfolio: {len(portfolio)} properties, injected vendor data into {injected} buildings")
-    except Exception as e:
-        print(f"[BoardIQ] Warning: Could not load Yardi data: {e}")
-
-_load_yardi_portfolio()
 
 # ── Auth (simple demo auth — swap for real auth in production) ───────────────
 DEMO_USERS = {
@@ -495,6 +495,7 @@ DEMO_USERS = {
     "board@gramercyplaza.com": {"password": "demo1234", "buildings": ["bbl_1009270001"], "name": "Gramercy Plaza Board", "role": "board"},
     "admin@boardiq.com":     {"password": "admin", "buildings": list(BUILDINGS_DB.keys()), "name": "BoardIQ Admin", "is_admin": True, "role": "admin"},
     "century@boardiq.com":   {"password": "century", "buildings": list(CENTURY_BUILDINGS.keys()), "name": "Century Management", "role": "admin"},
+    "mrc@boardiq.com":       {"password": "madison", "buildings": list(MRC_BUILDINGS.keys()), "name": "Madison Realty Capital", "role": "admin"},
     "vendor@schindler.com":  {"password": "demo1234", "name": "Schindler Elevator Corp", "role": "vendor", "vendor_id": "v001", "buildings": []},
     "vendor@cleanstar.com":  {"password": "demo1234", "name": "Clean Star Services", "role": "vendor", "vendor_id": "v002", "buildings": []},
     "vendor@apexext.com":    {"password": "demo1234", "name": "Apex Exterminating", "role": "vendor", "vendor_id": "v003", "buildings": []},
@@ -1077,6 +1078,11 @@ _century_bbls = [bbl for bbl, b in BUILDINGS_DB.items() if "century" in str(b.ge
 if _century_bbls:
     MANAGEMENT_CO_BUILDINGS["Century Management"] = _century_bbls
 
+# MRC buildings
+_mrc_bbls = [bbl for bbl, b in BUILDINGS_DB.items() if "madison" in str(b.get("managing_agent","")).lower()]
+if _mrc_bbls:
+    MANAGEMENT_CO_BUILDINGS["Madison Realty Capital"] = _mrc_bbls
+
 # Category display labels
 CATEGORY_LABELS = {
     "ELEVATOR_MAINTENANCE": "Elevator Maintenance",
@@ -1345,7 +1351,6 @@ def login():
 
     return render_template_string(LOGIN_HTML,
         error=error,
-        requested=request.args.get("requested"),
         total_buildings=total_buildings,
         total_units=f"{total_units:,}",
         total_vendor_spend=total_vendor_spend,
@@ -1356,55 +1361,6 @@ def login():
 def logout():
     session.clear()
     return redirect(url_for("login"))
-
-@app.route("/request-access", methods=["POST"])
-def request_access():
-    try:
-        name = request.form.get("name", "").strip()
-        email = request.form.get("email", "").strip()
-        if not name or not email:
-            return redirect(url_for("login"))
-
-        credentials_table = "\n".join(
-            f"  {u_email}  /  {u.get('password','')}  ({u.get('role','board')})"
-            for u_email, u in DEMO_USERS.items()
-        )
-        body = (
-            f"New BoardIQ demo access request:\n\n"
-            f"Name: {name}\n"
-            f"Email: {email}\n\n"
-            f"--- Demo Credentials Reference ---\n{credentials_table}\n"
-        )
-
-        resend_key = os.environ.get("RESEND_API_KEY")
-        if resend_key:
-            app.logger.info(f"[ACCESS] Sending email via Resend (key starts with {resend_key[:8]}...)")
-            payload = json.dumps({
-                "from": "BoardIQ <access@mybuildingiq.com>",
-                "to": ["jake.sirotkin@gmail.com"],
-                "subject": f"BoardIQ Demo Request from {name}",
-                "text": body,
-            }).encode()
-            req = urllib.request.Request(
-                "https://api.resend.com/emails",
-                data=payload,
-                headers={
-                    "Authorization": f"Bearer {resend_key}",
-                    "Content-Type": "application/json",
-                },
-            )
-            try:
-                resp = urllib.request.urlopen(req, timeout=10)
-                resp_body = resp.read().decode()
-                app.logger.info(f"[ACCESS] Resend response: {resp.status} {resp_body}")
-            except Exception as e:
-                app.logger.error(f"[ACCESS] Email send failed: {e}")
-        else:
-            app.logger.error("[ACCESS] RESEND_API_KEY not set")
-    except Exception as e:
-        app.logger.error(f"Request access error: {e}")
-
-    return redirect(url_for("login", requested=1))
 
 @app.route("/dashboard")
 @login_required
@@ -1454,12 +1410,17 @@ def dashboard():
             c["linked_vendor"] = None
 
     has_portfolio = len(user.get("buildings", [])) > 20
+    # Determine branding theme based on managing agent
+    _managing_agent = building.get("managing_agent", "")
+    _theme = "mrc" if "madison" in _managing_agent.lower() else "default"
+
     return render_template_string(DASHBOARD_HTML,
         building=building,
         benchmarks=benchmarks,
         user_name=session.get("user_name"),
         is_admin=is_admin,
         has_portfolio=has_portfolio,
+        theme=_theme,
         all_buildings=[ensure_building_data(BUILDINGS_DB[b]) for b in
                        DEMO_USERS[session["user_email"]].get("buildings", [])],
         active_bbl=active_bbl,
@@ -1496,44 +1457,6 @@ def api_building(bbl):
     benchmarks = compute_benchmarks(building)
     return jsonify({"building": building, "benchmarks": benchmarks})
 
-@app.route("/api/import-yardi", methods=["POST"])
-@login_required
-def import_yardi():
-    """Accept Yardi Expense Distribution .xlsx upload and import vendor data."""
-    if "file" not in request.files:
-        return jsonify({"ok": False, "error": "No file uploaded"}), 400
-    f = request.files["file"]
-    if not f.filename.endswith(".xlsx"):
-        return jsonify({"ok": False, "error": "Please upload an .xlsx file"}), 400
-    try:
-        result = parse_yardi_expense_report(f)
-        if not result["vendor_data"]:
-            return jsonify({"ok": False, "error": "No benchmarkable expense data found in this file"}), 400
-        # Find current building
-        bbl = session.get("current_building")
-        if not bbl or bbl not in BUILDINGS_DB:
-            return jsonify({"ok": False, "error": "No building selected"}), 400
-        building = BUILDINGS_DB[bbl]
-        units = building.get("units", 1)
-        # Calculate per_unit and update building
-        for v in result["vendor_data"]:
-            v["per_unit"] = round(v["annual"] / units) if units else 0
-        building["vendor_data"] = result["vendor_data"]
-        if result["property_code"]:
-            building["yardi_property_code"] = result["property_code"]
-        # Persist
-        boardiq_db.save_building_vendor_data(bbl, building["vendor_data"])
-        return jsonify({
-            "ok": True,
-            "property_code": result["property_code"],
-            "building_name": result["building_name"],
-            "vendors_imported": len(result["vendor_data"]),
-            "categories": list(set(v["category_label"] for v in result["vendor_data"])),
-            "total_benchmarkable": sum(v["annual"] for v in result["vendor_data"]),
-        })
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 500
-
 @app.route("/api/upload-invoices", methods=["POST"])
 @login_required
 def upload_invoices():
@@ -1564,6 +1487,90 @@ def upload_invoices():
         try: os.remove(tmp_path)
         except: pass
         return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/import-yardi", methods=["POST"])
+@login_required
+def import_yardi():
+    """Import vendor data from a Yardi Expense Distribution (Paid Only) .xlsx export."""
+    if "file" not in request.files:
+        return jsonify({"error": "No file provided"}), 400
+
+    f = request.files["file"]
+    if not f.filename or not f.filename.lower().endswith(".xlsx"):
+        return jsonify({"error": "Please upload a .xlsx file"}), 400
+
+    import tempfile
+
+    with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as tmp:
+        tmp_path = tmp.name
+    f.save(tmp_path)
+
+    try:
+        # Try multi-building first, falls back to single
+        results = parse_multi_building_report(tmp_path)
+        os.remove(tmp_path)
+    except Exception as e:
+        try: os.remove(tmp_path)
+        except: pass
+        return jsonify({"error": f"Failed to parse Yardi report: {e}"}), 500
+
+    # Match to current building or by property code
+    bbl = session.get("active_building")
+    building = BUILDINGS_DB.get(bbl)
+    if not building:
+        return jsonify({"error": "No active building selected"}), 400
+
+    # Use first result (or match by property code if multiple)
+    target_bbl = request.form.get("bbl", bbl)
+    if target_bbl and target_bbl in BUILDINGS_DB:
+        building = BUILDINGS_DB[target_bbl]
+        bbl = target_bbl
+
+    if len(results) > 1:
+        # Multiple properties — let user know, use first match
+        prop_codes = [r["property_code"] for r in results]
+        result = results[0]
+    else:
+        result = results[0]
+
+    units = building.get("units", 1)
+    imported = []
+    updated = []
+
+    for v in result["vendors"]:
+        v["per_unit"] = round(v["annual"] / max(units, 1))
+
+        # Check if vendor+category already exists
+        existing = None
+        for ev in building.get("vendor_data", []):
+            if ev.get("category") == v["category"]:
+                existing = ev
+                break
+
+        if existing:
+            existing["vendor"] = v["vendor"]
+            existing["annual"] = v["annual"]
+            existing["per_unit"] = v["per_unit"]
+            updated.append(v["vendor"])
+        else:
+            if "vendor_data" not in building:
+                building["vendor_data"] = []
+            building["vendor_data"].append(v)
+            imported.append(v["vendor"])
+
+    _save_vendor_data()
+
+    return jsonify({
+        "success": True,
+        "property_code": result["property_code"],
+        "period": result["period"],
+        "imported": len(imported),
+        "updated": len(updated),
+        "total_vendors": len(result["vendors"]),
+        "vendors": [{"vendor": v["vendor"], "category": CATEGORY_LABELS.get(v["category"], v["category"]),
+                      "annual": v["annual"]} for v in result["vendors"]],
+    })
 
 
 def _normalize_address(addr):
@@ -3434,12 +3441,12 @@ body{background:var(--bg);font-family:'Plus Jakarta Sans',sans-serif;color:var(-
 .login-btn{width:100%;background:var(--ink);color:var(--white);font-family:inherit;font-size:14px;font-weight:600;padding:13px;border:none;border-radius:6px;cursor:pointer;margin-top:4px;transition:background 0.15s}
 .login-btn:hover{background:#1a1714}
 .error-msg{background:#fdecea;color:var(--red);border:1px solid #f0b8b3;border-radius:6px;padding:10px 14px;font-size:13px;margin-bottom:14px}
-.request-access-section{margin-top:18px;border-top:1px solid var(--border);padding-top:16px}
-.request-label{font-size:12px;color:var(--ink-muted);text-align:center;margin-bottom:10px}
-.request-form input{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:13px;margin-bottom:8px;box-sizing:border-box}
-.request-access-btn{width:100%;background:var(--bg);border:1.5px solid var(--gold);border-radius:6px;color:var(--gold);font-family:inherit;font-size:13px;font-weight:600;padding:11px;cursor:pointer;transition:all 0.2s}
-.request-access-btn:hover{background:var(--gold);color:#fff}
-.success-msg{margin-top:18px;background:#eaf7ed;color:var(--green);border:1px solid #b5dfbd;border-radius:6px;padding:12px 14px;font-size:13px;text-align:center}
+.demo-accounts{margin-top:18px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px 16px;font-size:11.5px;color:var(--ink-muted);line-height:1.7}
+.demo-accounts strong{color:var(--ink);font-weight:600}
+.demo-accounts .role-tag{display:inline-block;font-size:9px;letter-spacing:0.8px;text-transform:uppercase;font-weight:700;padding:1px 6px;border-radius:3px;margin-left:4px}
+.demo-accounts .role-board{background:var(--gold-light);color:var(--gold)}
+.demo-accounts .role-admin{background:var(--green-light);color:var(--green)}
+.demo-accounts .role-vendor{background:#e8e2f0;color:#6b4d9e}
 .login-card .vendor-link{display:block;text-align:center;margin-top:14px;font-size:12px;color:var(--ink-muted)}
 .login-card .vendor-link a{color:var(--gold);font-weight:600;text-decoration:none}
 .login-card .vendor-link a:hover{text-decoration:underline}
@@ -3557,18 +3564,12 @@ body{background:var(--bg);font-family:'Plus Jakarta Sans',sans-serif;color:var(-
         <input type="password" name="password" placeholder="••••••••" required>
         <button type="submit" class="login-btn">Sign In &rarr;</button>
       </form>
-      {% if requested %}
-      <div class="success-msg">Access request sent! You'll receive credentials shortly.</div>
-      {% else %}
-      <div class="request-access-section">
-        <div class="request-label">Don't have an account?</div>
-        <form method="POST" action="/request-access" class="request-form">
-          <input type="text" name="name" placeholder="Your name" required>
-          <input type="email" name="email" placeholder="Your email" required>
-          <button type="submit" class="request-access-btn">Request Demo Access &rarr;</button>
-        </form>
+      <div class="demo-accounts">
+        <strong>Demo Accounts</strong><br>
+        board@130e18.com &middot; demo1234 <span class="role-tag role-board">Board</span><br>
+        admin@boardiq.com &middot; admin <span class="role-tag role-admin">Admin</span><br>
+        vendor@schindler.com &middot; demo1234 <span class="role-tag role-vendor">Vendor</span>
       </div>
-      {% endif %}
       <div class="vendor-link">Are you a vendor? <a href="/vendor/register">Join the Vendor Network &rarr;</a></div>
     </div>
   </div>
@@ -3695,8 +3696,8 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BoardIQ — {{ building.address }}</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=IBM+Plex+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<title>{% if theme == 'mrc' %}MRC{% else %}BoardIQ{% endif %} — {{ building.address }}</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=IBM+Plex+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@300;400;500;600&family=Inter:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 :root {
   --bg:#f4f1eb;--surface:#fff;--surface2:#f9f7f3;--border:#e5e0d5;--border2:#d4cdc0;
@@ -3776,23 +3777,6 @@ table.vt tr.click:hover td{background:var(--surface2)}
 .pill-red{background:var(--red-light);color:var(--red);border:1px solid var(--red-border)}
 .pill-yellow{background:var(--yellow-light);color:var(--yellow);border:1px solid var(--yellow-border)}
 .pill-green{background:var(--green-light);color:var(--green);border:1px solid var(--green-border)}
-/* ── Vendor Context Panel ── */
-.vctx{max-height:0;overflow:hidden;transition:max-height .35s ease;background:var(--surface2)}
-.vctx.open{max-height:600px}
-.vctx-inner{padding:16px 18px 18px}
-.vctx-summary{font-size:13px;font-weight:600;color:var(--ink);margin-bottom:14px;line-height:1.5}
-.vctx-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
-.vctx-card{background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:12px 14px}
-.vctx-card-icon{font-size:14px;margin-bottom:6px}
-.vctx-card-label{font-size:9px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);font-weight:600;margin-bottom:6px}
-.vctx-card-text{font-size:12px;color:var(--dim);line-height:1.6}
-.vctx-toggle{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;color:var(--gold);cursor:pointer;font-weight:600;padding:3px 0;margin-top:5px;border:none;background:none;font-family:inherit}
-.vctx-toggle:hover{color:#a06e2a}
-.vctx-chevron{font-size:9px;transition:transform .25s}
-.vctx-toggle.open .vctx-chevron{transform:rotate(180deg)}
-.vctx-row td{background:transparent}
-.vctx-row:hover{background:transparent!important}
-@media(max-width:768px){.vctx-grid{grid-template-columns:1fr}}
 .savings-hdr{padding:14px 20px;border-bottom:1px solid var(--border);background:linear-gradient(135deg,#fdf6ec 0%,var(--surface) 100%)}
 .savings-lbl{font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
 .savings-val{font-family:'Playfair Display',serif;font-size:32px;color:var(--gold);letter-spacing:-1px;line-height:1}
@@ -4122,14 +4106,40 @@ body.sidebar-open .sidebar-overlay{display:block}
 .d-commit-btn:disabled{opacity:.4;cursor:not-allowed}
 .d-reset-btn{background:none;border:1px solid var(--border2);border-radius:6px;padding:10px 16px;font-family:inherit;font-size:12px;color:var(--muted);cursor:pointer}
 .d-sum{font-size:12.5px;color:var(--dim);flex:1}
+
+/* ── MRC Theme Override ─────────────────────────────────────────────────── */
+body.theme-mrc {
+  --bg:#f7f8fa;--surface:#fff;--surface2:#f0f2f5;--border:#e0e3e8;--border2:#ccd0d6;
+  --text:#05070a;--muted:#6b7280;--dim:#4b5563;
+  --green:#059669;--green-light:#ecfdf5;--green-border:#a7f3d0;
+  --yellow:#d97706;--yellow-light:#fffbeb;--yellow-border:#fcd34d;
+  --red:#dc2626;--red-light:#fef2f2;--red-border:#fca5a5;
+  --gold:#0066cc;--gold-light:#eff6ff;--ink:#05070a;
+}
+body.theme-mrc { background:var(--bg); font-family:'Inter','DM Sans','Helvetica Neue',Helvetica,Arial,sans-serif }
+body.theme-mrc .sidebar { background:#05070a }
+body.theme-mrc .logo-mark span { color:#0066cc }
+body.theme-mrc .logo-sub { color:rgba(255,255,255,.4) }
+body.theme-mrc .nav-item.active { border-left-color:#0066cc; background:rgba(255,255,255,.05) }
+body.theme-mrc .topbar { background:#05070a; border-bottom:1px solid rgba(255,255,255,.08) }
+body.theme-mrc .topbar-logo span { color:#0066cc }
+body.theme-mrc .section-title { font-family:'Inter','DM Sans',sans-serif; letter-spacing:-0.01em }
+body.theme-mrc .card { border:1px solid var(--border); box-shadow:0 1px 3px rgba(0,0,0,.04) }
+body.theme-mrc .stat-val { font-family:'DM Sans','Inter',monospace }
+body.theme-mrc .panel .panel-head { background:#05070a }
+body.theme-mrc .bid-badge { background:#0066cc }
 </style>
 </head>
-<body>
+<body class="{% if theme == 'mrc' %}theme-mrc{% endif %}">
 
 <!-- TOP BAR with Sign Out always visible -->
 <header class="topbar">
   <button class="hamburger" onclick="document.body.classList.toggle('sidebar-open')" aria-label="Menu">☰</button>
+  {% if theme == 'mrc' %}
+  <div class="topbar-logo" style="font-family:'DM Sans','Inter',sans-serif;font-weight:700;letter-spacing:-0.5px">MRC<span style="color:#0066cc;margin-left:4px">|</span> <span style="font-weight:400;font-size:12px;opacity:.6">BoardIQ</span></div>
+  {% else %}
   <div class="topbar-logo">Board<span>IQ</span></div>
+  {% endif %}
   <div class="topbar-right">
     <span class="topbar-user">{{ user_name }}</span>
     {% if is_admin %}
@@ -4142,8 +4152,13 @@ body.sidebar-open .sidebar-overlay{display:block}
 <div class="sidebar-overlay" onclick="document.body.classList.remove('sidebar-open')"></div>
 <nav class="sidebar">
   <div class="logo">
+    {% if theme == 'mrc' %}
+    <div class="logo-mark" style="font-family:'DM Sans','Inter',sans-serif;font-weight:700;letter-spacing:-0.5px;font-size:20px">Madison Realty<span style="display:block;font-size:14px;color:#0066cc;margin-top:2px">Capital</span></div>
+    <div class="logo-sub">Powered by BoardIQ</div>
+    {% else %}
     <div class="logo-mark">Board<span>IQ</span></div>
     <div class="logo-sub">Property Intelligence</div>
+    {% endif %}
   </div>
   <div class="nav">
     {% if has_portfolio %}
@@ -4297,35 +4312,8 @@ body.sidebar-open .sidebar-overlay{display:block}
                 {% elif status == 'yellow' %}<span class="pill pill-yellow">↑ Slightly Above</span>
                 {% else %}<span class="pill pill-green">✓ {% if pct < 40 %}Below{% else %}At{% endif %} Market</span>{% endif %}
               </div>
-              {% if bm.context %}<button class="vctx-toggle" onclick="event.stopPropagation();toggleVctx('vctx-{{ loop.index0 }}',this)">Why this benchmark? <span class="vctx-chevron">▾</span></button>{% endif %}
             </td>
           </tr>
-          {% if bm.context %}
-          <tr class="vctx-row"><td colspan="4" style="padding:0;border:none">
-            <div class="vctx" id="vctx-{{ loop.index0 }}">
-              <div class="vctx-inner">
-                <div class="vctx-summary">{{ bm.context.summary }}</div>
-                <div class="vctx-grid">
-                  <div class="vctx-card">
-                    <div class="vctx-card-icon">🏢</div>
-                    <div class="vctx-card-label">Building Profile</div>
-                    <div class="vctx-card-text">{{ bm.context.building_note }}</div>
-                  </div>
-                  <div class="vctx-card">
-                    <div class="vctx-card-icon">📅</div>
-                    <div class="vctx-card-label">Contract Age</div>
-                    <div class="vctx-card-text">{{ bm.context.contract_note }}</div>
-                  </div>
-                  <div class="vctx-card">
-                    <div class="vctx-card-icon">📊</div>
-                    <div class="vctx-card-label">Peer Comparison</div>
-                    <div class="vctx-card-text">{{ bm.context.peer_note }}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </td></tr>
-          {% endif %}
           {% endif %}
           {% endfor %}
         </tbody>
@@ -4366,22 +4354,22 @@ body.sidebar-open .sidebar-overlay{display:block}
       {% endfor %}
 
       {# Upload zone — compact to preserve savings impact #}
-      <div style="display:flex;gap:8px">
-        <div class="upload-compact" style="flex:1" onclick="document.getElementById('yardiInput').click()">
-          <div class="upload-compact-icon" style="color:var(--gold)">⬡</div>
-          <div>
-            <div class="upload-compact-text">Import from Yardi</div>
-            <div class="upload-compact-sub">Expense Distribution Report (.xlsx)</div>
-          </div>
-          <input type="file" id="yardiInput" accept=".xlsx" style="display:none" onchange="importYardi(this)">
-        </div>
-        <div class="upload-compact" style="flex:1" onclick="document.getElementById('csvInput').click()">
+      <div style="display:flex;border-top:1px solid var(--border)">
+        <div class="upload-compact" style="flex:1;border-top:none" onclick="document.getElementById('csvInput').click()">
           <div class="upload-compact-icon">↑</div>
           <div>
-            <div class="upload-compact-text">Upload Invoices</div>
-            <div class="upload-compact-sub">CSV / Excel / PDF</div>
+            <div class="upload-compact-text">Upload Invoice Data</div>
+            <div class="upload-compact-sub">CSV / PDF from accounting system</div>
           </div>
-          <input type="file" id="csvInput" accept=".csv,.xlsx,.xls,.pdf" style="display:none" onchange="uploadInvoices(this)">
+          <input type="file" id="csvInput" accept=".csv,.xlsx,.xls" style="display:none" onchange="uploadInvoices(this)">
+        </div>
+        <div class="upload-compact" style="flex:1;border-top:none;border-left:1px solid var(--border)" onclick="document.getElementById('yardiInput').click()">
+          <div class="upload-compact-icon" style="color:var(--green)">⬡</div>
+          <div>
+            <div class="upload-compact-text">Import from Yardi</div>
+            <div class="upload-compact-sub">Expense Distribution (.xlsx)</div>
+          </div>
+          <input type="file" id="yardiInput" accept=".xlsx" style="display:none" onchange="importYardi(this)">
         </div>
       </div>
       <div class="upload-result" id="uploadResult"></div>
@@ -4842,20 +4830,6 @@ async function closeBidRequest(requestId, btn) {
   } catch(e) { alert('Network error'); if (btn) btn.disabled = false; }
 }
 
-function toggleVctx(id, btn) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  const wasOpen = el.classList.contains('open');
-  // Close all open context panels
-  document.querySelectorAll('.vctx.open').forEach(v => v.classList.remove('open'));
-  document.querySelectorAll('.vctx-toggle.open').forEach(b => b.classList.remove('open'));
-  // Toggle the clicked one (if it wasn't already open)
-  if (!wasOpen) {
-    el.classList.add('open');
-    if (btn) btn.classList.add('open');
-  }
-}
-
 function openPanel(type, idx) {
   const content = document.getElementById('panelContent');
   if (type === 'vendor') {
@@ -5288,18 +5262,26 @@ async function importYardi(input) {
   formData.append('file', file);
   const resultEl = document.getElementById('uploadResult');
   resultEl.style.display = 'block';
-  resultEl.innerHTML = '<span style="color:var(--gold)">⏳ Importing Yardi expense data...</span>';
+  resultEl.style.background = '';
+  resultEl.style.color = '';
+  resultEl.textContent = '⏳ Importing Yardi expense report...';
   try {
     const resp = await fetch('/api/import-yardi', {method:'POST', body:formData});
     const data = await resp.json();
-    if (data.ok) {
-      resultEl.innerHTML = '<span style="color:var(--green)">✓ Imported ' + data.vendors_imported + ' vendor categories · $' + Math.round(data.total_benchmarkable).toLocaleString() + ' benchmarked</span>';
-      setTimeout(() => location.reload(), 1500);
+    if (data.success) {
+      const lines = data.vendors.map(v => v.vendor + ' — ' + v.category + ' ($' + v.annual.toLocaleString() + '/yr)');
+      resultEl.innerHTML = '<div style="font-size:12px;color:var(--green);font-weight:600;margin-bottom:4px">✓ Yardi import complete — ' + data.total_vendors + ' vendor' + (data.total_vendors !== 1 ? 's' : '') + ' · Period: ' + data.period + '</div>' +
+        '<div style="font-size:11px;color:var(--dim);line-height:1.6">' + lines.join('<br>') + '</div>' +
+        '<div style="font-size:10px;color:var(--muted);margin-top:6px">' + data.imported + ' new · ' + data.updated + ' updated · Refresh to see benchmarks</div>';
     } else {
-      resultEl.innerHTML = '<span style="color:var(--red)">Error: ' + (data.error || 'Unknown error') + '</span>';
+      resultEl.style.background = 'var(--red-light)';
+      resultEl.style.color = 'var(--red)';
+      resultEl.textContent = 'Error: ' + data.error;
     }
   } catch(e) {
-    resultEl.innerHTML = '<span style="color:var(--red)">Import failed — check console.</span>';
+    resultEl.style.background = 'var(--red-light)';
+    resultEl.style.color = 'var(--red)';
+    resultEl.textContent = 'Yardi import failed — check console.';
   }
   input.value = '';
 }
@@ -6516,10 +6498,16 @@ def portfolio_dashboard():
         "by_borough": by_borough,
     }
 
+    # Determine branding
+    _company_name = user.get("name", "Portfolio")
+    _theme = "mrc" if "madison" in _company_name.lower() else "default"
+
     return render_template_string(PORTFOLIO_HTML,
         portfolio=portfolio,
         buildings=buildings_data,
         user_name=session.get("user_name"),
+        company_name=_company_name,
+        theme=_theme,
     )
 
 
@@ -6528,8 +6516,8 @@ PORTFOLIO_HTML = """<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BoardIQ — Portfolio Dashboard</title>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=IBM+Plex+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<title>{% if theme == 'mrc' %}MRC{% else %}BoardIQ{% endif %} — Portfolio Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=IBM+Plex+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@300;400;500;600&family=Inter:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 :root {
   --bg:#f4f1eb;--surface:#fff;--surface2:#f9f7f3;--border:#e5e0d5;--border2:#d4cdc0;
@@ -6539,6 +6527,20 @@ PORTFOLIO_HTML = """<!DOCTYPE html>
   --red:#c0392b;--red-light:#fdecea;--red-border:#f0b8b3;
   --gold:#c4893a;--gold-light:#fdf3e6;--ink:#2c2825;
 }
+body.theme-mrc {
+  --bg:#f7f8fa;--surface:#fff;--surface2:#f0f2f5;--border:#e0e3e8;--border2:#ccd0d6;
+  --text:#05070a;--muted:#6b7280;--dim:#4b5563;
+  --green:#059669;--green-light:#ecfdf5;--green-border:#a7f3d0;
+  --yellow:#d97706;--yellow-light:#fffbeb;--yellow-border:#fcd34d;
+  --red:#dc2626;--red-light:#fef2f2;--red-border:#fca5a5;
+  --gold:#0066cc;--gold-light:#eff6ff;--ink:#05070a;
+}
+body.theme-mrc { font-family:'Inter','DM Sans','Helvetica Neue',sans-serif }
+body.theme-mrc .topbar { background:#05070a }
+body.theme-mrc .topbar-logo span { color:#0066cc }
+body.theme-mrc .sidebar { background:#05070a }
+body.theme-mrc .logo-mark span { color:#0066cc }
+body.theme-mrc .nav-item.active { border-left-color:#0066cc }
 *{box-sizing:border-box;margin:0;padding:0}
 body{background:var(--bg);color:var(--text);font-family:'Plus Jakarta Sans',sans-serif;min-height:100vh}
 
@@ -6655,11 +6657,15 @@ body.p-sidebar-open .p-sidebar-overlay{display:block}
 }
 </style>
 </head>
-<body>
+<body class="{% if theme == 'mrc' %}theme-mrc{% endif %}">
 
 <header class="topbar">
   <button class="p-hamburger" onclick="document.body.classList.toggle('p-sidebar-open')" aria-label="Menu">☰</button>
+  {% if theme == 'mrc' %}
+  <div class="topbar-logo" style="font-family:'DM Sans','Inter',sans-serif;font-weight:700;letter-spacing:-0.5px">MRC<span style="color:#0066cc;margin-left:4px">|</span> <span style="font-weight:400;font-size:12px;opacity:.6">BoardIQ</span></div>
+  {% else %}
   <div class="topbar-logo">Board<span>IQ</span></div>
+  {% endif %}
   <div class="topbar-right">
     <span class="topbar-user">{{ user_name }}</span>
     <a href="/logout" class="topbar-signout">Sign Out</a>
@@ -6669,8 +6675,13 @@ body.p-sidebar-open .p-sidebar-overlay{display:block}
 <div class="p-sidebar-overlay" onclick="document.body.classList.remove('p-sidebar-open')"></div>
 <nav class="sidebar">
   <div class="logo">
+    {% if theme == 'mrc' %}
+    <div class="logo-mark" style="font-family:'DM Sans','Inter',sans-serif;font-weight:700;letter-spacing:-0.5px;font-size:18px">Madison Realty<span style="display:block;font-size:13px;color:#0066cc;margin-top:2px">Capital</span></div>
+    <div class="logo-sub">Powered by BoardIQ</div>
+    {% else %}
     <div class="logo-mark">Board<span>IQ</span></div>
     <div class="logo-sub">Portfolio Intelligence</div>
+    {% endif %}
   </div>
   <div class="nav">
     <div class="nav-label">Portfolio</div>
@@ -6686,7 +6697,7 @@ body.p-sidebar-open .p-sidebar-overlay{display:block}
   </div>
   <div class="bldg-block">
     <div class="bldg-tag">Portfolio</div>
-    <div class="bldg-name">Century Management</div>
+    <div class="bldg-name">{{ company_name }}</div>
     <div class="bldg-meta">{{ portfolio.total_buildings }} buildings · {{ "{:,}".format(portfolio.total_units) }} units</div>
   </div>
 </nav>
@@ -6695,7 +6706,7 @@ body.p-sidebar-open .p-sidebar-overlay{display:block}
   <div class="page-header">
     <div>
       <div class="page-title">Portfolio Intelligence</div>
-      <div class="page-sub">Century Management &nbsp;·&nbsp; {{ portfolio.total_buildings }} buildings &nbsp;·&nbsp; {{ "{:,}".format(portfolio.total_units) }} units across NYC</div>
+      <div class="page-sub">{{ company_name }} &nbsp;·&nbsp; {{ portfolio.total_buildings }} buildings &nbsp;·&nbsp; {{ "{:,}".format(portfolio.total_units) }} units across NYC</div>
     </div>
     <div class="header-badge">{{ portfolio.total_buildings }} Active Properties</div>
   </div>
