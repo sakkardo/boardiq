@@ -1,371 +1,176 @@
 """
-Yardi Expense Distribution Report Parser for BoardIQ
-Parses .xlsx exports from Yardi Voyager's "Expense Distribution (Paid Only)" report
-and returns structured vendor data for benchmarking.
-
-Supports two Yardi export formats:
-  - Original format: separate columns for GL code, payee name, amount (16 cols)
-  - Batch export format: GL code and vendor in single column (11 cols)
+Yardi Expense Distribution Report Parser
+==========================================
+Parses "Expense Distribution (Paid Only)" .xlsx exports from Yardi
+and converts them into BoardIQ vendor_data format for benchmarking.
 """
 
 import re
-import os
-import csv
 from collections import defaultdict
+import openpyxl
 
-try:
-    import pandas as pd
-except ImportError:
-    pd = None
 
-# ── GL Code → BoardIQ Category Mapping ────────────────────────────────────────
-
-GL_TO_CATEGORY = {
+# GL code → BoardIQ category mapping
+GL_CATEGORY_MAP = {
     "5812": "ELEVATOR_MAINTENANCE",
     "5831": "EXTERMINATING",
-    "5803": "CLEANING_MAINTENANCE",
+    "5803": "CLEANING",
     "5852": "WATER_TREATMENT",
     "5810": "HVAC_MAINTENANCE",
-    "5806": "AC_MAINTENANCE",
-    "5828": "RUBBISH_REMOVAL",
+    "5806": "HVAC_MAINTENANCE",      # AC → HVAC bucket
+    "5828": "WASTE_REMOVAL",
     "5865": "LANDSCAPING",
     "5870": "LANDSCAPING",
-    "6105": "INSURANCE_PACKAGE",
-    "6120": "INSURANCE_UMBRELLA",
-    "6125": "INSURANCE_DO",
-    "6510": "MANAGEMENT_FEES",
-    "6305": "WATER_SEWER",
-    "5837": "SECURITY_ALARM",
-    "5639": "ELEVATOR_REPAIRS",
-    "5630": "PLUMBING_REPAIRS",
-    "5622": "HVAC_REPAIRS",
-    "5633": "ELECTRICAL_REPAIRS",
+    "6105": "INSURANCE",
+    "6120": "INSURANCE",
+    "6125": "INSURANCE",
+    "6510": "MANAGEMENT_FEE",
+    "6305": "UTILITIES_WATER",
+    "5837": "SECURITY",
 }
-
-CATEGORY_LABELS = {
-    "ELEVATOR_MAINTENANCE": "Elevator Maintenance",
-    "EXTERMINATING": "Exterminating",
-    "CLEANING_MAINTENANCE": "Cleaning & Maintenance",
-    "WATER_TREATMENT": "Water Treatment",
-    "HVAC_MAINTENANCE": "HVAC Maintenance",
-    "AC_MAINTENANCE": "AC Maintenance",
-    "RUBBISH_REMOVAL": "Rubbish Removal",
-    "LANDSCAPING": "Landscaping",
-    "INSURANCE_PACKAGE": "Package Insurance",
-    "INSURANCE_UMBRELLA": "Umbrella Insurance",
-    "INSURANCE_DO": "D&O Insurance",
-    "MANAGEMENT_FEES": "Management Fees",
-    "WATER_SEWER": "Water/Sewer",
-    "SECURITY_ALARM": "Security/Alarm",
-    "ELEVATOR_REPAIRS": "Elevator Repairs",
-    "PLUMBING_REPAIRS": "Plumbing Repairs",
-    "HVAC_REPAIRS": "HVAC Repairs",
-    "ELECTRICAL_REPAIRS": "Electrical Repairs",
-}
-
-# Known vendor name merges (duplicates with spelling variations)
-VENDOR_MERGE = {
-    "We Wire Electric Inc": "We Wire Electric Group Inc",
-}
-
-# Regex patterns
-GL_PATTERN = re.compile(r"^(\d{4})-\d{4}\s*-\s*(.+)")
-TOTAL_PATTERN = re.compile(r"^Total\s+(\d{4})-")
-PROP_PATTERN = re.compile(r"Property=(\d+)")
-
-
-def _safe_float(val):
-    """Convert a value to float, returning 0.0 on failure."""
-    if val is None:
-        return 0.0
-    try:
-        return float(val)
-    except (ValueError, TypeError):
-        return 0.0
-
-
-def _is_notna(val):
-    """Check if a value is not NaN/None."""
-    if val is None:
-        return False
-    if isinstance(val, float):
-        import math
-        return not math.isnan(val)
-    return True
 
 
 def parse_yardi_expense_report(filepath):
+    """Parse a single-property Yardi Expense Distribution (Paid Only) .xlsx file.
+
+    Returns:
+        dict with keys:
+            property_code (str): e.g. "148"
+            period (str): e.g. "From 01/2025 to 12/2025"
+            vendors (list[dict]): BoardIQ vendor_data format
     """
-    Parse a single Yardi Expense Distribution (Paid Only) .xlsx file.
+    wb = openpyxl.load_workbook(filepath, read_only=True, data_only=True)
+    ws = wb.active
+    rows = list(ws.iter_rows(values_only=True))
+    wb.close()
 
-    Returns dict:
-        {
-            "property_code": str,
-            "building_name": str,
-            "period": str,
-            "vendor_data": [
-                {
-                    "vendor": "PS Marcato Elevator Company",
-                    "category": "ELEVATOR_MAINTENANCE",
-                    "category_label": "Elevator Maintenance",
-                    "annual": 23271,
-                    "per_unit": 0,        # calculated later with unit count
-                    "last_bid_year": None,
-                    "months_left": None,
-                },
-                ...
-            ],
-            "all_expenses": {category: total, ...},  # totals by category
-            "grand_total": float,
-        }
+    if not rows:
+        raise ValueError("Empty spreadsheet")
+
+    result = _parse_property_section(rows, 0)
+    return result
+
+
+def parse_multi_building_report(filepath):
+    """Parse a Yardi export that may contain multiple properties.
+
+    Each property section starts with "Expense Distribution (Paid Only)" header.
+
+    Returns:
+        list[dict]: One result dict per property, same format as parse_yardi_expense_report.
     """
-    if pd is None:
-        raise ImportError("pandas is required for Yardi import")
+    wb = openpyxl.load_workbook(filepath, read_only=True, data_only=True)
+    ws = wb.active
+    rows = list(ws.iter_rows(values_only=True))
+    wb.close()
 
-    df = pd.read_excel(filepath, header=None)
+    if not rows:
+        raise ValueError("Empty spreadsheet")
 
-    if len(df) < 4:
-        return {"property_code": None, "building_name": None, "period": None,
-                "vendor_data": [], "all_expenses": {}, "grand_total": 0}
+    # Find all section start indices (rows starting with the report header)
+    section_starts = []
+    for i, row in enumerate(rows):
+        cell0 = str(row[0]).strip() if row[0] else ""
+        if "expense distribution" in cell0.lower():
+            section_starts.append(i)
 
-    # ── Detect format ──────────────────────────────────────────────────────
-    row0 = str(df.iloc[0, 0]).strip() if _is_notna(df.iloc[0, 0]) else ""
-    row1 = str(df.iloc[1, 0]).strip() if _is_notna(df.iloc[1, 0]) else ""
-    row2_col1 = str(df.iloc[2, 1]).strip() if df.shape[1] > 1 and _is_notna(df.iloc[2, 1]) else ""
+    if not section_starts:
+        # Try parsing as single property from row 0
+        return [_parse_property_section(rows, 0)]
 
-    is_batch = "Control" in row2_col1  # Batch exports have "Control" in col 1
+    results = []
+    for idx, start in enumerate(section_starts):
+        end = section_starts[idx + 1] if idx + 1 < len(section_starts) else len(rows)
+        section_rows = rows[start:end]
+        try:
+            result = _parse_property_section(section_rows, 0)
+            results.append(result)
+        except Exception as e:
+            print(f"[YardiImport] Skipping section at row {start}: {e}")
 
-    # ── Extract metadata ───────────────────────────────────────────────────
-    prop_match = PROP_PATTERN.search(row1)
-    if prop_match:
-        property_code = prop_match.group(1)
-    else:
-        property_code = row1 if row1.isdigit() else None
+    return results if results else [_parse_property_section(rows, 0)]
 
-    # Extract period
-    period = ""
-    if is_batch:
-        period_match = re.search(r"mm/yy=(\S+)", row1)
-        if period_match:
-            period = period_match.group(1)
-    else:
-        if "Period:" in row1:
-            period = row1
-        elif len(df) > 2:
-            row2_str = str(df.iloc[2, 0]) if _is_notna(df.iloc[2, 0]) else ""
-            if "Period:" in row2_str:
-                period = row2_str
 
-    # Extract building name from filename if available
-    building_name = None
-    if hasattr(filepath, "name"):
-        fname = os.path.basename(filepath.name)
-    else:
-        fname = os.path.basename(str(filepath))
-    fname_match = re.match(r"ExpDist_\d+_(.+)\.xlsx", fname)
-    if fname_match:
-        building_name = fname_match.group(1)
+def _parse_property_section(rows, start_offset):
+    """Parse one property section from the Yardi report.
 
-    # ── Parse line items ───────────────────────────────────────────────────
-    # Aggregate: (vendor_name, category) -> total spend
-    vendor_cats = defaultdict(float)
-    current_gl_main = None
-    grand_total = 0.0
+    Args:
+        rows: List of row tuples (values_only).
+        start_offset: Row index where this section starts (0-based).
 
-    for i in range(3, len(df)):
-        row = df.iloc[i]
-        col0 = str(row[0]).strip() if _is_notna(row[0]) else ""
+    Returns:
+        dict with property_code, period, vendors
+    """
+    # Row 0: Header ("Expense Distribution (Paid Only)")
+    # Row 1: Property code (e.g. "148")
+    # Row 2: Period (e.g. "Period: From 01/2025 to 12/2025")
+    # Row 3: Column headers
+    # Row 4+: Data
 
-        # Check for Grand Total
-        if col0 == "Grand Total":
-            if is_batch:
-                grand_total = _safe_float(row[6])
-            else:
-                grand_total = _safe_float(row[11]) if df.shape[1] > 11 else 0
+    property_code = str(rows[1][0]).strip() if len(rows) > 1 and rows[1][0] else ""
+    period_raw = str(rows[2][0]).strip() if len(rows) > 2 and rows[2][0] else ""
+    period = period_raw.replace("Period: ", "").strip() if period_raw else ""
 
-        if is_batch:
-            # ── Batch format: col 0 = "XXXX-XXXX - Name" or "code - Vendor" ──
-            gl_m = GL_PATTERN.match(col0)
-            if gl_m:
-                current_gl_main = gl_m.group(1)
+    # Aggregate spend by (category, payee_name)
+    # category_payee_totals[category][payee_name] = total_amount
+    category_payee_totals = defaultdict(lambda: defaultdict(float))
+
+    current_gl = None
+
+    for i in range(4, len(rows)):
+        row = rows[i]
+        if not row or all(c is None for c in row):
+            continue
+
+        col0 = str(row[0]).strip() if row[0] else ""
+        col1 = str(row[1]).strip() if row[1] and len(row) > 1 else ""
+
+        # Skip total/grand total rows
+        if col0.lower().startswith("total") or col0.lower().startswith("grand total"):
+            current_gl = None
+            continue
+
+        # Check if this row has a new GL account code
+        gl_match = re.match(r'^(\d{4})', col0)
+        if gl_match:
+            current_gl = gl_match.group(1)
+
+        # Get payee name (col 3) and amount (col 11)
+        payee_name = str(row[3]).strip() if len(row) > 3 and row[3] else ""
+        amount = 0
+        if len(row) > 11 and row[11] is not None:
+            try:
+                amount = float(row[11])
+            except (ValueError, TypeError):
                 continue
 
-            tot_m = TOTAL_PATTERN.match(col0)
-            if tot_m:
-                current_gl_main = None
-                continue
+        if not payee_name or amount == 0:
+            continue
 
-            if (current_gl_main and current_gl_main in GL_TO_CATEGORY
-                    and " - " in col0 and not col0.startswith("Total")):
-                vendor_name = col0.split(" - ", 1)[1].strip()
-                amt = _safe_float(row[6])
-                if vendor_name and amt != 0:
-                    vendor_name = VENDOR_MERGE.get(vendor_name, vendor_name)
-                    category = GL_TO_CATEGORY[current_gl_main]
-                    vendor_cats[(vendor_name, category)] += amt
-        else:
-            # ── Original format: GL in col 0, vendor in col 3, amount in col 11 ──
-            # GL codes can be "XXXX-XXXX" (no name) or "XXXX-XXXX - Name"
-            gl_m = GL_PATTERN.match(col0) if col0 else None
-            if not gl_m and col0 and re.match(r"^\d{4}-\d{4}$", col0):
-                # Bare GL code without name suffix
-                gl_m_simple = re.match(r"^(\d{4})-\d{4}$", col0)
-                if gl_m_simple:
-                    current_gl_main = gl_m_simple.group(1)
-                    continue
-            if gl_m:
-                current_gl_main = gl_m.group(1)
-                continue
+        # Map GL code to BoardIQ category
+        if current_gl and current_gl in GL_CATEGORY_MAP:
+            category = GL_CATEGORY_MAP[current_gl]
+            category_payee_totals[category][payee_name] += amount
 
-            if col0.startswith("Total"):
-                current_gl_main = None
-                continue
+    # For each category, pick the primary vendor (highest total spend)
+    vendors = []
+    for category, payees in sorted(category_payee_totals.items()):
+        if not payees:
+            continue
+        primary_vendor = max(payees.items(), key=lambda x: x[1])
+        vendor_name, total_spend = primary_vendor
 
-            payee = str(row[3]).strip() if df.shape[1] > 3 and _is_notna(row[3]) else ""
-            amt = _safe_float(row[11]) if df.shape[1] > 11 else 0
-            if (payee and amt != 0 and current_gl_main
-                    and current_gl_main in GL_TO_CATEGORY):
-                payee = VENDOR_MERGE.get(payee, payee)
-                category = GL_TO_CATEGORY[current_gl_main]
-                vendor_cats[(payee, category)] += amt
-
-    # ── Aggregate: pick primary vendor per category (highest spend) ────────
-    cat_vendors = defaultdict(list)
-    for (vendor, cat), total in vendor_cats.items():
-        cat_vendors[cat].append((vendor, total))
-
-    vendor_data = []
-    all_expenses = {}
-    for cat, vendors in cat_vendors.items():
-        # Sum all vendor spend for this category
-        cat_total = sum(t for _, t in vendors)
-        all_expenses[cat] = round(cat_total, 2)
-
-        # Primary vendor = highest absolute spend
-        primary = max(vendors, key=lambda x: abs(x[1]))
-        vendor_data.append({
-            "vendor": primary[0],
-            "category": cat,
-            "category_label": CATEGORY_LABELS.get(cat, cat),
-            "annual": round(cat_total, 0),
-            "per_unit": 0,
+        vendors.append({
+            "vendor": vendor_name,
+            "category": category,
+            "annual": round(total_spend),
+            "per_unit": 0,  # calculated later when unit count is known
             "last_bid_year": None,
             "months_left": None,
         })
-
-    # Sort by annual spend descending
-    vendor_data.sort(key=lambda x: -abs(x["annual"]))
 
     return {
         "property_code": property_code,
-        "building_name": building_name,
         "period": period,
-        "vendor_data": vendor_data,
-        "all_expenses": all_expenses,
-        "grand_total": round(grand_total, 2),
+        "vendors": vendors,
     }
-
-
-def parse_folder(folder_path):
-    """
-    Parse all .xlsx files in a folder.
-    Returns list of parse results, one per building.
-    """
-    results = []
-    errors = []
-    for fname in sorted(os.listdir(folder_path)):
-        if not fname.endswith(".xlsx"):
-            continue
-        fpath = os.path.join(folder_path, fname)
-        try:
-            result = parse_yardi_expense_report(fpath)
-            if result["vendor_data"]:
-                results.append(result)
-        except Exception as e:
-            errors.append({"file": fname, "error": str(e)})
-    return results, errors
-
-
-def load_portfolio_csv(csv_path):
-    """
-    Load the pre-built consolidated CSV (yardi_portfolio_data.csv)
-    and return vendor data grouped by property code.
-
-    Returns dict: {property_code: [vendor_dict, ...]}
-    """
-    portfolio = defaultdict(list)
-    with open(csv_path, "r") as f:
-        reader = csv.DictReader(f)
-        # Aggregate by (property, vendor, category)
-        agg = defaultdict(float)
-        meta = {}
-        for row in reader:
-            key = (row["property_code"], row["vendor"], row["category"])
-            agg[key] += float(row["annual_spend"])
-            meta[key] = {
-                "building_name": row["building_name"],
-                "category_label": row["category_label"],
-            }
-
-    # Pick primary vendor per (property, category)
-    prop_cat = defaultdict(list)
-    for (prop, vendor, cat), total in agg.items():
-        prop_cat[(prop, cat)].append((vendor, total, meta[(prop, vendor, cat)]))
-
-    for (prop, cat), vendors in prop_cat.items():
-        primary = max(vendors, key=lambda x: abs(x[1]))
-        cat_total = sum(t for _, t, _ in vendors)
-        portfolio[prop].append({
-            "vendor": primary[0],
-            "category": cat,
-            "category_label": primary[2]["category_label"],
-            "annual": round(cat_total, 0),
-            "per_unit": 0,
-            "last_bid_year": None,
-            "months_left": None,
-        })
-
-    # Sort each building's vendors by spend
-    for prop in portfolio:
-        portfolio[prop].sort(key=lambda x: -abs(x["annual"]))
-
-    return dict(portfolio)
-
-
-def compute_portfolio_benchmarks(csv_path):
-    """
-    Compute portfolio-wide benchmark percentiles from the consolidated CSV.
-    Returns dict: {category: {p25, p50, p75, p90, mean, count, total}}
-    """
-    import statistics
-
-    cat_spends = defaultdict(list)
-    with open(csv_path, "r") as f:
-        reader = csv.DictReader(f)
-        # Aggregate per (property, category) first
-        prop_cat = defaultdict(float)
-        for row in reader:
-            key = (row["property_code"], row["category"])
-            prop_cat[key] += float(row["annual_spend"])
-
-    for (prop, cat), total in prop_cat.items():
-        if total > 0:
-            cat_spends[cat].append(total)
-
-    benchmarks = {}
-    for cat, spends in cat_spends.items():
-        if len(spends) < 3:
-            continue
-        s = sorted(spends)
-        n = len(s)
-        benchmarks[cat] = {
-            "p25": s[int(n * 0.25)],
-            "p50": s[int(n * 0.50)],
-            "p75": s[int(n * 0.75)],
-            "p90": s[int(n * 0.90)],
-            "mean": round(statistics.mean(s), 0),
-            "count": n,
-            "total": round(sum(s), 0),
-            "label": CATEGORY_LABELS.get(cat, cat),
-        }
-    return benchmarks
