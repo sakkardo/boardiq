@@ -68,7 +68,7 @@ def _send_email(to_addr, subject, html_body):
         try:
             import urllib.request
             payload = json.dumps({
-                "from": "BoardIQ <onboarding@resend.dev>",
+                "from": "BoardIQ <access@mybuildingiq.com>",
                 "to": [to_addr],
                 "subject": subject,
                 "html": html_body,
