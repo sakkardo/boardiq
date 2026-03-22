@@ -87,7 +87,16 @@ def _send_email(to_addr, subject, html_body):
                 result = json.loads(resp.read().decode())
                 print(f"[BoardIQ Email] Sent to {to_addr}: {subject} (id: {result.get('id', '?')})")
         except Exception as e:
+            # Read the response body for details on why it failed
+            error_body = ""
+            if hasattr(e, 'read'):
+                try:
+                    error_body = e.read().decode()
+                except Exception:
+                    pass
             print(f"[BoardIQ Email] FAILED to send to {to_addr}: {e}")
+            print(f"[BoardIQ Email] Response body: {error_body}")
+            print(f"[BoardIQ Email] API key starts with: {RESEND_API_KEY[:8]}..." if RESEND_API_KEY else "[BoardIQ Email] No API key!")
 
     # Send in background thread so request doesn't block
     threading.Thread(target=_send, daemon=True).start()
