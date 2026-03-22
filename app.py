@@ -23,7 +23,12 @@ import json
 import csv
 import io
 import re
-from datetime import datetime
+import uuid
+import smtplib
+import threading
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from datetime import datetime, timedelta
 from functools import wraps
 
 sys.path.insert(0, os.path.dirname(__file__))
@@ -36,7 +41,51 @@ from yardi_import import parse_yardi_expense_report, parse_multi_building_report
 import db as boardiq_db
 
 app = Flask(__name__)
-app.secret_key = "boardiq-dev-key-change-in-production"
+app.secret_key = os.environ.get("SECRET_KEY", "boardiq-dev-key-change-in-production")
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  ACCESS REQUEST SYSTEM
+#  - Visitors request access via dropdown (no passwords exposed)
+#  - Admin gets email notification with Approve/Deny links
+#  - Approve generates a one-time magic link (4hr expiry) emailed to requester
+# ═══════════════════════════════════════════════════════════════════════════════
+
+ADMIN_EMAIL = "jake.sirotkin@gmail.com"
+GMAIL_USER = "jake.sirotkin@gmail.com"
+GMAIL_APP_PASSWORD = os.environ.get("GMAIL_APP_PASSWORD", "")
+SITE_URL = os.environ.get("SITE_URL", "https://mybuildingiq.com")
+
+# In-memory stores (reset on deploy — fine for low-volume demo access)
+ACCESS_REQUESTS = {}   # token → {name, email, access_type, account_email, requested_at, status}
+MAGIC_LINKS = {}       # token → {account_email, created_at, used}
+
+def _send_email(to_addr, subject, html_body):
+    """Send email via Gmail SMTP. Falls back to console logging if not configured."""
+    if not GMAIL_APP_PASSWORD:
+        print(f"[BoardIQ Email] (no GMAIL_APP_PASSWORD set — logging only)")
+        print(f"  To: {to_addr}")
+        print(f"  Subject: {subject}")
+        print(f"  Body preview: {html_body[:200]}")
+        return False
+
+    def _send():
+        try:
+            msg = MIMEMultipart("alternative")
+            msg["From"] = f"BoardIQ <{GMAIL_USER}>"
+            msg["To"] = to_addr
+            msg["Subject"] = subject
+            msg.attach(MIMEText(html_body, "html"))
+
+            with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+                server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
+                server.sendmail(GMAIL_USER, to_addr, msg.as_string())
+            print(f"[BoardIQ Email] Sent to {to_addr}: {subject}")
+        except Exception as e:
+            print(f"[BoardIQ Email] FAILED to send to {to_addr}: {e}")
+
+    # Send in background thread so request doesn't block
+    threading.Thread(target=_send, daemon=True).start()
+    return True
 
 # ── Load Century Management buildings from enriched database ─────────────────
 def _load_century_buildings():
@@ -1357,8 +1406,8 @@ def login():
         total_vendor_spend = f"${total_spend / 1_000:,.0f}K"
     num_categories = len(ALL_CATEGORIES)
 
-    # Build list of email addresses that require an access code (for JS field toggle)
-    _gated = json.dumps([e for e, u in DEMO_USERS.items() if u.get("access_code")])
+    # Build access options for the request-access dropdown
+    _access_options = _build_access_options()
 
     return render_template_string(LOGIN_HTML,
         error=error,
@@ -1366,13 +1415,214 @@ def login():
         total_units=f"{total_units:,}",
         total_vendor_spend=total_vendor_spend,
         num_categories=num_categories,
-        gated_emails=_gated,
+        access_options=_access_options,
     )
 
 @app.route("/logout")
 def logout():
     session.clear()
     return redirect(url_for("login"))
+
+
+# ── Access Request System Routes ─────────────────────────────────────────────
+
+# Build the access-type options from DEMO_USERS at module level (called after DEMO_USERS is defined)
+def _build_access_options():
+    """Generate dropdown options from DEMO_USERS for the request-access form."""
+    options = []
+    for email, user in DEMO_USERS.items():
+        role = user.get("role", "board")
+        name = user.get("name", email)
+        if role == "vendor":
+            label = f"Vendor Portal — {name}"
+        elif role == "admin":
+            if "century" in email:
+                label = f"Century Management (Admin)"
+            elif "mrc" in email:
+                label = f"Madison Realty Capital (Admin)"
+            elif "admin" in email:
+                label = f"BoardIQ Admin"
+            else:
+                label = f"{name} (Admin)"
+        else:
+            # Board member — show building address
+            bbl = user.get("buildings", [""])[0]
+            bldg = BUILDINGS_DB.get(bbl, {})
+            addr = bldg.get("address", name)
+            label = f"{addr} (Board Member)"
+        options.append({"email": email, "label": label, "role": role})
+    return sorted(options, key=lambda x: x["label"])
+
+@app.route("/request-access", methods=["POST"])
+def request_access():
+    """Visitor requests access — sends approval email to admin."""
+    req_name = request.form.get("name", "").strip()
+    req_email = request.form.get("email", "").strip()
+    access_type = request.form.get("access_type", "").strip()
+
+    if not req_name or not req_email or not access_type:
+        return jsonify({"error": "All fields are required"}), 400
+
+    # Find which account they're requesting
+    target_user = DEMO_USERS.get(access_type)
+    if not target_user:
+        return jsonify({"error": "Invalid access type"}), 400
+
+    # Generate approval token
+    token = uuid.uuid4().hex
+    ACCESS_REQUESTS[token] = {
+        "name": req_name,
+        "email": req_email,
+        "account_email": access_type,
+        "access_label": target_user.get("name", access_type),
+        "requested_at": datetime.utcnow().isoformat(),
+        "status": "pending",
+    }
+
+    # Send approval email to admin
+    approve_url = f"{SITE_URL}/approve-access/{token}"
+    deny_url = f"{SITE_URL}/deny-access/{token}"
+
+    _send_email(
+        ADMIN_EMAIL,
+        f"[BoardIQ] Access Request: {req_name} → {target_user.get('name', access_type)}",
+        f"""
+        <div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto;padding:20px">
+            <h2 style="color:#05070a;margin-bottom:16px">New Access Request</h2>
+            <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+                <tr><td style="padding:8px 0;color:#6b7280;width:100px">Name</td><td style="padding:8px 0;font-weight:600">{req_name}</td></tr>
+                <tr><td style="padding:8px 0;color:#6b7280">Email</td><td style="padding:8px 0">{req_email}</td></tr>
+                <tr><td style="padding:8px 0;color:#6b7280">Requesting</td><td style="padding:8px 0;font-weight:600">{target_user.get('name', access_type)}</td></tr>
+                <tr><td style="padding:8px 0;color:#6b7280">Time</td><td style="padding:8px 0">{datetime.utcnow().strftime('%b %d, %Y at %I:%M %p')} UTC</td></tr>
+            </table>
+            <div style="margin-top:20px">
+                <a href="{approve_url}" style="display:inline-block;background:#059669;color:white;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:600;margin-right:12px">Approve</a>
+                <a href="{deny_url}" style="display:inline-block;background:#dc2626;color:white;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:600">Deny</a>
+            </div>
+            <p style="margin-top:20px;font-size:12px;color:#9ca3af">Approving will send a one-time login link to {req_email} that expires in 4 hours.</p>
+        </div>
+        """
+    )
+
+    return jsonify({"success": True, "message": "Your request has been submitted. You will receive a login link via email once approved."})
+
+
+@app.route("/approve-access/<token>")
+def approve_access(token):
+    """Admin clicks Approve — generates magic link and emails it to the requester."""
+    req = ACCESS_REQUESTS.get(token)
+    if not req:
+        return "<h2>Invalid or expired request.</h2>", 404
+    if req["status"] != "pending":
+        return f"<h2>This request was already {req['status']}.</h2>", 400
+
+    req["status"] = "approved"
+
+    # Generate magic login link
+    magic_token = uuid.uuid4().hex
+    MAGIC_LINKS[magic_token] = {
+        "account_email": req["account_email"],
+        "created_at": datetime.utcnow(),
+        "used": False,
+    }
+
+    magic_url = f"{SITE_URL}/magic-login/{magic_token}"
+
+    # Email the requester their login link
+    _send_email(
+        req["email"],
+        f"Your BoardIQ Access Has Been Approved",
+        f"""
+        <div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto;padding:20px">
+            <h2 style="color:#05070a;margin-bottom:8px">Access Approved</h2>
+            <p style="color:#4b5563;margin-bottom:20px">Hi {req['name']}, your access to <strong>{req['access_label']}</strong> on BoardIQ has been approved.</p>
+            <a href="{magic_url}" style="display:inline-block;background:#05070a;color:white;padding:14px 32px;border-radius:6px;text-decoration:none;font-weight:600;font-size:16px">Log In to BoardIQ &rarr;</a>
+            <p style="margin-top:20px;font-size:12px;color:#9ca3af">This link is <strong>one-time use</strong> and expires in <strong>4 hours</strong>. Do not share it.</p>
+        </div>
+        """
+    )
+
+    return f"""<!DOCTYPE html><html><head><title>Access Approved</title>
+    <style>body{{font-family:Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f7f8fa}}
+    .card{{background:white;padding:40px;border-radius:12px;box-shadow:0 2px 20px rgba(0,0,0,.08);text-align:center;max-width:400px}}
+    h2{{color:#059669;margin-bottom:8px}} p{{color:#4b5563;font-size:14px}}</style></head>
+    <body><div class="card"><h2>&#10003; Approved</h2>
+    <p>A one-time login link has been sent to <strong>{req['email']}</strong>.</p>
+    <p style="font-size:12px;color:#9ca3af;margin-top:16px">The link expires in 4 hours.</p>
+    </div></body></html>"""
+
+
+@app.route("/deny-access/<token>")
+def deny_access(token):
+    """Admin clicks Deny — marks request as denied."""
+    req = ACCESS_REQUESTS.get(token)
+    if not req:
+        return "<h2>Invalid or expired request.</h2>", 404
+    if req["status"] != "pending":
+        return f"<h2>This request was already {req['status']}.</h2>", 400
+
+    req["status"] = "denied"
+    return f"""<!DOCTYPE html><html><head><title>Access Denied</title>
+    <style>body{{font-family:Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f7f8fa}}
+    .card{{background:white;padding:40px;border-radius:12px;box-shadow:0 2px 20px rgba(0,0,0,.08);text-align:center;max-width:400px}}
+    h2{{color:#dc2626;margin-bottom:8px}} p{{color:#4b5563;font-size:14px}}</style></head>
+    <body><div class="card"><h2>&#10007; Denied</h2>
+    <p>Access request from <strong>{req['name']}</strong> ({req['email']}) has been denied.</p>
+    </div></body></html>"""
+
+
+@app.route("/magic-login/<token>")
+def magic_login(token):
+    """One-time magic link login. Expires after 4 hours or first use."""
+    link = MAGIC_LINKS.get(token)
+    if not link:
+        return f"""<!DOCTYPE html><html><head><title>Invalid Link</title>
+        <style>body{{font-family:Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f7f8fa}}
+        .card{{background:white;padding:40px;border-radius:12px;box-shadow:0 2px 20px rgba(0,0,0,.08);text-align:center;max-width:400px}}
+        h2{{color:#dc2626}} p{{color:#4b5563;font-size:14px}} a{{color:#0066cc}}</style></head>
+        <body><div class="card"><h2>Invalid Link</h2><p>This login link is invalid or has already been used.</p>
+        <a href="/">Back to BoardIQ</a></div></body></html>""", 404
+
+    # Check expiry (4 hours)
+    if datetime.utcnow() - link["created_at"] > timedelta(hours=4):
+        link["used"] = True
+        return f"""<!DOCTYPE html><html><head><title>Link Expired</title>
+        <style>body{{font-family:Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f7f8fa}}
+        .card{{background:white;padding:40px;border-radius:12px;box-shadow:0 2px 20px rgba(0,0,0,.08);text-align:center;max-width:400px}}
+        h2{{color:#d97706}} p{{color:#4b5563;font-size:14px}} a{{color:#0066cc}}</style></head>
+        <body><div class="card"><h2>Link Expired</h2><p>This login link has expired. Please request access again.</p>
+        <a href="/">Back to BoardIQ</a></div></body></html>""", 410
+
+    if link["used"]:
+        return f"""<!DOCTYPE html><html><head><title>Already Used</title>
+        <style>body{{font-family:Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f7f8fa}}
+        .card{{background:white;padding:40px;border-radius:12px;box-shadow:0 2px 20px rgba(0,0,0,.08);text-align:center;max-width:400px}}
+        h2{{color:#d97706}} p{{color:#4b5563;font-size:14px}} a{{color:#0066cc}}</style></head>
+        <body><div class="card"><h2>Already Used</h2><p>This login link has already been used.</p>
+        <a href="/">Back to BoardIQ</a></div></body></html>""", 410
+
+    # Burn the token
+    link["used"] = True
+
+    # Log in as the mapped account
+    acct_email = link["account_email"]
+    user = DEMO_USERS.get(acct_email)
+    if not user:
+        return "Account not found", 404
+
+    session["user_email"] = acct_email
+    session["user_name"] = user["name"]
+    session["user_role"] = user.get("role", "board")
+    if user.get("role") == "vendor":
+        session["vendor_id"] = user.get("vendor_id")
+        return redirect(url_for("vendor_dashboard"))
+    buildings = user.get("buildings", [])
+    if buildings:
+        session["active_building"] = buildings[0]
+    if len(buildings) > 20:
+        return redirect(url_for("portfolio_dashboard"))
+    return redirect(url_for("dashboard"))
+
 
 @app.route("/dashboard")
 @login_required
@@ -3453,6 +3703,7 @@ body{background:var(--bg);font-family:'Plus Jakarta Sans',sans-serif;color:var(-
 .login-btn{width:100%;background:var(--ink);color:var(--white);font-family:inherit;font-size:14px;font-weight:600;padding:13px;border:none;border-radius:6px;cursor:pointer;margin-top:4px;transition:background 0.15s}
 .login-btn:hover{background:#1a1714}
 .error-msg{background:#fdecea;color:var(--red);border:1px solid #f0b8b3;border-radius:6px;padding:10px 14px;font-size:13px;margin-bottom:14px}
+#requestMsg{border-radius:8px;padding:12px 16px;font-size:13px;margin-bottom:14px;line-height:1.5}
 .demo-accounts{margin-top:18px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px 16px;font-size:11.5px;color:var(--ink-muted);line-height:1.7}
 .demo-accounts strong{color:var(--ink);font-weight:600}
 .demo-accounts .role-tag{display:inline-block;font-size:9px;letter-spacing:0.8px;text-transform:uppercase;font-weight:700;padding:1px 6px;border-radius:3px;margin-left:4px}
@@ -3565,59 +3816,99 @@ body{background:var(--bg);font-family:'Plus Jakarta Sans',sans-serif;color:var(-
       <div class="hero-scroll"><span>&darr;</span> Scroll to explore</div>
     </div>
     <div class="login-card" id="login-section">
-      <div class="card-label">Board &amp; Admin Access</div>
-      <h2>Sign In</h2>
-      <div class="card-sub">Access your building dashboard</div>
-      {% if error %}<div class="error-msg">{{ error }}</div>{% endif %}
-      <form method="POST" action="/login" id="loginForm">
-        <label>Email Address</label>
-        <input type="email" name="email" id="loginEmail" placeholder="board@yourbuilding.com" required>
-        <label>Password</label>
-        <input type="password" name="password" placeholder="••••••••" required>
-        <div id="accessCodeWrap" style="display:none">
-          <label>Access Code</label>
-          <input type="text" name="access_code" id="accessCodeInput" placeholder="Enter your access code" autocomplete="off">
-          <div style="font-size:10.5px;color:var(--ink-muted);margin-top:4px">This account requires an access code. Contact your administrator if you don\\'t have one.</div>
-        </div>
-        <button type="submit" class="login-btn">Sign In &rarr;</button>
-      </form>
-      <script>
-      // Show access code field when email matches a gated account
-      (function(){
-        var el = document.getElementById('loginEmail');
-        var wrap = document.getElementById('accessCodeWrap');
-        var gated = {{ gated_emails | safe }};
-        function check(){
-          var v = el.value.trim().toLowerCase();
-          wrap.style.display = gated.indexOf(v) !== -1 ? 'block' : 'none';
-        }
-        el.addEventListener('input', check);
-        el.addEventListener('change', check);
-        {% if error and 'access code' in error|lower %}wrap.style.display='block';{% endif %}
-        check();
-      })();
-      </script>
-      <div class="demo-accounts" id="demoHint" style="display:none">
-        <strong>Demo Accounts</strong><br>
-        board@130e18.com &middot; demo1234 <span class="role-tag role-board">Board</span><br>
-        admin@boardiq.com &middot; admin <span class="role-tag role-admin">Admin</span><br>
-        vendor@schindler.com &middot; demo1234 <span class="role-tag role-vendor">Vendor</span>
+      <div class="card-label">Get Started</div>
+      <h2>Request Access</h2>
+      <div class="card-sub">Select a dashboard to explore and we'll send you a login link</div>
+
+      <!-- Request Access Form (default view) -->
+      <div id="requestForm">
+        <div id="requestMsg" style="display:none"></div>
+        <label>Your Name</label>
+        <input type="text" id="reqName" placeholder="Jane Smith" required>
+        <label>Your Email</label>
+        <input type="email" id="reqEmail" placeholder="jane@company.com" required>
+        <label>Access Type</label>
+        <select id="reqType" style="width:100%;padding:11px 14px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:14px;color:var(--ink);background:var(--white);margin-bottom:16px;appearance:none;-webkit-appearance:none;background-image:url('data:image/svg+xml;utf8,<svg xmlns=&quot;http://www.w3.org/2000/svg&quot; width=&quot;12&quot; height=&quot;8&quot;><path d=&quot;M1 1l5 5 5-5&quot; stroke=&quot;%238a8278&quot; stroke-width=&quot;1.5&quot; fill=&quot;none&quot;/></svg>');background-repeat:no-repeat;background-position:right 14px center">
+          <option value="">Select a dashboard...</option>
+          {% for opt in access_options %}
+          <option value="{{ opt.email }}">{{ opt.label }}</option>
+          {% endfor %}
+        </select>
+        <button type="button" class="login-btn" id="reqSubmitBtn" onclick="submitAccessRequest()">Request Access &rarr;</button>
       </div>
-      <div class="vendor-link">Are you a vendor? <a href="/vendor/register">Join the Vendor Network &rarr;</a></div>
+
       <script>
-      // Ctrl+Shift+D toggles demo account hints
+      function submitAccessRequest(){
+        var name = document.getElementById('reqName').value.trim();
+        var email = document.getElementById('reqEmail').value.trim();
+        var type = document.getElementById('reqType').value;
+        var msg = document.getElementById('requestMsg');
+        var btn = document.getElementById('reqSubmitBtn');
+
+        if(!name || !email || !type){
+          msg.style.display='block';
+          msg.style.background='var(--red-light,#fdecea)';msg.style.color='var(--red,#c0392b)';msg.style.border='1px solid var(--red-border,#f0b8b3)';
+          msg.innerHTML='Please fill in all fields.';
+          return;
+        }
+
+        btn.disabled=true; btn.textContent='Submitting...';
+
+        fetch('/request-access',{
+          method:'POST',
+          headers:{'Content-Type':'application/x-www-form-urlencoded'},
+          body:'name='+encodeURIComponent(name)+'&email='+encodeURIComponent(email)+'&access_type='+encodeURIComponent(type)
+        })
+        .then(function(r){return r.json()})
+        .then(function(data){
+          msg.style.display='block';
+          if(data.success){
+            msg.style.background='var(--green-light,#e6f4ec)';msg.style.color='var(--green,#1a7a4a)';msg.style.border='1px solid var(--green-border,#b8deca)';
+            msg.innerHTML='<strong>Request submitted!</strong><br>Check your email — you\\'ll receive a login link once approved.';
+            btn.textContent='Request Sent';
+          } else {
+            msg.style.background='var(--red-light,#fdecea)';msg.style.color='var(--red,#c0392b)';msg.style.border='1px solid var(--red-border,#f0b8b3)';
+            msg.innerHTML=data.error || 'Something went wrong. Please try again.';
+            btn.disabled=false; btn.textContent='Request Access \\u2192';
+          }
+        })
+        .catch(function(){
+          msg.style.display='block';
+          msg.style.background='var(--red-light,#fdecea)';msg.style.color='var(--red,#c0392b)';msg.style.border='1px solid var(--red-border,#f0b8b3)';
+          msg.innerHTML='Network error. Please try again.';
+          btn.disabled=false; btn.textContent='Request Access \\u2192';
+        });
+      }
+      </script>
+
+      <!-- Hidden admin login — Ctrl+Shift+D or ?admin=1 -->
+      <div id="adminLogin" style="display:none;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+        <div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--ink-muted);margin-bottom:10px;font-weight:600">Admin Login</div>
+        {% if error %}<div class="error-msg">{{ error }}</div>{% endif %}
+        <form method="POST" action="/login">
+          <label>Email</label>
+          <input type="email" name="email" placeholder="admin@boardiq.com" required>
+          <label>Password</label>
+          <input type="password" name="password" placeholder="••••••••" required>
+          <button type="submit" class="login-btn" style="background:var(--ink)">Admin Sign In &rarr;</button>
+        </form>
+      </div>
+
+      <script>
+      // Ctrl+Shift+D toggles admin login
       document.addEventListener('keydown', function(e){
         if(e.ctrlKey && e.shiftKey && e.key === 'D'){
           e.preventDefault();
-          var h = document.getElementById('demoHint');
+          var h = document.getElementById('adminLogin');
           h.style.display = h.style.display === 'none' ? 'block' : 'none';
         }
       });
-      // Also allow ?demo=1 in URL
-      if(new URLSearchParams(window.location.search).get('demo')==='1'){
-        document.getElementById('demoHint').style.display='block';
+      if(new URLSearchParams(window.location.search).get('admin')==='1'){
+        document.getElementById('adminLogin').style.display='block';
       }
       </script>
+
+      <div class="vendor-link">Are you a vendor? <a href="/vendor/register">Join the Vendor Network &rarr;</a></div>
     </div>
   </div>
 </section>
