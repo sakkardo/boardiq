@@ -495,7 +495,7 @@ DEMO_USERS = {
     "board@gramercyplaza.com": {"password": "demo1234", "buildings": ["bbl_1009270001"], "name": "Gramercy Plaza Board", "role": "board"},
     "admin@boardiq.com":     {"password": "admin", "buildings": list(BUILDINGS_DB.keys()), "name": "BoardIQ Admin", "is_admin": True, "role": "admin"},
     "century@boardiq.com":   {"password": "century", "buildings": list(CENTURY_BUILDINGS.keys()), "name": "Century Management", "role": "admin"},
-    "mrc@boardiq.com":       {"password": "madison", "buildings": list(MRC_BUILDINGS.keys()), "name": "Madison Realty Capital", "role": "admin"},
+    "mrc@boardiq.com":       {"password": "madison", "buildings": list(MRC_BUILDINGS.keys()), "name": "Madison Realty Capital", "role": "admin", "access_code": "MRC2026"},
     "vendor@schindler.com":  {"password": "demo1234", "name": "Schindler Elevator Corp", "role": "vendor", "vendor_id": "v001", "buildings": []},
     "vendor@cleanstar.com":  {"password": "demo1234", "name": "Clean Star Services", "role": "vendor", "vendor_id": "v002", "buildings": []},
     "vendor@apexext.com":    {"password": "demo1234", "name": "Apex Exterminating", "role": "vendor", "vendor_id": "v003", "buildings": []},
@@ -1319,22 +1319,30 @@ def login():
     if request.method == "POST":
         email = request.form.get("email", "").lower().strip()
         password = request.form.get("password", "")
+        access_code = request.form.get("access_code", "").strip()
         user = DEMO_USERS.get(email)
         if user and user["password"] == password:
-            session["user_email"] = email
-            session["user_name"] = user["name"]
-            session["user_role"] = user.get("role", "board")
-            if user.get("role") == "vendor":
-                session["vendor_id"] = user.get("vendor_id")
-                return redirect(url_for("vendor_dashboard"))
-            buildings = user.get("buildings", [])
-            if buildings:
-                session["active_building"] = buildings[0]
-            # Management companies (many buildings) → portfolio view
-            if len(buildings) > 20:
-                return redirect(url_for("portfolio_dashboard"))
-            return redirect(url_for("dashboard"))
-        error = "Invalid credentials."
+            # ── Invite-code gated accounts ──────────────────────────────
+            # Accounts with an "access_code" field require a matching code
+            required_code = user.get("access_code")
+            if required_code and access_code.upper() != required_code.upper():
+                error = "Valid credentials, but an access code is required for this account."
+            else:
+                session["user_email"] = email
+                session["user_name"] = user["name"]
+                session["user_role"] = user.get("role", "board")
+                if user.get("role") == "vendor":
+                    session["vendor_id"] = user.get("vendor_id")
+                    return redirect(url_for("vendor_dashboard"))
+                buildings = user.get("buildings", [])
+                if buildings:
+                    session["active_building"] = buildings[0]
+                # Management companies (many buildings) → portfolio view
+                if len(buildings) > 20:
+                    return redirect(url_for("portfolio_dashboard"))
+                return redirect(url_for("dashboard"))
+        else:
+            error = "Invalid credentials."
 
     # Compute live stats for splash page
     total_buildings = len(BUILDINGS_DB)
@@ -1349,12 +1357,16 @@ def login():
         total_vendor_spend = f"${total_spend / 1_000:,.0f}K"
     num_categories = len(ALL_CATEGORIES)
 
+    # Build list of email addresses that require an access code (for JS field toggle)
+    _gated = json.dumps([e for e, u in DEMO_USERS.items() if u.get("access_code")])
+
     return render_template_string(LOGIN_HTML,
         error=error,
         total_buildings=total_buildings,
         total_units=f"{total_units:,}",
         total_vendor_spend=total_vendor_spend,
         num_categories=num_categories,
+        gated_emails=_gated,
     )
 
 @app.route("/logout")
@@ -3557,20 +3569,55 @@ body{background:var(--bg);font-family:'Plus Jakarta Sans',sans-serif;color:var(-
       <h2>Sign In</h2>
       <div class="card-sub">Access your building dashboard</div>
       {% if error %}<div class="error-msg">{{ error }}</div>{% endif %}
-      <form method="POST" action="/login">
+      <form method="POST" action="/login" id="loginForm">
         <label>Email Address</label>
-        <input type="email" name="email" placeholder="board@yourbuilding.com" required>
+        <input type="email" name="email" id="loginEmail" placeholder="board@yourbuilding.com" required>
         <label>Password</label>
         <input type="password" name="password" placeholder="••••••••" required>
+        <div id="accessCodeWrap" style="display:none">
+          <label>Access Code</label>
+          <input type="text" name="access_code" id="accessCodeInput" placeholder="Enter your access code" autocomplete="off">
+          <div style="font-size:10.5px;color:var(--ink-muted);margin-top:4px">This account requires an access code. Contact your administrator if you don\\'t have one.</div>
+        </div>
         <button type="submit" class="login-btn">Sign In &rarr;</button>
       </form>
-      <div class="demo-accounts">
+      <script>
+      // Show access code field when email matches a gated account
+      (function(){
+        var el = document.getElementById('loginEmail');
+        var wrap = document.getElementById('accessCodeWrap');
+        var gated = {{ gated_emails | safe }};
+        function check(){
+          var v = el.value.trim().toLowerCase();
+          wrap.style.display = gated.indexOf(v) !== -1 ? 'block' : 'none';
+        }
+        el.addEventListener('input', check);
+        el.addEventListener('change', check);
+        {% if error and 'access code' in error|lower %}wrap.style.display='block';{% endif %}
+        check();
+      })();
+      </script>
+      <div class="demo-accounts" id="demoHint" style="display:none">
         <strong>Demo Accounts</strong><br>
         board@130e18.com &middot; demo1234 <span class="role-tag role-board">Board</span><br>
         admin@boardiq.com &middot; admin <span class="role-tag role-admin">Admin</span><br>
         vendor@schindler.com &middot; demo1234 <span class="role-tag role-vendor">Vendor</span>
       </div>
       <div class="vendor-link">Are you a vendor? <a href="/vendor/register">Join the Vendor Network &rarr;</a></div>
+      <script>
+      // Ctrl+Shift+D toggles demo account hints
+      document.addEventListener('keydown', function(e){
+        if(e.ctrlKey && e.shiftKey && e.key === 'D'){
+          e.preventDefault();
+          var h = document.getElementById('demoHint');
+          h.style.display = h.style.display === 'none' ? 'block' : 'none';
+        }
+      });
+      // Also allow ?demo=1 in URL
+      if(new URLSearchParams(window.location.search).get('demo')==='1'){
+        document.getElementById('demoHint').style.display='block';
+      }
+      </script>
     </div>
   </div>
 </section>
