@@ -80,6 +80,7 @@ def _send_email(to_addr, subject, html_body):
                 headers={
                     "Authorization": f"Bearer {RESEND_API_KEY}",
                     "Content-Type": "application/json",
+                    "User-Agent": "BoardIQ/1.0",
                 },
                 method="POST",
             )
