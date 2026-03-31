@@ -1646,10 +1646,20 @@ def admin_send_credentials():
             )
             message = f'<span style="color:#059669">&#10003; Credentials sent to {recipient_email}</span>'
 
-    account_options = ""
+        # Build account options grouped by role
+    account_options = '<optgroup label="Board Portals">'
     for em, info in sorted(DEMO_USERS.items()):
-        if info.get("role") != "vendor":
+        if info.get("role") == "board":
             account_options += f'<option value="{em}">{info.get("name", em)} ({em})</option>'
+    account_options += '</optgroup><optgroup label="Admin Portals">'
+    for em, info in sorted(DEMO_USERS.items()):
+        if info.get("role") == "admin":
+            account_options += f'<option value="{em}">{info.get("name", em)} ({em})</option>'
+    account_options += '</optgroup><optgroup label="Vendor Portals">'
+    for em, info in sorted(DEMO_USERS.items()):
+        if info.get("role") == "vendor":
+            account_options += f'<option value="{em}">{info.get("name", em)} ({em})</option>'
+    account_options += '</optgroup>'
 
     return f"""<!DOCTYPE html><html><head><title>Send Credentials - BoardIQ</title>
     <style>
