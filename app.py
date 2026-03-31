@@ -4073,27 +4073,22 @@ body{background:var(--bg);font-family:'Plus Jakarta Sans',sans-serif;color:var(-
 <nav class="splash-nav" id="splashNav">
   <a href="/" class="nav-logo">Board<b>IQ</b></a>
   <button class="splash-hamburger" onclick="document.querySelector('.splash-nav .nav-links').classList.toggle('open')" aria-label="Menu">☰</button>
-<div id="login-section" style="max-width:400px;margin:60px auto;padding:0 20px">
-            <div style="background:white;padding:40px;border-radius:12px;box-shadow:0 2px 20px rgba(0,0,0,.08);text-align:center">
-                <p style="font-size:13px;color:#6b7280;text-transform:uppercase;letter-spacing:2px;margin:0 0 4px">BoardIQ</p>
-                <h2 style="color:#05070a;margin:0 0 24px;font-size:22px">Sign In</h2>
-                {% if error %}
-                <p style="color:#c0392b;font-size:14px;margin-bottom:16px">{{ error }}</p>
-                {% endif %}
-                <form method="POST" action="/login">
-                    <div style="text-align:left">
-                        <label style="display:block;font-size:13px;color:#4b5563;margin:0 0 4px;font-weight:600">Email</label>
-                        <input name="email" type="email" placeholder="you@example.com" required
-                               style="width:100%;padding:12px;border:1px solid #d1d5db;border-radius:8px;font-size:16px;box-sizing:border-box;margin-bottom:14px">
-                        <label style="display:block;font-size:13px;color:#4b5563;margin:0 0 4px;font-weight:600">Password</label>
-                        <input name="password" type="password" placeholder="••••••••" required
-                               style="width:100%;padding:12px;border:1px solid #d1d5db;border-radius:8px;font-size:16px;box-sizing:border-box">
-                    </div>
-                    <button type="submit" style="display:block;width:100%;padding:14px;background:#05070a;color:white;border:none;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer;margin-top:20px">Sign In &rarr;</button>
-                </form>
-                <p style="margin-top:20px;font-size:12px;color:#9ca3af">Need access? Contact your administrator.</p>
-            </div>
-        </div>
+<div class="login-card" id="login-section">
+      <div class="card-label">Welcome Back</div>
+      <h2>Sign In</h2>
+      <div class="card-sub">Enter your credentials to access your dashboard</div>
+
+      {% if error %}<div class="error-msg">{{ error }}</div>{% endif %}
+      <form method="POST" action="/login">
+        <label>Email</label>
+        <input type="email" name="email" placeholder="you@example.com" required>
+        <label>Password</label>
+        <input type="password" name="password" placeholder="••••••••" required>
+        <button type="submit" class="login-btn">Sign In &rarr;</button>
+      </form>
+
+      <div class="vendor-link">Are you a vendor? <a href="/vendor/register">Join the Vendor Network &rarr;</a></div>
+    </div>
 
       <div class="vendor-link">Are you a vendor? <a href="/vendor/register">Join the Vendor Network &rarr;</a></div>
     </div>
