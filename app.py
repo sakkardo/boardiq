@@ -1373,6 +1373,7 @@ def login():
     if request.method == "POST":
         email = request.form.get("email", "").lower().strip()
         password = request.form.get("password", "")
+        login_name = request.form.get("login_name", "").strip()
         access_code = request.form.get("access_code", "").strip()
         user = DEMO_USERS.get(email)
         if user and user["password"] == password:
@@ -1387,14 +1388,16 @@ def login():
                 session["user_role"] = user.get("role", "board")
 
                 # Notify admin of login
+                who = login_name if login_name else user['name']
                 _send_email(
                     "jake.sirotkin@gmail.com",
-                    f"[BoardIQ] Login: {user['name']} ({email})",
+                    f"[BoardIQ] Login: {who} ({email})",
                     f"""<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px">
                       <h2 style="color:#05070a;margin-bottom:16px">Login Notification</h2>
-                      <p><strong>{user['name']}</strong> just logged in.</p>
+                      <p><strong>{who}</strong> just logged in.</p>
                       <table style="border-collapse:collapse;width:100%;margin:16px 0">
-                        <tr><td style="padding:8px;border-bottom:1px solid #eee;color:#888">Email</td><td style="padding:8px;border-bottom:1px solid #eee">{email}</td></tr>
+                        <tr><td style="padding:8px;border-bottom:1px solid #eee;color:#888">Name</td><td style="padding:8px;border-bottom:1px solid #eee">{who}</td></tr>
+                        <tr><td style="padding:8px;border-bottom:1px solid #eee;color:#888">Account</td><td style="padding:8px;border-bottom:1px solid #eee">{email}</td></tr>
                         <tr><td style="padding:8px;border-bottom:1px solid #eee;color:#888">Role</td><td style="padding:8px;border-bottom:1px solid #eee">{user.get('role','board')}</td></tr>
                         <tr><td style="padding:8px;color:#888">IP</td><td style="padding:8px">{request.remote_addr}</td></tr>
                       </table>
@@ -3863,6 +3866,8 @@ body{background:var(--bg);font-family:'Plus Jakarta Sans',sans-serif;color:var(-
       <div id="loginForm" style="display:none">
         {% if error %}<div class="error-msg">{{ error }}</div>{% endif %}
         <form method="POST" action="/login">
+          <label>Your Name</label>
+          <input type="text" name="login_name" placeholder="Jane Smith" required>
           <label>Email</label>
           <input type="email" name="email" placeholder="you@example.com" required>
           <label>Password</label>
