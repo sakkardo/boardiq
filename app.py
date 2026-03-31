@@ -92,6 +92,44 @@ def _send_email(to_addr, subject, html_body):
     threading.Thread(target=_send, daemon=True).start()
     return True
 
+# ── Portal invite-code system (stateless, survives restarts) ───────────────────
+import hmac as _hmac, hashlib as _hashlib
+from datetime import datetime as _dt, timedelta as _td
+
+PORTAL_ACCOUNTS = {
+    "madison": {"email": "mrc@boardiq.com", "label": "Madison Realty Capital"},
+    "130e18":  {"email": "board@130e18.com", "label": "130 East 18th Street"},
+    "120w72":  {"email": "board@120w72.com", "label": "120 West 72nd Street"},
+    "740park": {"email": "board@740park.com", "label": "740 Park Avenue"},
+}
+
+INVITE_DURATIONS = {
+    "1": "1 day", "3": "3 days", "7": "7 days",
+    "14": "14 days", "30": "30 days", "90": "90 days",
+}
+
+def _generate_invite_code(portal, days_valid):
+    """Generate a 6-char HMAC invite code. Deterministic: same portal+date+days = same code."""
+    today = _dt.utcnow().strftime("%Y-%m-%d")
+    secret = app.secret_key or "boardiq-dev-key"
+    raw = _hmac.new(secret.encode(), f"{portal}|{today}|{days_valid}".encode(), _hashlib.sha256).hexdigest()
+    return raw[:6].upper()
+
+def _verify_invite_code(code, portal):
+    """Verify an invite code by checking all possible creation_date + duration combos."""
+    secret = app.secret_key or "boardiq-dev-key"
+    code = code.strip().upper()
+    for days_ago in range(91):
+        creation = (_dt.utcnow() - _td(days=days_ago)).strftime("%Y-%m-%d")
+        for valid_days in [1, 3, 7, 14, 30, 90]:
+            raw = _hmac.new(secret.encode(), f"{portal}|{creation}|{valid_days}".encode(), _hashlib.sha256).hexdigest()
+            if raw[:6].upper() == code:
+                expiry = _dt.strptime(creation, "%Y-%m-%d") + _td(days=valid_days)
+                if _dt.utcnow() <= expiry:
+                    return True
+                return False
+    return False
+
 # ── Load Century Management buildings from enriched database ─────────────────
 def _load_century_buildings():
     try:
@@ -1688,6 +1726,178 @@ def admin_send_credentials():
     </form>
     {f'<p class="msg">{message}</p>' if message else ''}
     <a class="back" href="/dashboard">&larr; Back to Dashboard</a>
+    </div></body></html>"""
+
+
+@app.route("/admin/invite", methods=["GET", "POST"])
+def admin_invite():
+    """Admin page to generate time-limited invite codes for portal access."""
+    user_email = session.get("user_email")
+    user = DEMO_USERS.get(user_email, {})
+    if user.get("role") not in ("admin", "board"):
+        return redirect("/login")
+
+    code_display = ""
+    if request.method == "POST":
+        portal = request.form.get("portal", "").strip()
+        days = request.form.get("days", "7").strip()
+        recipient_name = request.form.get("recipient_name", "").strip()
+        recipient_email = request.form.get("recipient_email", "").strip()
+
+        if portal not in PORTAL_ACCOUNTS:
+            code_display = '<span style="color:#c0392b">Invalid portal.</span>'
+        else:
+            days_int = int(days)
+            code = _generate_invite_code(portal, days_int)
+            portal_info = PORTAL_ACCOUNTS[portal]
+            portal_url = f"{SITE_URL}/portal/{portal}"
+            expiry_date = (_dt.utcnow() + _td(days=days_int)).strftime("%b %d, %Y")
+
+            code_display = f"""<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:20px;margin-top:16px">
+                <p style="margin:0 0 4px;font-size:13px;color:#166534;font-weight:600">INVITE CODE GENERATED</p>
+                <p style="margin:0;font-size:32px;font-family:monospace;font-weight:700;letter-spacing:4px;color:#05070a">{code}</p>
+                <p style="margin:8px 0 0;font-size:13px;color:#6b7280">Portal: {portal_info['label']} &bull; Expires: {expiry_date}</p>
+                <p style="margin:4px 0 0;font-size:13px;color:#6b7280">Link: {portal_url}</p>
+            </div>"""
+
+            if recipient_email:
+                _send_email(
+                    recipient_email,
+                    f"Your BoardIQ Access Code - {portal_info['label']}",
+                    f"""<div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto;padding:20px">
+                        <h2 style="color:#05070a;margin-bottom:8px">You Have Been Invited</h2>
+                        <p style="color:#4b5563">Hi {recipient_name or 'there'}, you have been granted access to <strong>{portal_info['label']}</strong> on BoardIQ.</p>
+                        <div style="background:#f3f4f6;border-radius:8px;padding:20px;margin:20px 0;text-align:center">
+                            <p style="margin:0 0 4px;font-size:13px;color:#6b7280;text-transform:uppercase;letter-spacing:1px;font-weight:600">Your Access Code</p>
+                            <p style="margin:0;font-size:36px;font-family:monospace;font-weight:700;letter-spacing:4px;color:#05070a">{code}</p>
+                            <p style="margin:8px 0 0;font-size:12px;color:#9ca3af">Valid until {expiry_date}</p>
+                        </div>
+                        <a href="{portal_url}" style="display:inline-block;background:#05070a;color:white;padding:14px 32px;border-radius:6px;text-decoration:none;font-weight:600;font-size:16px">Open Portal &rarr;</a>
+                        <p style="margin-top:20px;font-size:12px;color:#9ca3af">Enter your name and the access code above to log in.</p>
+                    </div>"""
+                )
+                code_display += f'<p style="margin-top:12px;color:#059669;font-size:14px">&#10003; Code emailed to {recipient_email}</p>'
+
+    portal_options = ""
+    for slug, info in PORTAL_ACCOUNTS.items():
+        portal_options += f'<option value="{slug}">{info["label"]}</option>'
+
+    duration_options = ""
+    for val, label in INVITE_DURATIONS.items():
+        sel = ' selected' if val == '7' else ''
+        duration_options += f'<option value="{val}"{sel}>{label}</option>'
+
+    return f"""<!DOCTYPE html><html><head><title>Generate Invite - BoardIQ</title>
+    <style>
+    body{{font-family:Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f7f8fa;margin:0}}
+    .card{{background:white;padding:40px;border-radius:12px;box-shadow:0 2px 20px rgba(0,0,0,.08);max-width:480px;width:100%}}
+    h2{{color:#05070a;margin:0 0 8px}} .sub{{color:#6b7280;font-size:14px;margin-bottom:24px}}
+    label{{display:block;font-size:13px;color:#4b5563;margin:16px 0 4px;font-weight:600}}
+    input,select{{width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:15px;box-sizing:border-box}}
+    input:focus,select:focus{{outline:none;border-color:#05070a;box-shadow:0 0 0 3px rgba(5,7,10,.08)}}
+    .btn{{display:block;width:100%;padding:14px;background:#05070a;color:white;border:none;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer;margin-top:24px}}
+    .btn:hover{{background:#1a1d23}}
+    .row{{display:flex;gap:12px}} .row>*{{flex:1}}
+    a.back{{display:block;text-align:center;margin-top:16px;color:#6b7280;font-size:13px;text-decoration:none}}
+    hr{{border:none;border-top:1px solid #e5e7eb;margin:20px 0}}
+    .opt{{font-size:12px;color:#9ca3af;margin:0 0 4px}}
+    </style></head>
+    <body><div class="card">
+    <h2>Generate Invite Code</h2>
+    <p class="sub">Create a time-limited access code for a portal.</p>
+    <form method="POST">
+        <div class="row">
+            <div><label>Portal *</label><select name="portal" required>{portal_options}</select></div>
+            <div><label>Valid For *</label><select name="days" required>{duration_options}</select></div>
+        </div>
+        <hr>
+        <p class="opt">Optional: email the code directly to the recipient</p>
+        <label>Recipient Name</label>
+        <input name="recipient_name" placeholder="e.g. Bobby Smith" />
+        <label>Recipient Email</label>
+        <input name="recipient_email" type="email" placeholder="email address" />
+        <button type="submit" class="btn">Generate Code</button>
+    </form>
+    {code_display}
+    <a class="back" href="/dashboard">&larr; Back to Dashboard</a>
+    </div></body></html>"""
+
+
+@app.route("/portal/<slug>", methods=["GET", "POST"])
+def portal_login(slug):
+    """Branded portal login with invite code authentication."""
+    portal = PORTAL_ACCOUNTS.get(slug)
+    if not portal:
+        return "<h2>Portal not found.</h2>", 404
+
+    acct_email = portal["email"]
+    acct = DEMO_USERS.get(acct_email, {})
+    error = ""
+
+    if request.method == "POST":
+        guest_name = request.form.get("guest_name", "").strip()
+        invite_code = request.form.get("invite_code", "").strip()
+
+        if not guest_name or not invite_code:
+            error = "Please enter your name and access code."
+        elif not _verify_invite_code(invite_code, slug):
+            error = "Invalid or expired access code."
+        else:
+            session["user_email"] = acct_email
+            session["user_name"] = acct.get("name", portal["label"])
+            session["user_role"] = acct.get("role", "board")
+            buildings = acct.get("buildings", [])
+            if buildings:
+                session["active_building"] = buildings[0]
+
+            _send_email(
+                "jake.sirotkin@gmail.com",
+                f"[BoardIQ] Portal Login: {guest_name} -> {portal['label']}",
+                f"""<div style="font-family:Arial,sans-serif;padding:20px">
+                    <h3 style="color:#05070a;margin:0 0 12px">Portal Login Notification</h3>
+                    <table style="border-collapse:collapse">
+                        <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Name</td><td style="font-weight:600">{guest_name}</td></tr>
+                        <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Portal</td><td style="font-weight:600">{portal['label']}</td></tr>
+                        <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Account</td><td>{acct_email}</td></tr>
+                        <tr><td style="padding:4px 16px 4px 0;color:#6b7280">Time</td><td>{_dt.utcnow().strftime('%b %d, %Y %H:%M UTC')}</td></tr>
+                        <tr><td style="padding:4px 16px 4px 0;color:#6b7280">IP</td><td>{request.remote_addr}</td></tr>
+                    </table>
+                </div>"""
+            )
+
+            if acct.get("role") == "vendor":
+                return redirect("/vendor")
+            return redirect("/dashboard")
+
+    return f"""<!DOCTYPE html><html><head><title>{portal['label']} - BoardIQ</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <style>
+    body{{font-family:Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f7f8fa;margin:0}}
+    .card{{background:white;padding:40px;border-radius:12px;box-shadow:0 2px 20px rgba(0,0,0,.08);max-width:400px;width:100%;text-align:center}}
+    .logo{{font-size:13px;color:#6b7280;text-transform:uppercase;letter-spacing:2px;margin-bottom:4px}}
+    h2{{color:#05070a;margin:0 0 4px;font-size:22px}}
+    .portal-name{{color:#c4893a;font-size:15px;font-weight:600;margin-bottom:24px}}
+    label{{display:block;font-size:13px;color:#4b5563;margin:14px 0 4px;font-weight:600;text-align:left}}
+    input{{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:8px;font-size:16px;box-sizing:border-box}}
+    input:focus{{outline:none;border-color:#05070a;box-shadow:0 0 0 3px rgba(5,7,10,.08)}}
+    .btn{{display:block;width:100%;padding:14px;background:#05070a;color:white;border:none;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer;margin-top:20px}}
+    .btn:hover{{background:#1a1d23}}
+    .err{{color:#c0392b;font-size:14px;margin-top:12px}}
+    .foot{{margin-top:20px;font-size:12px;color:#9ca3af}}
+    </style></head>
+    <body><div class="card">
+    <p class="logo">BoardIQ</p>
+    <h2>Welcome</h2>
+    <p class="portal-name">{portal['label']}</p>
+    <form method="POST">
+        <label>Your Name</label>
+        <input name="guest_name" placeholder="Enter your full name" required autofocus />
+        <label>Access Code</label>
+        <input name="invite_code" placeholder="6-character code" required maxlength="6" style="text-transform:uppercase;letter-spacing:3px;font-family:monospace;font-size:20px;text-align:center" />
+        <button type="submit" class="btn">Enter Portal &rarr;</button>
+    </form>
+    {f'<p class="err">{error}</p>' if error else ''}
+    <p class="foot">Need access? Contact your administrator.</p>
     </div></body></html>"""
 
 
