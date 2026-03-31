@@ -24,7 +24,10 @@ import csv
 import io
 import re
 import uuid
+import smtplib
 import threading
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timedelta
 from functools import wraps
 
@@ -44,21 +47,20 @@ app.secret_key = os.environ.get("SECRET_KEY", "boardiq-dev-key-change-in-product
 #  ACCESS REQUEST SYSTEM
 #  - Visitors request access via dropdown (no passwords exposed)
 #  - Admin gets email notification with Approve/Deny links
-#  - Approve generates a one-time magic link (4hr expiry) emailed to requester
+#  - Approve sends login credentials to requester via email
 # ═══════════════════════════════════════════════════════════════════════════════
 
 ADMIN_EMAIL = "jake.sirotkin@gmail.com"
-RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
+GMAIL_USER = "jake.sirotkin@gmail.com"
+GMAIL_APP_PASSWORD = os.environ.get("GMAIL_APP_PASSWORD", "")
 SITE_URL = os.environ.get("SITE_URL", "https://mybuildingiq.com")
 
 # In-memory stores (reset on deploy — fine for low-volume demo access)
 ACCESS_REQUESTS = {}   # token → {name, email, access_type, account_email, requested_at, status}
-MAGIC_LINKS = {}       # token → {account_email, created_at, used}
-
 def _send_email(to_addr, subject, html_body):
-    """Send email via Resend API. Falls back to console logging if not configured."""
-    if not RESEND_API_KEY:
-        print(f"[BoardIQ Email] (no RESEND_API_KEY set — logging only)")
+    """Send email via Gmail SMTP. Falls back to console logging if not configured."""
+    if not GMAIL_APP_PASSWORD:
+        print(f"[BoardIQ Email] (no GMAIL_APP_PASSWORD set — logging only)")
         print(f"  To: {to_addr}")
         print(f"  Subject: {subject}")
         print(f"  Body preview: {html_body[:200]}")
@@ -66,38 +68,18 @@ def _send_email(to_addr, subject, html_body):
 
     def _send():
         try:
-            import urllib.request
-            payload = json.dumps({
-                "from": "BoardIQ <access@mybuildingiq.com>",
-                "to": [to_addr],
-                "subject": subject,
-                "html": html_body,
-            }).encode("utf-8")
+            msg = MIMEMultipart("alternative")
+            msg["From"] = f"BoardIQ <{GMAIL_USER}>"
+            msg["To"] = to_addr
+            msg["Subject"] = subject
+            msg.attach(MIMEText(html_body, "html"))
 
-            req = urllib.request.Request(
-                "https://api.resend.com/emails",
-                data=payload,
-                headers={
-                    "Authorization": f"Bearer {RESEND_API_KEY}",
-                    "Content-Type": "application/json",
-                    "User-Agent": "BoardIQ/1.0",
-                },
-                method="POST",
-            )
-            with urllib.request.urlopen(req, timeout=10) as resp:
-                result = json.loads(resp.read().decode())
-                print(f"[BoardIQ Email] Sent to {to_addr}: {subject} (id: {result.get('id', '?')})")
+            with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+                server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
+                server.sendmail(GMAIL_USER, to_addr, msg.as_string())
+            print(f"[BoardIQ Email] Sent to {to_addr}: {subject}")
         except Exception as e:
-            # Read the response body for details on why it failed
-            error_body = ""
-            if hasattr(e, 'read'):
-                try:
-                    error_body = e.read().decode()
-                except Exception:
-                    pass
             print(f"[BoardIQ Email] FAILED to send to {to_addr}: {e}")
-            print(f"[BoardIQ Email] Response body: {error_body}")
-            print(f"[BoardIQ Email] API key starts with: {RESEND_API_KEY[:8]}..." if RESEND_API_KEY else "[BoardIQ Email] No API key!")
 
     # Send in background thread so request doesn't block
     threading.Thread(target=_send, daemon=True).start()
@@ -1396,6 +1378,23 @@ def login():
                 session["user_email"] = email
                 session["user_name"] = user["name"]
                 session["user_role"] = user.get("role", "board")
+
+                # Notify admin of login
+                _send_email(
+                    "jake.sirotkin@gmail.com",
+                    f"[BoardIQ] Login: {user['name']} ({email})",
+                    f"""<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px">
+                      <h2 style="color:#05070a;margin-bottom:16px">Login Notification</h2>
+                      <p><strong>{user['name']}</strong> just logged in.</p>
+                      <table style="border-collapse:collapse;width:100%;margin:16px 0">
+                        <tr><td style="padding:8px;border-bottom:1px solid #eee;color:#888">Email</td><td style="padding:8px;border-bottom:1px solid #eee">{email}</td></tr>
+                        <tr><td style="padding:8px;border-bottom:1px solid #eee;color:#888">Role</td><td style="padding:8px;border-bottom:1px solid #eee">{user.get('role','board')}</td></tr>
+                        <tr><td style="padding:8px;color:#888">IP</td><td style="padding:8px">{request.remote_addr}</td></tr>
+                      </table>
+                      <p style="font-size:12px;color:#aaa">BoardIQ &middot; {datetime.now().strftime('%b %d, %Y at %I:%M %p')}</p>
+                    </div>"""
+                )
+
                 if user.get("role") == "vendor":
                     session["vendor_id"] = user.get("vendor_id")
                     return redirect(url_for("vendor_dashboard"))
@@ -1515,7 +1514,7 @@ def request_access():
                 <a href="{approve_url}" style="display:inline-block;background:#059669;color:white;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:600;margin-right:12px">Approve</a>
                 <a href="{deny_url}" style="display:inline-block;background:#dc2626;color:white;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:600">Deny</a>
             </div>
-            <p style="margin-top:20px;font-size:12px;color:#9ca3af">Approving will send a one-time login link to {req_email} that expires in 4 hours.</p>
+            <p style="margin-top:20px;font-size:12px;color:#9ca3af">Approving will send login credentials to {req_email}.</p>
         </div>
         """
     )
@@ -1525,7 +1524,7 @@ def request_access():
 
 @app.route("/approve-access/<token>")
 def approve_access(token):
-    """Admin clicks Approve — generates magic link and emails it to the requester."""
+    """Admin clicks Approve — sends credentials to the requester."""
     req = ACCESS_REQUESTS.get(token)
     if not req:
         return "<h2>Invalid or expired request.</h2>", 404
@@ -1534,17 +1533,13 @@ def approve_access(token):
 
     req["status"] = "approved"
 
-    # Generate magic login link
-    magic_token = uuid.uuid4().hex
-    MAGIC_LINKS[magic_token] = {
-        "account_email": req["account_email"],
-        "created_at": datetime.utcnow(),
-        "used": False,
-    }
+    # Look up the demo account credentials
+    acct_email = req["account_email"]
+    acct_user = DEMO_USERS.get(acct_email, {})
+    acct_password = acct_user.get("password", "")
+    login_url = f"{SITE_URL}/?admin=1"
 
-    magic_url = f"{SITE_URL}/magic-login/{magic_token}"
-
-    # Email the requester their login link
+    # Email the requester their credentials
     _send_email(
         req["email"],
         f"Your BoardIQ Access Has Been Approved",
@@ -1552,8 +1547,15 @@ def approve_access(token):
         <div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto;padding:20px">
             <h2 style="color:#05070a;margin-bottom:8px">Access Approved</h2>
             <p style="color:#4b5563;margin-bottom:20px">Hi {req['name']}, your access to <strong>{req['access_label']}</strong> on BoardIQ has been approved.</p>
-            <a href="{magic_url}" style="display:inline-block;background:#05070a;color:white;padding:14px 32px;border-radius:6px;text-decoration:none;font-weight:600;font-size:16px">Log In to BoardIQ &rarr;</a>
-            <p style="margin-top:20px;font-size:12px;color:#9ca3af">This link is <strong>one-time use</strong> and expires in <strong>4 hours</strong>. Do not share it.</p>
+            <div style="background:#f3f4f6;border-radius:8px;padding:20px;margin:20px 0">
+                <p style="margin:0 0 8px;font-size:13px;color:#6b7280;text-transform:uppercase;letter-spacing:1px;font-weight:600">Your Login Credentials</p>
+                <table style="width:100%;border-collapse:collapse">
+                    <tr><td style="padding:6px 0;color:#6b7280;width:80px">Email</td><td style="padding:6px 0;font-weight:600;font-family:monospace">{acct_email}</td></tr>
+                    <tr><td style="padding:6px 0;color:#6b7280">Password</td><td style="padding:6px 0;font-weight:600;font-family:monospace">{acct_password}</td></tr>
+                </table>
+            </div>
+            <a href="{login_url}" style="display:inline-block;background:#05070a;color:white;padding:14px 32px;border-radius:6px;text-decoration:none;font-weight:600;font-size:16px">Log In to BoardIQ &rarr;</a>
+            <p style="margin-top:20px;font-size:12px;color:#9ca3af">Click "Already have credentials? Log in" on the home page, then enter the credentials above.</p>
         </div>
         """
     )
@@ -1563,8 +1565,7 @@ def approve_access(token):
     .card{{background:white;padding:40px;border-radius:12px;box-shadow:0 2px 20px rgba(0,0,0,.08);text-align:center;max-width:400px}}
     h2{{color:#059669;margin-bottom:8px}} p{{color:#4b5563;font-size:14px}}</style></head>
     <body><div class="card"><h2>&#10003; Approved</h2>
-    <p>A one-time login link has been sent to <strong>{req['email']}</strong>.</p>
-    <p style="font-size:12px;color:#9ca3af;margin-top:16px">The link expires in 4 hours.</p>
+    <p>Login credentials have been sent to <strong>{req['email']}</strong>.</p>
     </div></body></html>"""
 
 
@@ -1587,57 +1588,6 @@ def deny_access(token):
     </div></body></html>"""
 
 
-@app.route("/magic-login/<token>")
-def magic_login(token):
-    """One-time magic link login. Expires after 4 hours or first use."""
-    link = MAGIC_LINKS.get(token)
-    if not link:
-        return f"""<!DOCTYPE html><html><head><title>Invalid Link</title>
-        <style>body{{font-family:Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f7f8fa}}
-        .card{{background:white;padding:40px;border-radius:12px;box-shadow:0 2px 20px rgba(0,0,0,.08);text-align:center;max-width:400px}}
-        h2{{color:#dc2626}} p{{color:#4b5563;font-size:14px}} a{{color:#0066cc}}</style></head>
-        <body><div class="card"><h2>Invalid Link</h2><p>This login link is invalid or has already been used.</p>
-        <a href="/">Back to BoardIQ</a></div></body></html>""", 404
-
-    # Check expiry (4 hours)
-    if datetime.utcnow() - link["created_at"] > timedelta(hours=4):
-        link["used"] = True
-        return f"""<!DOCTYPE html><html><head><title>Link Expired</title>
-        <style>body{{font-family:Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f7f8fa}}
-        .card{{background:white;padding:40px;border-radius:12px;box-shadow:0 2px 20px rgba(0,0,0,.08);text-align:center;max-width:400px}}
-        h2{{color:#d97706}} p{{color:#4b5563;font-size:14px}} a{{color:#0066cc}}</style></head>
-        <body><div class="card"><h2>Link Expired</h2><p>This login link has expired. Please request access again.</p>
-        <a href="/">Back to BoardIQ</a></div></body></html>""", 410
-
-    if link["used"]:
-        return f"""<!DOCTYPE html><html><head><title>Already Used</title>
-        <style>body{{font-family:Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f7f8fa}}
-        .card{{background:white;padding:40px;border-radius:12px;box-shadow:0 2px 20px rgba(0,0,0,.08);text-align:center;max-width:400px}}
-        h2{{color:#d97706}} p{{color:#4b5563;font-size:14px}} a{{color:#0066cc}}</style></head>
-        <body><div class="card"><h2>Already Used</h2><p>This login link has already been used.</p>
-        <a href="/">Back to BoardIQ</a></div></body></html>""", 410
-
-    # Burn the token
-    link["used"] = True
-
-    # Log in as the mapped account
-    acct_email = link["account_email"]
-    user = DEMO_USERS.get(acct_email)
-    if not user:
-        return "Account not found", 404
-
-    session["user_email"] = acct_email
-    session["user_name"] = user["name"]
-    session["user_role"] = user.get("role", "board")
-    if user.get("role") == "vendor":
-        session["vendor_id"] = user.get("vendor_id")
-        return redirect(url_for("vendor_dashboard"))
-    buildings = user.get("buildings", [])
-    if buildings:
-        session["active_building"] = buildings[0]
-    if len(buildings) > 20:
-        return redirect(url_for("portfolio_dashboard"))
-    return redirect(url_for("dashboard"))
 
 
 @app.route("/dashboard")
@@ -3897,30 +3847,46 @@ body{background:var(--bg);font-family:'Plus Jakarta Sans',sans-serif;color:var(-
       }
       </script>
 
-      <!-- Hidden admin login — Ctrl+Shift+D or ?admin=1 -->
-      <div id="adminLogin" style="display:none;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
-        <div style="font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--ink-muted);margin-bottom:10px;font-weight:600">Admin Login</div>
+      <!-- Toggle link to switch to login -->
+      <div style="text-align:center;margin-top:12px">
+        <a href="#" id="showLoginLink" onclick="toggleLoginView(true);return false;" style="font-size:13px;color:var(--ink-muted);text-decoration:underline;text-underline-offset:3px">Already have credentials? Log in</a>
+      </div>
+
+      <!-- Login form (hidden by default) -->
+      <div id="loginForm" style="display:none">
         {% if error %}<div class="error-msg">{{ error }}</div>{% endif %}
         <form method="POST" action="/login">
           <label>Email</label>
-          <input type="email" name="email" placeholder="admin@boardiq.com" required>
+          <input type="email" name="email" placeholder="you@example.com" required>
           <label>Password</label>
           <input type="password" name="password" placeholder="••••••••" required>
-          <button type="submit" class="login-btn" style="background:var(--ink)">Admin Sign In &rarr;</button>
+          <button type="submit" class="login-btn">Sign In &rarr;</button>
         </form>
+        <div style="text-align:center;margin-top:12px">
+          <a href="#" onclick="toggleLoginView(false);return false;" style="font-size:13px;color:var(--ink-muted);text-decoration:underline;text-underline-offset:3px">&larr; Back to Request Access</a>
+        </div>
       </div>
 
       <script>
-      // Ctrl+Shift+D toggles admin login
+      function toggleLoginView(showLogin){
+        document.getElementById('requestForm').style.display = showLogin ? 'none' : 'block';
+        document.getElementById('showLoginLink').style.display = showLogin ? 'none' : 'block';
+        document.getElementById('loginForm').style.display = showLogin ? 'block' : 'none';
+        document.querySelector('.login-card h2').textContent = showLogin ? 'Sign In' : 'Request Access';
+        document.querySelector('.card-sub').textContent = showLogin
+          ? 'Enter your email and password'
+          : 'Select a dashboard to explore and we\\'ll send you a login link';
+      }
+      {% if error %}toggleLoginView(true);{% endif %}
+      // Ctrl+Shift+D still works as shortcut
       document.addEventListener('keydown', function(e){
         if(e.ctrlKey && e.shiftKey && e.key === 'D'){
           e.preventDefault();
-          var h = document.getElementById('adminLogin');
-          h.style.display = h.style.display === 'none' ? 'block' : 'none';
+          toggleLoginView(document.getElementById('loginForm').style.display === 'none');
         }
       });
       if(new URLSearchParams(window.location.search).get('admin')==='1'){
-        document.getElementById('adminLogin').style.display='block';
+        toggleLoginView(true);
       }
       </script>
 
