@@ -4648,6 +4648,11 @@ body.theme-mrc .logo-sub { color:rgba(255,255,255,.4) }
 body.theme-mrc .nav-item.active { border-left-color:#0066cc; background:rgba(255,255,255,.05) }
 body.theme-mrc .topbar { background:#05070a; border-bottom:1px solid rgba(255,255,255,.08) }
 body.theme-mrc .topbar-logo span { color:#0066cc }
+body.theme-mrc .topbar-signout { color:white; border-color:rgba(255,255,255,.3) }
+body.theme-mrc .topbar-signout:hover { background:white; color:#05070a }
+body.theme-mrc .topbar-user { color:rgba(255,255,255,.7) }
+body.theme-mrc .topbar-back { color:rgba(255,255,255,.5); border-color:rgba(255,255,255,.2) }
+body.theme-mrc .topbar-back:hover { color:white; border-color:white }
 body.theme-mrc .section-title { font-family:'Inter','DM Sans',sans-serif; letter-spacing:-0.01em }
 body.theme-mrc .card { border:1px solid var(--border); box-shadow:0 1px 3px rgba(0,0,0,.04) }
 body.theme-mrc .stat-val { font-family:'DM Sans','Inter',monospace }
