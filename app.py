@@ -1757,7 +1757,7 @@ def admin_invite():
                 <p style="margin:0 0 4px;font-size:13px;color:#166534;font-weight:600">INVITE CODE GENERATED</p>
                 <p style="margin:0;font-size:32px;font-family:monospace;font-weight:700;letter-spacing:4px;color:#05070a">{code}</p>
                 <p style="margin:8px 0 0;font-size:13px;color:#6b7280">Portal: {portal_info['label']} &bull; Expires: {expiry_date}</p>
-                <p style="margin:4px 0 0;font-size:13px;color:#6b7280">Link: {portal_url}</p>
+                <p style="margin:4px 0 0;font-size:13px;color:#6b7280">Link: <a href="{portal_url}" target="_blank" style="color:#166534;text-decoration:underline">{portal_url}</a></p>
             </div>"""
 
             if recipient_email:
