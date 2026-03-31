@@ -24,10 +24,7 @@ import csv
 import io
 import re
 import uuid
-import smtplib
 import threading
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timedelta
 from functools import wraps
 
@@ -51,16 +48,15 @@ app.secret_key = os.environ.get("SECRET_KEY", "boardiq-dev-key-change-in-product
 # ═══════════════════════════════════════════════════════════════════════════════
 
 ADMIN_EMAIL = "jake.sirotkin@gmail.com"
-GMAIL_USER = "jake.sirotkin@gmail.com"
-GMAIL_APP_PASSWORD = os.environ.get("GMAIL_APP_PASSWORD", "")
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
 SITE_URL = os.environ.get("SITE_URL", "https://mybuildingiq.com")
 
 # In-memory stores (reset on deploy — fine for low-volume demo access)
 ACCESS_REQUESTS = {}   # token → {name, email, access_type, account_email, requested_at, status}
 def _send_email(to_addr, subject, html_body):
-    """Send email via Gmail SMTP. Falls back to console logging if not configured."""
-    if not GMAIL_APP_PASSWORD:
-        print(f"[BoardIQ Email] (no GMAIL_APP_PASSWORD set — logging only)")
+    """Send email via Resend API. Falls back to console logging if not configured."""
+    if not RESEND_API_KEY:
+        print(f"[BoardIQ Email] (no RESEND_API_KEY set — logging only)")
         print(f"  To: {to_addr}")
         print(f"  Subject: {subject}")
         print(f"  Body preview: {html_body[:200]}")
@@ -68,16 +64,27 @@ def _send_email(to_addr, subject, html_body):
 
     def _send():
         try:
-            msg = MIMEMultipart("alternative")
-            msg["From"] = f"BoardIQ <{GMAIL_USER}>"
-            msg["To"] = to_addr
-            msg["Subject"] = subject
-            msg.attach(MIMEText(html_body, "html"))
+            import urllib.request
+            payload = json.dumps({
+                "from": "BoardIQ <access@mybuildingiq.com>",
+                "to": [to_addr],
+                "subject": subject,
+                "html": html_body,
+            }).encode("utf-8")
 
-            with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-                server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
-                server.sendmail(GMAIL_USER, to_addr, msg.as_string())
-            print(f"[BoardIQ Email] Sent to {to_addr}: {subject}")
+            req = urllib.request.Request(
+                "https://api.resend.com/emails",
+                data=payload,
+                headers={
+                    "Authorization": f"Bearer {RESEND_API_KEY}",
+                    "Content-Type": "application/json",
+                    "User-Agent": "BoardIQ/1.0",
+                },
+                method="POST",
+            )
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                result = json.loads(resp.read().decode())
+                print(f"[BoardIQ Email] Sent to {to_addr}: {subject} (id: {result.get('id', '?')})")
         except Exception as e:
             print(f"[BoardIQ Email] FAILED to send to {to_addr}: {e}")
 
