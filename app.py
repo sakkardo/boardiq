@@ -4073,7 +4073,28 @@ body{background:var(--bg);font-family:'Plus Jakarta Sans',sans-serif;color:var(-
 <nav class="splash-nav" id="splashNav">
   <a href="/" class="nav-logo">Board<b>IQ</b></a>
   <button class="splash-hamburger" onclick="document.querySelector('.splash-nav .nav-links').classList.toggle('open')" aria-label="Menu">☰</button>
-<div class="login-card" id="login-section">
+  <div class="nav-links">
+    <a href="#features" onclick="document.querySelector('.splash-nav .nav-links').classList.remove('open')">Features</a>
+    <a href="#how-it-works" onclick="document.querySelector('.splash-nav .nav-links').classList.remove('open')">How It Works</a>
+    <a href="/vendors">For Vendors</a>
+    <a href="#login-section" class="nav-cta" onclick="document.querySelector('.splash-nav .nav-links').classList.remove('open')">Sign In</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="hero">
+  <div class="hero-inner">
+    <div class="hero-text">
+      <div class="hero-badges">
+        <span class="hero-badge"><span class="dot dot-gold"></span> NYC Co-ops &amp; Condos</span>
+        <span class="hero-badge"><span class="dot dot-green"></span> Built for Board Members</span>
+      </div>
+      <h1>Know what your building <em>should</em> be paying.</h1>
+      <p class="subtitle">BoardIQ gives co-op and condo boards real-time vendor benchmarks, compliance tracking, and competitive bidding tools &mdash; so you can cut costs, stay compliant, and make smarter decisions.</p>
+      <a href="#login-section" style="display:inline-block;background:var(--gold);color:var(--white);padding:13px 32px;border-radius:6px;font-size:15px;font-weight:600;text-decoration:none;transition:background 0.15s">Get Started &rarr;</a>
+      <div class="hero-scroll"><span>&darr;</span> Scroll to explore</div>
+    </div>
+    <div class="login-card" id="login-section">
       <div class="card-label">Welcome Back</div>
       <h2>Sign In</h2>
       <div class="card-sub">Enter your credentials to access your dashboard</div>
@@ -4089,13 +4110,9 @@ body{background:var(--bg);font-family:'Plus Jakarta Sans',sans-serif;color:var(-
 
       <div class="vendor-link">Are you a vendor? <a href="/vendor/register">Join the Vendor Network &rarr;</a></div>
     </div>
-
-      <div class="vendor-link">Are you a vendor? <a href="/vendor/register">Join the Vendor Network &rarr;</a></div>
-    </div>
   </div>
 </section>
 
-<!-- STATS -->
 <section class="stats-strip">
   <div class="stats-inner">
     <div class="stat-item"><div class="stat-num">{{ total_buildings }}</div><div class="stat-label">NYC Buildings</div></div>
