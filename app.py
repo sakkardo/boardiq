@@ -4073,137 +4073,27 @@ body{background:var(--bg);font-family:'Plus Jakarta Sans',sans-serif;color:var(-
 <nav class="splash-nav" id="splashNav">
   <a href="/" class="nav-logo">Board<b>IQ</b></a>
   <button class="splash-hamburger" onclick="document.querySelector('.splash-nav .nav-links').classList.toggle('open')" aria-label="Menu">☰</button>
-  <div class="nav-links">
-    <a href="#features" onclick="document.querySelector('.splash-nav .nav-links').classList.remove('open')">Features</a>
-    <a href="#how-it-works" onclick="document.querySelector('.splash-nav .nav-links').classList.remove('open')">How It Works</a>
-    <a href="/vendors">For Vendors</a>
-    <a href="#login-section" class="nav-cta" onclick="document.querySelector('.splash-nav .nav-links').classList.remove('open')">Sign In</a>
-  </div>
-</nav>
-
-<!-- HERO -->
-<section class="hero" id="hero">
-  <div class="hero-inner">
-    <div class="hero-text">
-      <div class="hero-badges">
-        <span class="hero-badge"><span class="dot dot-gold"></span> NYC Co-ops &amp; Condos</span>
-        <span class="hero-badge"><span class="dot dot-green"></span> Built for Board Members</span>
-      </div>
-      <h1>Know what your building <em>should</em> be paying.</h1>
-      <p class="subtitle">BoardIQ gives co-op and condo boards real-time vendor benchmarks, compliance tracking, and competitive bidding tools &mdash; so you can cut costs, stay compliant, and make smarter decisions.</p>
-      <a href="#login-section" style="display:inline-block;background:var(--gold);color:var(--white);padding:13px 32px;border-radius:6px;font-size:15px;font-weight:600;text-decoration:none;transition:background 0.15s">Get Started &rarr;</a>
-      <div class="hero-scroll"><span>&darr;</span> Scroll to explore</div>
-    </div>
-    <div class="login-card" id="login-section">
-      <div class="card-label">Get Started</div>
-      <h2>Request Access</h2>
-      <div class="card-sub">Select a dashboard to explore and we'll send you a login link</div>
-
-      <!-- Request Access Form (default view) -->
-      <div id="requestForm">
-        <div id="requestMsg" style="display:none"></div>
-        <label>Your Name</label>
-        <input type="text" id="reqName" placeholder="Jane Smith" required>
-        <label>Your Email</label>
-        <input type="email" id="reqEmail" placeholder="jane@company.com" required>
-        <label>Access Type</label>
-        <select id="reqType" style="width:100%;padding:11px 14px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:14px;color:var(--ink);background:var(--white);margin-bottom:16px;appearance:none;-webkit-appearance:none;background-image:url('data:image/svg+xml;utf8,<svg xmlns=&quot;http://www.w3.org/2000/svg&quot; width=&quot;12&quot; height=&quot;8&quot;><path d=&quot;M1 1l5 5 5-5&quot; stroke=&quot;%238a8278&quot; stroke-width=&quot;1.5&quot; fill=&quot;none&quot;/></svg>');background-repeat:no-repeat;background-position:right 14px center">
-          <option value="">Select a dashboard...</option>
-          {% for opt in access_options %}
-          <option value="{{ opt.email }}">{{ opt.label }}</option>
-          {% endfor %}
-        </select>
-        <button type="button" class="login-btn" id="reqSubmitBtn" onclick="submitAccessRequest()">Request Access &rarr;</button>
-      </div>
-
-      <script>
-      function submitAccessRequest(){
-        var name = document.getElementById('reqName').value.trim();
-        var email = document.getElementById('reqEmail').value.trim();
-        var type = document.getElementById('reqType').value;
-        var msg = document.getElementById('requestMsg');
-        var btn = document.getElementById('reqSubmitBtn');
-
-        if(!name || !email || !type){
-          msg.style.display='block';
-          msg.style.background='var(--red-light,#fdecea)';msg.style.color='var(--red,#c0392b)';msg.style.border='1px solid var(--red-border,#f0b8b3)';
-          msg.innerHTML='Please fill in all fields.';
-          return;
-        }
-
-        btn.disabled=true; btn.textContent='Submitting...';
-
-        fetch('/request-access',{
-          method:'POST',
-          headers:{'Content-Type':'application/x-www-form-urlencoded'},
-          body:'name='+encodeURIComponent(name)+'&email='+encodeURIComponent(email)+'&access_type='+encodeURIComponent(type)
-        })
-        .then(function(r){return r.json()})
-        .then(function(data){
-          msg.style.display='block';
-          if(data.success){
-            msg.style.background='var(--green-light,#e6f4ec)';msg.style.color='var(--green,#1a7a4a)';msg.style.border='1px solid var(--green-border,#b8deca)';
-            msg.innerHTML='<strong>Request submitted!</strong><br>Check your email — you\\'ll receive a login link once approved.';
-            btn.textContent='Request Sent';
-          } else {
-            msg.style.background='var(--red-light,#fdecea)';msg.style.color='var(--red,#c0392b)';msg.style.border='1px solid var(--red-border,#f0b8b3)';
-            msg.innerHTML=data.error || 'Something went wrong. Please try again.';
-            btn.disabled=false; btn.textContent='Request Access \\u2192';
-          }
-        })
-        .catch(function(){
-          msg.style.display='block';
-          msg.style.background='var(--red-light,#fdecea)';msg.style.color='var(--red,#c0392b)';msg.style.border='1px solid var(--red-border,#f0b8b3)';
-          msg.innerHTML='Network error. Please try again.';
-          btn.disabled=false; btn.textContent='Request Access \\u2192';
-        });
-      }
-      </script>
-
-      <!-- Toggle link to switch to login -->
-      <div style="text-align:center;margin-top:12px">
-        <a href="#" id="showLoginLink" onclick="toggleLoginView(true);return false;" style="font-size:13px;color:var(--ink-muted);text-decoration:underline;text-underline-offset:3px">Already have credentials? Log in</a>
-      </div>
-
-      <!-- Login form (hidden by default) -->
-      <div id="loginForm" style="display:none">
-        {% if error %}<div class="error-msg">{{ error }}</div>{% endif %}
-        <form method="POST" action="/login">
-          <label>Your Name</label>
-          <input type="text" name="login_name" placeholder="Jane Smith" required>
-          <label>Email</label>
-          <input type="email" name="email" placeholder="you@example.com" required>
-          <label>Password</label>
-          <input type="password" name="password" placeholder="••••••••" required>
-          <button type="submit" class="login-btn">Sign In &rarr;</button>
-        </form>
-        <div style="text-align:center;margin-top:12px">
-          <a href="#" onclick="toggleLoginView(false);return false;" style="font-size:13px;color:var(--ink-muted);text-decoration:underline;text-underline-offset:3px">&larr; Back to Request Access</a>
+<div id="login-section" style="max-width:400px;margin:60px auto;padding:0 20px">
+            <div style="background:white;padding:40px;border-radius:12px;box-shadow:0 2px 20px rgba(0,0,0,.08);text-align:center">
+                <p style="font-size:13px;color:#6b7280;text-transform:uppercase;letter-spacing:2px;margin:0 0 4px">BoardIQ</p>
+                <h2 style="color:#05070a;margin:0 0 24px;font-size:22px">Sign In</h2>
+                {% if error %}
+                <p style="color:#c0392b;font-size:14px;margin-bottom:16px">{{ error }}</p>
+                {% endif %}
+                <form method="POST" action="/login">
+                    <div style="text-align:left">
+                        <label style="display:block;font-size:13px;color:#4b5563;margin:0 0 4px;font-weight:600">Email</label>
+                        <input name="email" type="email" placeholder="you@example.com" required
+                               style="width:100%;padding:12px;border:1px solid #d1d5db;border-radius:8px;font-size:16px;box-sizing:border-box;margin-bottom:14px">
+                        <label style="display:block;font-size:13px;color:#4b5563;margin:0 0 4px;font-weight:600">Password</label>
+                        <input name="password" type="password" placeholder="••••••••" required
+                               style="width:100%;padding:12px;border:1px solid #d1d5db;border-radius:8px;font-size:16px;box-sizing:border-box">
+                    </div>
+                    <button type="submit" style="display:block;width:100%;padding:14px;background:#05070a;color:white;border:none;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer;margin-top:20px">Sign In &rarr;</button>
+                </form>
+                <p style="margin-top:20px;font-size:12px;color:#9ca3af">Need access? Contact your administrator.</p>
+            </div>
         </div>
-      </div>
-
-      <script>
-      function toggleLoginView(showLogin){
-        document.getElementById('requestForm').style.display = showLogin ? 'none' : 'block';
-        document.getElementById('showLoginLink').style.display = showLogin ? 'none' : 'block';
-        document.getElementById('loginForm').style.display = showLogin ? 'block' : 'none';
-        document.querySelector('.login-card h2').textContent = showLogin ? 'Sign In' : 'Request Access';
-        document.querySelector('.card-sub').textContent = showLogin
-          ? 'Enter your email and password'
-          : 'Select a dashboard to explore and we\\'ll send you a login link';
-      }
-      {% if error %}toggleLoginView(true);{% endif %}
-      // Ctrl+Shift+D still works as shortcut
-      document.addEventListener('keydown', function(e){
-        if(e.ctrlKey && e.shiftKey && e.key === 'D'){
-          e.preventDefault();
-          toggleLoginView(document.getElementById('loginForm').style.display === 'none');
-        }
-      });
-      if(new URLSearchParams(window.location.search).get('admin')==='1'){
-        toggleLoginView(true);
-      }
-      </script>
 
       <div class="vendor-link">Are you a vendor? <a href="/vendor/register">Join the Vendor Network &rarr;</a></div>
     </div>
