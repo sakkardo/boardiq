@@ -1598,6 +1598,89 @@ def deny_access(token):
     </div></body></html>"""
 
 
+@app.route("/admin/send-credentials", methods=["GET", "POST"])
+def admin_send_credentials():
+    """Admin page to manually send login credentials to someone."""
+    user_email = session.get("user_email")
+    user = DEMO_USERS.get(user_email, {})
+    if user.get("role") not in ("admin", "board"):
+        return redirect("/login")
+
+    message = ""
+    if request.method == "POST":
+        recipient_name = request.form.get("recipient_name", "").strip()
+        recipient_email = request.form.get("recipient_email", "").strip()
+        account_email = request.form.get("account_email", "").strip()
+
+        if not recipient_email or not account_email:
+            message = '<span style="color:#c0392b">Please fill in all fields.</span>'
+        else:
+            acct = DEMO_USERS.get(account_email, {})
+            acct_password = acct.get("password", "")
+            acct_name = acct.get("name", account_email)
+            login_url = f"{SITE_URL}/?admin=1"
+
+            _send_email(
+                recipient_email,
+                "Your BoardIQ Access Has Been Approved",
+                f"""
+                <div style="font-family:Arial,sans-serif;max-width:500px;margin:0 auto;padding:20px">
+                    <h2 style="color:#05070a;margin-bottom:8px">Access Approved</h2>
+                    <p style="color:#4b5563;margin-bottom:20px">Hi {recipient_name or 'there'}, your access to <strong>{acct_name}</strong> on BoardIQ has been approved.</p>
+                    <div style="background:#f3f4f6;border-radius:8px;padding:20px;margin:20px 0">
+                        <p style="margin:0 0 8px;font-size:13px;color:#6b7280;text-transform:uppercase;letter-spacing:1px;font-weight:600">Your Login Credentials</p>
+                        <table style="width:100%;border-collapse:collapse">
+                            <tr><td style="padding:6px 0;color:#6b7280;width:80px">Email</td><td style="padding:6px 0;font-weight:600;font-family:monospace">{account_email}</td></tr>
+                            <tr><td style="padding:6px 0;color:#6b7280">Password</td><td style="padding:6px 0;font-weight:600;font-family:monospace">{acct_password}</td></tr>
+                        </table>
+                    </div>
+                    <a href="{login_url}" style="display:inline-block;background:#05070a;color:white;padding:14px 32px;border-radius:6px;text-decoration:none;font-weight:600;font-size:16px">Log In to BoardIQ &rarr;</a>
+                    <p style="margin-top:20px;font-size:12px;color:#9ca3af">Click "Already have credentials? Log in" on the home page, then enter the credentials above.</p>
+                </div>
+                """
+            )
+            _send_email(
+                "jake.sirotkin@gmail.com",
+                f"[BoardIQ] Credentials sent to {recipient_email}",
+                f"<p>Credentials for <strong>{acct_name}</strong> ({account_email}) were manually sent to <strong>{recipient_email}</strong> ({recipient_name or 'no name'}).</p>"
+            )
+            message = f'<span style="color:#059669">&#10003; Credentials sent to {recipient_email}</span>'
+
+    account_options = ""
+    for em, info in sorted(DEMO_USERS.items()):
+        if info.get("role") != "vendor":
+            account_options += f'<option value="{em}">{info.get("name", em)} ({em})</option>'
+
+    return f"""<!DOCTYPE html><html><head><title>Send Credentials - BoardIQ</title>
+    <style>
+    body{{font-family:Arial,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f7f8fa;margin:0}}
+    .card{{background:white;padding:40px;border-radius:12px;box-shadow:0 2px 20px rgba(0,0,0,.08);max-width:480px;width:100%}}
+    h2{{color:#05070a;margin:0 0 8px}} .sub{{color:#6b7280;font-size:14px;margin-bottom:24px}}
+    label{{display:block;font-size:13px;color:#4b5563;margin:16px 0 4px;font-weight:600}}
+    input,select{{width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:15px;box-sizing:border-box}}
+    input:focus,select:focus{{outline:none;border-color:#05070a;box-shadow:0 0 0 3px rgba(5,7,10,.08)}}
+    .btn{{display:block;width:100%;padding:14px;background:#05070a;color:white;border:none;border-radius:8px;font-size:16px;font-weight:600;cursor:pointer;margin-top:24px}}
+    .btn:hover{{background:#1a1d23}}
+    .msg{{margin-top:16px;font-size:14px;text-align:center}}
+    a.back{{display:block;text-align:center;margin-top:16px;color:#6b7280;font-size:13px;text-decoration:none}}
+    </style></head>
+    <body><div class="card">
+    <h2>Send Credentials</h2>
+    <p class="sub">Manually send login credentials to someone.</p>
+    <form method="POST">
+        <label>Recipient Name</label>
+        <input name="recipient_name" placeholder="e.g. Bobby Smith" />
+        <label>Recipient Email *</label>
+        <input name="recipient_email" type="email" placeholder="email address" required />
+        <label>Account to Grant Access *</label>
+        <select name="account_email" required>{account_options}</select>
+        <button type="submit" class="btn">Send Credentials Email</button>
+    </form>
+    {f'<p class="msg">{message}</p>' if message else ''}
+    <a class="back" href="/dashboard">&larr; Back to Dashboard</a>
+    </div></body></html>"""
+
+
 
 
 @app.route("/dashboard")
