@@ -4731,6 +4731,10 @@ body.theme-mrc .bid-badge { background:#0066cc }
     <div class="nav-item" data-section="educationSection" onclick="scrollToSection('educationSection',this)">📖 &nbsp;Education
       <span style="font-size:8px;font-weight:700;letter-spacing:1px;text-transform:uppercase;background:var(--gold);color:var(--ink);padding:1px 5px;border-radius:3px;margin-left:auto">NEW</span>
     </div>
+    {% if is_admin %}
+    <div class="nav-label">Admin</div>
+    <a href="/admin/invite" class="nav-item" style="text-decoration:none;color:rgba(255,255,255,.5)">&#128273; &nbsp;Generate Invite Code</a>
+    {% endif %}                
   </div>
   {% if all_buildings|length > 1 %}
   <div class="switch-links">
