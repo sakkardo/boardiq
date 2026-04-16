@@ -164,6 +164,31 @@ def _load_mrc_buildings():
 
 MRC_BUILDINGS = _load_mrc_buildings()
 
+# ── User-added buildings (persisted to added_buildings.json) ────────────────
+_ADDED_BUILDINGS_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "added_buildings.json")
+
+def _load_added_buildings():
+    """Load user-added buildings from side JSON file. Returns {id: building_dict}."""
+    try:
+        if os.path.exists(_ADDED_BUILDINGS_PATH):
+            with open(_ADDED_BUILDINGS_PATH, "r") as f:
+                data = json.load(f)
+            print(f"[BoardIQ] Loaded {len(data)} user-added buildings")
+            return data
+    except Exception as e:
+        print(f"[BoardIQ] Warning: Could not load added_buildings.json: {e}")
+    return {}
+
+def _save_added_buildings(added):
+    """Persist user-added buildings to side JSON file."""
+    try:
+        with open(_ADDED_BUILDINGS_PATH, "w") as f:
+            json.dump(added, f, indent=2, default=str)
+    except Exception as e:
+        print(f"[BoardIQ] Warning: Could not save added_buildings.json: {e}")
+
+ADDED_BUILDINGS = _load_added_buildings()
+
 # ── Vendor data persistence (PostgreSQL with JSON file fallback) ─────────────
 _VENDOR_DATA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "vendor_data.json")
 
@@ -575,6 +600,12 @@ for _mkey, _demo_bbl in list(BBL_NORMALIZE.items()):
 
 print(f"[BoardIQ] Merged MRC buildings ({len(MRC_BUILDINGS)} total)")
 
+# ── Merge user-added buildings into main DB ─────────────────────────────────
+for _akey, _abldg in ADDED_BUILDINGS.items():
+    BUILDINGS_DB[_akey] = _abldg
+if ADDED_BUILDINGS:
+    print(f"[BoardIQ] Merged {len(ADDED_BUILDINGS)} user-added buildings")
+
 # ── Initialize database and load persisted data ─────────────────────────────
 _db_available = boardiq_db.init_db()
 _load_persisted_vendor_data()
@@ -587,7 +618,7 @@ DEMO_USERS = {
     "board@gramercyplaza.com": {"password": "demo1234", "buildings": ["bbl_1009270001"], "name": "Gramercy Plaza Board", "role": "board"},
     "admin@boardiq.com":     {"password": "admin", "buildings": list(BUILDINGS_DB.keys()), "name": "BoardIQ Admin", "is_admin": True, "role": "admin"},
     "century@boardiq.com":   {"password": "century", "buildings": list(CENTURY_BUILDINGS.keys()), "name": "Century Management", "role": "admin"},
-    "mrc@boardiq.com":       {"password": "madison", "buildings": list(MRC_BUILDINGS.keys()), "name": "Madison Realty Capital", "role": "admin"},
+    "mrc@boardiq.com":       {"password": "madison", "buildings": list(MRC_BUILDINGS.keys()) + list(ADDED_BUILDINGS.keys()), "name": "Madison Realty Capital", "role": "admin"},
     "vendor@schindler.com":  {"password": "demo1234", "name": "Schindler Elevator Corp", "role": "vendor", "vendor_id": "v001", "buildings": []},
     "vendor@cleanstar.com":  {"password": "demo1234", "name": "Clean Star Services", "role": "vendor", "vendor_id": "v002", "buildings": []},
     "vendor@apexext.com":    {"password": "demo1234", "name": "Apex Exterminating", "role": "vendor", "vendor_id": "v003", "buildings": []},
@@ -1955,11 +1986,15 @@ def dashboard():
     _managing_agent = building.get("managing_agent", "")
     _theme = "mrc" if "madison" in _managing_agent.lower() else "default"
 
+    is_mrc_admin = (session.get("user_email") == "mrc@boardiq.com")
+    added_building_ids = list(ADDED_BUILDINGS.keys())
     return render_template_string(DASHBOARD_HTML,
         building=building,
         benchmarks=benchmarks,
         user_name=session.get("user_name"),
         is_admin=is_admin,
+        is_mrc_admin=is_mrc_admin,
+        added_building_ids=added_building_ids,
         has_portfolio=has_portfolio,
         theme=_theme,
         all_buildings=[ensure_building_data(BUILDINGS_DB[b]) for b in
@@ -2102,6 +2137,160 @@ def import_yardi():
         "total_vendors": len(result["vendors"]),
         "vendors": [{"vendor": v["vendor"], "category": CATEGORY_LABELS.get(v["category"], v["category"]),
                       "annual": v["annual"]} for v in result["vendors"]],
+    })
+
+
+# ── Admin: Add / Delete buildings ────────────────────────────────────────────
+def _require_mrc_admin():
+    """Return (user, None) if caller is Madison Realty Capital admin, else (None, err_response)."""
+    user_email = session.get("user_email") or session.get("email")
+    user = DEMO_USERS.get(user_email)
+    if not user:
+        return None, (jsonify({"error": "Not authenticated"}), 401)
+    if user.get("role") != "admin":
+        return None, (jsonify({"error": "Admin access required"}), 403)
+    # Restrict to Madison admin for now. To expand, drop this check.
+    if user_email != "mrc@boardiq.com":
+        return None, (jsonify({"error": "This feature is currently limited to Madison admin"}), 403)
+    return user, None
+
+
+@app.route("/api/admin/preview-building", methods=["POST"])
+@login_required
+def admin_preview_building():
+    """Look up an NYC address via GeoSearch + PLUTO + HPD + DOB. Does NOT persist."""
+    user, err = _require_mrc_admin()
+    if err:
+        return err
+    data = request.get_json(silent=True) or {}
+    address = (data.get("address") or "").strip()
+    if not address:
+        return jsonify({"error": "Address is required"}), 400
+    try:
+        import nyc_lookup
+        result = nyc_lookup.lookup_building(address)
+    except Exception as e:
+        return jsonify({"error": f"Lookup failed: {e}"}), 500
+
+    if result.get("error"):
+        return jsonify({"error": result["error"]}), 404
+
+    # Flag if this BBL already exists in our DB
+    bbl = result.get("bbl")
+    already_exists = bbl in BUILDINGS_DB
+    return jsonify({
+        "success": True,
+        "already_exists": already_exists,
+        "building": result,
+    })
+
+
+@app.route("/api/admin/add-building", methods=["POST"])
+@login_required
+def admin_add_building():
+    """Persist a looked-up building into the Madison portfolio."""
+    user, err = _require_mrc_admin()
+    if err:
+        return err
+    data = request.get_json(silent=True) or {}
+    address = (data.get("address") or "").strip()
+    overrides = data.get("overrides") or {}
+    if not address:
+        return jsonify({"error": "Address is required"}), 400
+
+    try:
+        import nyc_lookup
+        result = nyc_lookup.lookup_building(address)
+    except Exception as e:
+        return jsonify({"error": f"Lookup failed: {e}"}), 500
+
+    if result.get("error"):
+        return jsonify({"error": result["error"]}), 404
+
+    bbl = result["bbl"]
+    if bbl in BUILDINGS_DB:
+        return jsonify({
+            "error": "This building is already in the portfolio",
+            "bbl": bbl,
+            "existing_address": BUILDINGS_DB[bbl].get("address"),
+        }), 409
+
+    # Apply any user overrides (units, floors, year_built can be manually edited)
+    for k in ("units", "floors", "year_built", "building_class", "neighborhood", "borough"):
+        if overrides.get(k):
+            result[k] = overrides[k]
+
+    # Stamp with Madison metadata
+    result["managing_agent"] = "Madison Realty Capital"
+    result["subscription_tier"] = "premium"
+    result["subscription_since"] = datetime.utcnow().strftime("%Y-%m-%d")
+    result["board_president"] = ""
+    if not result.get("building_type"):
+        result["building_type"] = "Rental"
+    # Strip internal-only keys before persisting
+    result.pop("_lookup_warnings", None)
+
+    # Persist
+    BUILDINGS_DB[bbl] = result
+    ADDED_BUILDINGS[bbl] = result
+    _save_added_buildings(ADDED_BUILDINGS)
+
+    # Update the Madison admin's building list so the switcher picks it up
+    mrc_user = DEMO_USERS.get("mrc@boardiq.com")
+    if mrc_user and bbl not in mrc_user["buildings"]:
+        mrc_user["buildings"].append(bbl)
+
+    return jsonify({
+        "success": True,
+        "bbl": bbl,
+        "building": {
+            "id": bbl,
+            "address": result["address"],
+            "units": result.get("units"),
+            "floors": result.get("floors"),
+            "year_built": result.get("year_built"),
+            "borough": result.get("borough"),
+            "neighborhood": result.get("neighborhood"),
+        },
+    })
+
+
+@app.route("/api/admin/delete-building", methods=["POST"])
+@login_required
+def admin_delete_building():
+    """Remove a user-added building. Does not allow deleting seeded MRC buildings."""
+    user, err = _require_mrc_admin()
+    if err:
+        return err
+    data = request.get_json(silent=True) or {}
+    bbl = (data.get("bbl") or "").strip()
+    if not bbl:
+        return jsonify({"error": "BBL is required"}), 400
+
+    # Only allow deleting buildings that were added by the user (not seeded MRC)
+    if bbl not in ADDED_BUILDINGS:
+        return jsonify({"error": "This building cannot be deleted (it is part of the seeded portfolio)"}), 403
+
+    removed_address = ADDED_BUILDINGS[bbl].get("address", "")
+    # Remove from everywhere
+    ADDED_BUILDINGS.pop(bbl, None)
+    BUILDINGS_DB.pop(bbl, None)
+    _save_added_buildings(ADDED_BUILDINGS)
+
+    # Clear from Madison admin's building list
+    mrc_user = DEMO_USERS.get("mrc@boardiq.com")
+    if mrc_user and bbl in mrc_user["buildings"]:
+        mrc_user["buildings"].remove(bbl)
+
+    # If the deleted building was the user's active selection, clear it
+    if session.get("active_building") == bbl:
+        remaining = mrc_user["buildings"] if mrc_user else []
+        session["active_building"] = remaining[0] if remaining else None
+
+    return jsonify({
+        "success": True,
+        "deleted_bbl": bbl,
+        "deleted_address": removed_address,
     })
 
 
@@ -4256,13 +4445,19 @@ body{background:var(--bg);color:var(--text);font-family:'Plus Jakarta Sans',sans
 .user-name{font-size:12px;color:rgba(255,255,255,.5)}
 .logout-link{font-size:11px;color:rgba(255,255,255,.3);text-decoration:none}
 .logout-link:hover{color:rgba(255,255,255,.6)}
-{% if all_buildings|length > 1 %}.switch-links{padding:0 0 8px;border-top:1px solid rgba(255,255,255,.06);display:flex;flex-direction:column;min-height:0;flex:1;overflow:hidden}
+.switch-links{padding:0 0 8px;border-top:1px solid rgba(255,255,255,.06);display:flex;flex-direction:column;min-height:0;flex:1;overflow:hidden}
 .switch-search{margin:8px 14px 4px;padding:5px 10px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:4px;color:white;font-size:11px;font-family:inherit;outline:none}
 .switch-search::placeholder{color:rgba(255,255,255,.3)}
 .switch-list{overflow-y:auto;flex:1;padding:0 4px}
+.switch-row{display:flex;align-items:center;gap:2px}
+.switch-row .switch-link{flex:1}
 .switch-link{display:block;font-size:11px;color:rgba(255,255,255,.4);text-decoration:none;padding:4px 14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .switch-link:hover{color:rgba(255,255,255,.7);background:rgba(255,255,255,.04)}
-.switch-link.active-link{color:var(--gold)}{% endif %}
+.switch-link.active-link{color:var(--gold)}
+.add-bldg-btn{margin:10px 14px 6px;padding:7px 10px;background:rgba(196,137,58,.15);border:1px solid rgba(196,137,58,.35);color:var(--gold);border-radius:4px;font-family:inherit;font-size:11px;font-weight:600;cursor:pointer;letter-spacing:.3px}
+.add-bldg-btn:hover{background:rgba(196,137,58,.25);border-color:var(--gold)}
+.del-bldg-btn{background:transparent;border:none;color:rgba(255,255,255,.25);cursor:pointer;font-size:14px;padding:2px 8px;line-height:1}
+.del-bldg-btn:hover{color:var(--red);background:rgba(192,57,43,.15)}
 .main{margin-left:220px;padding:30px 34px 48px;margin-top:44px}
 .page-header{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid var(--border)}
 .page-title{font-family:'Playfair Display',serif;font-size:28px;color:var(--ink);letter-spacing:-.5px}
@@ -4727,15 +4922,23 @@ body.theme-mrc .bid-badge { background:#0066cc }
     <a href="/admin/invite" class="nav-item" style="text-decoration:none;color:rgba(255,255,255,.5)">&#128273; &nbsp;Generate Invite Code</a>
     {% endif %}                
   </div>
-  {% if all_buildings|length > 1 %}
+  {% if all_buildings|length > 1 or is_mrc_admin %}
   <div class="switch-links">
+    {% if is_mrc_admin %}
+    <button class="add-bldg-btn" onclick="openAddBuildingDrawer()">+ Add Building</button>
+    {% endif %}
     <input type="text" class="switch-search" id="sidebarBldgSearch" placeholder="Search buildings..." oninput="filterSidebarBldgs(this.value)">
     <div class="switch-list" id="sidebarBldgList">
     {% for b in all_buildings %}
-    <a href="/switch-building/{{ b.id }}"
-       class="switch-link {% if b.id == active_bbl %}active-link{% endif %}" data-addr="{{ b.address|lower }}">
-      {% if b.id == active_bbl %}▶ {% endif %}{{ b.address[:32] }}
-    </a>
+    <div class="switch-row" data-addr="{{ b.address|lower }}">
+      <a href="/switch-building/{{ b.id }}"
+         class="switch-link {% if b.id == active_bbl %}active-link{% endif %}">
+        {% if b.id == active_bbl %}▶ {% endif %}{{ b.address[:32] }}
+      </a>
+      {% if is_mrc_admin and b.id in added_building_ids %}
+      <button class="del-bldg-btn" onclick="deleteBuilding({{ b.id|tojson }}, {{ b.address|tojson }})" title="Delete this building">×</button>
+      {% endif %}
+    </div>
     {% endfor %}
     </div>
   </div>
@@ -6274,15 +6477,258 @@ openPanel = function(type, idx) {
   </div>
 </div>
 
+{% if is_mrc_admin %}
+<!-- ── Add Building Drawer (Madison admin only) ──────────────────────── -->
+<div class="drawer-overlay" id="addBldgOverlay" onclick="closeAddBuildingDrawer()"></div>
+<div class="upload-drawer" id="addBldgDrawer">
+  <div class="drawer-header">
+    <div class="drawer-title">Add Building</div>
+    <button class="drawer-close" onclick="closeAddBuildingDrawer()">✕</button>
+  </div>
+  <div class="drawer-body">
+    <!-- Step 1: address entry -->
+    <div id="addStep1">
+      <div style="font-size:13px;color:var(--muted);margin-bottom:12px">Enter a NYC address. We'll pull the BBL, tax assessment, violations, and compliance schedule from NYC OpenData.</div>
+      <label style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase">Street Address</label>
+      <input type="text" id="addBldgAddress" placeholder="e.g. 160 East 48th Street, Manhattan" style="width:100%;margin-top:6px;padding:10px 12px;font-family:inherit;font-size:14px;border:1px solid var(--border);border-radius:5px;background:var(--surface);color:var(--ink);outline:none" onkeydown="if(event.key==='Enter') previewBuilding()">
+      <div style="margin-top:16px;text-align:right">
+        <button id="addPreviewBtn" onclick="previewBuilding()" style="background:var(--ink);color:white;border:none;padding:10px 22px;border-radius:5px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">Look Up →</button>
+      </div>
+      <div id="addError" style="display:none;margin-top:14px;padding:10px 12px;background:rgba(192,57,43,.08);border-left:3px solid var(--red);font-size:12px;color:var(--red)"></div>
+    </div>
+
+    <!-- Step 2: preview looked-up data -->
+    <div id="addStep2" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div style="font-size:15px;font-weight:700;color:var(--ink)">Review &amp; Confirm</div>
+        <button class="d-reset-btn" onclick="resetAddBuilding()">Try Different Address</button>
+      </div>
+      <div id="addPreviewAddr" style="font-family:'Playfair Display',serif;font-size:18px;color:var(--ink);margin-bottom:4px"></div>
+      <div id="addPreviewMeta" style="font-size:12px;color:var(--muted);margin-bottom:20px"></div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px">
+        <div>
+          <label style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase">Units</label>
+          <input type="number" id="addUnits" style="width:100%;margin-top:4px;padding:8px 10px;font-family:inherit;font-size:13px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--ink)">
+        </div>
+        <div>
+          <label style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase">Floors</label>
+          <input type="number" id="addFloors" style="width:100%;margin-top:4px;padding:8px 10px;font-family:inherit;font-size:13px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--ink)">
+        </div>
+        <div>
+          <label style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase">Year Built</label>
+          <input type="number" id="addYearBuilt" style="width:100%;margin-top:4px;padding:8px 10px;font-family:inherit;font-size:13px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--ink)">
+        </div>
+        <div>
+          <label style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase">Bldg Class</label>
+          <input type="text" id="addBldgClass" style="width:100%;margin-top:4px;padding:8px 10px;font-family:inherit;font-size:13px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--ink)">
+        </div>
+      </div>
+
+      <div style="background:var(--surface2);border-radius:5px;padding:14px 16px;margin-bottom:16px">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Pulled from NYC OpenData</div>
+        <div id="addPreviewDetails" style="font-size:12.5px;line-height:1.8;color:var(--ink)"></div>
+      </div>
+
+      <div id="addCommitError" style="display:none;margin-bottom:14px;padding:10px 12px;background:rgba(192,57,43,.08);border-left:3px solid var(--red);font-size:12px;color:var(--red)"></div>
+
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button onclick="resetAddBuilding()" style="background:var(--surface2);color:var(--ink);border:1px solid var(--border);padding:10px 22px;border-radius:5px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">Cancel</button>
+        <button id="addCommitBtn" onclick="commitBuilding()" style="background:var(--gold);color:white;border:none;padding:10px 22px;border-radius:5px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">Add to Portfolio →</button>
+      </div>
+    </div>
+
+    <!-- Step 3: success -->
+    <div id="addStep3" style="display:none;padding:30px 24px;text-align:center">
+      <div style="font-size:44px;margin-bottom:10px">✅</div>
+      <div style="font-family:'Playfair Display',serif;font-size:22px;color:var(--ink);margin-bottom:6px">Building Added</div>
+      <div id="addSuccessMsg" style="font-size:13px;color:var(--muted);margin-bottom:24px"></div>
+      <button onclick="location.reload()" style="background:var(--ink);color:white;border:none;padding:10px 24px;border-radius:6px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer">Refresh Dashboard</button>
+    </div>
+
+    <!-- Processing overlay -->
+    <div id="addProc" style="display:none;text-align:center;padding:48px 0">
+      <div class="d-spinner"></div>
+      <div style="font-size:13px;font-weight:600;color:var(--ink);margin-bottom:5px" id="addProcMsg">Looking up address...</div>
+      <div style="font-size:12px;color:var(--muted)">Querying NYC GeoSearch, PLUTO, HPD &amp; DOB</div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
 <script>
 // ── Sidebar Building Search ──────────────────────────────────────────
 function filterSidebarBldgs(q) {
-  const links = document.querySelectorAll('#sidebarBldgList .switch-link');
+  const rows = document.querySelectorAll('#sidebarBldgList .switch-row');
   const term = q.toLowerCase().trim();
-  links.forEach(a => {
-    a.style.display = (!term || a.dataset.addr.includes(term)) ? '' : 'none';
+  rows.forEach(row => {
+    const addr = (row.dataset.addr || '').toLowerCase();
+    row.style.display = (!term || addr.includes(term)) ? '' : 'none';
   });
 }
+
+{% if is_mrc_admin %}
+// ── Add Building Drawer ──────────────────────────────────────────────
+let _pendingBuilding = null;
+
+function openAddBuildingDrawer() {
+  document.getElementById('addBldgDrawer').classList.add('open');
+  document.getElementById('addBldgOverlay').classList.add('open');
+  resetAddBuilding();
+}
+
+function closeAddBuildingDrawer() {
+  document.getElementById('addBldgDrawer').classList.remove('open');
+  document.getElementById('addBldgOverlay').classList.remove('open');
+}
+
+function resetAddBuilding() {
+  document.getElementById('addStep1').style.display = '';
+  document.getElementById('addStep2').style.display = 'none';
+  document.getElementById('addStep3').style.display = 'none';
+  document.getElementById('addProc').style.display = 'none';
+  document.getElementById('addError').style.display = 'none';
+  document.getElementById('addCommitError').style.display = 'none';
+  document.getElementById('addBldgAddress').value = '';
+  document.getElementById('addBldgAddress').focus();
+  _pendingBuilding = null;
+}
+
+async function previewBuilding() {
+  const address = document.getElementById('addBldgAddress').value.trim();
+  if (!address) {
+    showAddError('Please enter an address');
+    return;
+  }
+  document.getElementById('addError').style.display = 'none';
+  document.getElementById('addStep1').style.display = 'none';
+  document.getElementById('addProc').style.display = '';
+  document.getElementById('addProcMsg').textContent = 'Looking up address...';
+
+  try {
+    const r = await fetch('/api/admin/preview-building', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({address})
+    });
+    const data = await r.json();
+    document.getElementById('addProc').style.display = 'none';
+
+    if (!r.ok || !data.success) {
+      document.getElementById('addStep1').style.display = '';
+      showAddError(data.error || 'Lookup failed');
+      return;
+    }
+
+    if (data.already_exists) {
+      document.getElementById('addStep1').style.display = '';
+      showAddError('This building is already in the portfolio.');
+      return;
+    }
+
+    _pendingBuilding = data.building;
+    renderPreview(data.building);
+    document.getElementById('addStep2').style.display = '';
+  } catch (err) {
+    document.getElementById('addProc').style.display = 'none';
+    document.getElementById('addStep1').style.display = '';
+    showAddError('Network error: ' + err.message);
+  }
+}
+
+function renderPreview(b) {
+  document.getElementById('addPreviewAddr').textContent = b.address || '';
+  document.getElementById('addPreviewMeta').textContent =
+    [b.borough, b.neighborhood, 'BBL ' + (b.bbl || '').replace('bbl_', '')]
+    .filter(Boolean).join(' · ');
+  document.getElementById('addUnits').value = b.units || '';
+  document.getElementById('addFloors').value = b.floors || '';
+  document.getElementById('addYearBuilt').value = b.year_built || '';
+  document.getElementById('addBldgClass').value = b.building_class || '';
+
+  const details = [];
+  if (b.tax_assessment && b.tax_assessment.assessed_value) {
+    details.push('Assessed Value: $' + b.tax_assessment.assessed_value.toLocaleString());
+  }
+  if (b.violations) {
+    details.push('HPD Open: ' + (b.violations.hpd_open || 0) + ' · DOB Open: ' + (b.violations.dob_open || 0));
+  }
+  if (b.compliance_deadlines && b.compliance_deadlines.length) {
+    details.push(b.compliance_deadlines.length + ' compliance deadline templates (LL11, LL87, LL97, CAT1 where applicable)');
+  }
+  document.getElementById('addPreviewDetails').innerHTML = details.join('<br>') || '<i>No additional data available</i>';
+}
+
+function showAddError(msg) {
+  const el = document.getElementById('addError');
+  el.textContent = msg;
+  el.style.display = '';
+}
+
+async function commitBuilding() {
+  if (!_pendingBuilding) return;
+  const overrides = {
+    units: parseInt(document.getElementById('addUnits').value) || _pendingBuilding.units,
+    floors: parseInt(document.getElementById('addFloors').value) || _pendingBuilding.floors,
+    year_built: parseInt(document.getElementById('addYearBuilt').value) || _pendingBuilding.year_built,
+    building_class: document.getElementById('addBldgClass').value.trim() || _pendingBuilding.building_class,
+  };
+  const address = document.getElementById('addBldgAddress').value.trim();
+
+  document.getElementById('addStep2').style.display = 'none';
+  document.getElementById('addProc').style.display = '';
+  document.getElementById('addProcMsg').textContent = 'Saving building...';
+
+  try {
+    const r = await fetch('/api/admin/add-building', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({address, overrides})
+    });
+    const data = await r.json();
+    document.getElementById('addProc').style.display = 'none';
+
+    if (!r.ok || !data.success) {
+      document.getElementById('addStep2').style.display = '';
+      const el = document.getElementById('addCommitError');
+      el.textContent = data.error || 'Save failed';
+      el.style.display = '';
+      return;
+    }
+
+    document.getElementById('addStep3').style.display = '';
+    document.getElementById('addSuccessMsg').textContent =
+      (data.building.address || address) + ' (' + (data.building.units || '?') + ' units) has been added. You can now upload its expense distribution.';
+  } catch (err) {
+    document.getElementById('addProc').style.display = 'none';
+    document.getElementById('addStep2').style.display = '';
+    const el = document.getElementById('addCommitError');
+    el.textContent = 'Network error: ' + err.message;
+    el.style.display = '';
+  }
+}
+
+async function deleteBuilding(bbl, address) {
+  if (!confirm('Delete ' + address + ' from the portfolio?\\n\\nThis will remove the building and all its data. This cannot be undone.')) {
+    return;
+  }
+  try {
+    const r = await fetch('/api/admin/delete-building', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({bbl})
+    });
+    const data = await r.json();
+    if (!r.ok || !data.success) {
+      alert('Delete failed: ' + (data.error || 'unknown error'));
+      return;
+    }
+    location.reload();
+  } catch (err) {
+    alert('Network error: ' + err.message);
+  }
+}
+{% endif %}
 
 // ── Upload Drawer ─────────────────────────────────────────────────────
 const D_BUILDINGS = {{ all_buildings_json | safe }};
