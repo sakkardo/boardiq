@@ -2032,6 +2032,13 @@ def dashboard():
 
     is_mrc_admin = (session.get("user_email") == "mrc@boardiq.com")
     added_building_ids = list(ADDED_BUILDINGS.keys())
+    # Preserve the user's building keys in lockstep with all_buildings so the
+    # delete button can send the key the user's list uses (important for MRC
+    # buildings that alias demo BBLs — dict.id is the demo BBL but the user's
+    # list holds the mrc_xxx key).
+    _user_building_keys = [b for b in DEMO_USERS[session["user_email"]].get("buildings", [])
+                           if b in BUILDINGS_DB]
+    _user_buildings = [ensure_building_data(BUILDINGS_DB[b]) for b in _user_building_keys]
     return render_template_string(DASHBOARD_HTML,
         building=building,
         benchmarks=benchmarks,
@@ -2041,8 +2048,8 @@ def dashboard():
         added_building_ids=added_building_ids,
         has_portfolio=has_portfolio,
         theme=_theme,
-        all_buildings=[ensure_building_data(BUILDINGS_DB[b]) for b in
-                       DEMO_USERS[session["user_email"]].get("buildings", [])],
+        all_buildings=_user_buildings,
+        all_building_keys=_user_building_keys,
         active_bbl=active_bbl,
         all_buildings_json=json.dumps(sorted([{"bbl": k, "address": v["address"]} for k,v in BUILDINGS_DB.items()], key=lambda b: _sort_address_key(b["address"]))),
         categories_json=json.dumps(list(CATEGORY_LABELS.items())),
@@ -2320,22 +2327,36 @@ def admin_delete_building():
     elif bbl in BUILDINGS_DB:
         removed_address = BUILDINGS_DB[bbl].get("address", "")
 
-    # Remove from in-memory stores
-    ADDED_BUILDINGS.pop(bbl, None)
-    BUILDINGS_DB.pop(bbl, None)
-    _save_added_buildings(ADDED_BUILDINGS)
+    # Find every key in BUILDINGS_DB that refers to the same record so we can
+    # wipe aliases too. MRC seed buildings may have both a "mrc_*" key and an
+    # aliased demo BBL pointing at the same dict object.
+    keys_to_remove = {bbl}
+    target_dict = BUILDINGS_DB.get(bbl)
+    if target_dict is not None:
+        for _k, _v in list(BUILDINGS_DB.items()):
+            if _v is target_dict:
+                keys_to_remove.add(_k)
+    # Also sweep the BBL_NORMALIZE alias map — anything pointing to one of our
+    # keys, or any key that resolves to one of our keys, should be pulled.
+    for _src, _dst in list(BBL_NORMALIZE.items()):
+        if _src in keys_to_remove or _dst in keys_to_remove:
+            BBL_NORMALIZE.pop(_src, None)
 
-    # Tombstone so seed buildings don't reappear on next boot
-    DELETED_BUILDINGS.add(bbl)
+    # Remove from in-memory stores and tombstone every key we found
+    for _k in keys_to_remove:
+        ADDED_BUILDINGS.pop(_k, None)
+        BUILDINGS_DB.pop(_k, None)
+        DELETED_BUILDINGS.add(_k)
+    _save_added_buildings(ADDED_BUILDINGS)
     _save_deleted_buildings(DELETED_BUILDINGS)
 
-    # Clear from Madison admin's building list
+    # Clear from Madison admin's building list (any of the keys we removed)
     mrc_user = DEMO_USERS.get("mrc@boardiq.com")
-    if mrc_user and bbl in mrc_user["buildings"]:
-        mrc_user["buildings"].remove(bbl)
+    if mrc_user:
+        mrc_user["buildings"] = [x for x in mrc_user["buildings"] if x not in keys_to_remove]
 
     # If the deleted building was the user's active selection, clear it
-    if session.get("active_building") == bbl:
+    if session.get("active_building") in keys_to_remove:
         remaining = mrc_user["buildings"] if mrc_user else []
         session["active_building"] = remaining[0] if remaining else None
 
@@ -4985,13 +5006,14 @@ body.theme-mrc .bid-badge { background:#0066cc }
     <input type="text" class="switch-search" id="sidebarBldgSearch" placeholder="Search buildings..." oninput="filterSidebarBldgs(this.value)">
     <div class="switch-list" id="sidebarBldgList">
     {% for b in all_buildings %}
+    {% set _ukey = all_building_keys[loop.index0] %}
     <div class="switch-row" data-addr="{{ b.address|lower }}">
-      <a href="/switch-building/{{ b.id }}"
-         class="switch-link {% if b.id == active_bbl %}active-link{% endif %}">
-        {% if b.id == active_bbl %}▶ {% endif %}{{ b.address[:32] }}
+      <a href="/switch-building/{{ _ukey }}"
+         class="switch-link {% if _ukey == active_bbl %}active-link{% endif %}">
+        {% if _ukey == active_bbl %}▶ {% endif %}{{ b.address[:32] }}
       </a>
       {% if is_mrc_admin %}
-      <button class="del-bldg-btn" onclick="deleteBuilding({{ b.id|tojson }}, {{ b.address|tojson }})" title="Delete this building">×</button>
+      <button class="del-bldg-btn" onclick="deleteBuilding({{ _ukey|tojson }}, {{ b.address|tojson }})" title="Delete this building">×</button>
       {% endif %}
     </div>
     {% endfor %}
