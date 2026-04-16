@@ -189,6 +189,35 @@ def _save_added_buildings(added):
 
 ADDED_BUILDINGS = _load_added_buildings()
 
+# ── Tombstoned (user-deleted) building ids ──────────────────────────────────
+# MRC admins can delete seeded MRC buildings. We keep a tombstone list so the
+# deletion survives a process restart (seed buildings are rebuilt from
+# mrc_buildings.py every boot).
+_DELETED_BUILDINGS_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "deleted_buildings.json")
+
+def _load_deleted_buildings():
+    """Load the set of bbls that the user has explicitly deleted."""
+    try:
+        if os.path.exists(_DELETED_BUILDINGS_PATH):
+            with open(_DELETED_BUILDINGS_PATH, "r") as f:
+                data = json.load(f)
+            if isinstance(data, list):
+                print(f"[BoardIQ] Loaded {len(data)} tombstoned (deleted) building ids")
+                return set(data)
+    except Exception as e:
+        print(f"[BoardIQ] Warning: Could not load deleted_buildings.json: {e}")
+    return set()
+
+def _save_deleted_buildings(deleted):
+    """Persist the tombstone list."""
+    try:
+        with open(_DELETED_BUILDINGS_PATH, "w") as f:
+            json.dump(sorted(deleted), f, indent=2)
+    except Exception as e:
+        print(f"[BoardIQ] Warning: Could not save deleted_buildings.json: {e}")
+
+DELETED_BUILDINGS = _load_deleted_buildings()
+
 # ── Vendor data persistence (PostgreSQL with JSON file fallback) ─────────────
 _VENDOR_DATA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "vendor_data.json")
 
@@ -606,6 +635,21 @@ for _akey, _abldg in ADDED_BUILDINGS.items():
 if ADDED_BUILDINGS:
     print(f"[BoardIQ] Merged {len(ADDED_BUILDINGS)} user-added buildings")
 
+# ── Apply delete tombstones (user-deleted MRC seed buildings) ────────────────
+if DELETED_BUILDINGS:
+    _tomb_removed = 0
+    for _tbbl in list(DELETED_BUILDINGS):
+        if _tbbl in BUILDINGS_DB:
+            BUILDINGS_DB.pop(_tbbl, None)
+            _tomb_removed += 1
+        # Also remove from ADDED_BUILDINGS if tombstoned there
+        if _tbbl in ADDED_BUILDINGS:
+            ADDED_BUILDINGS.pop(_tbbl, None)
+    if _tomb_removed:
+        print(f"[BoardIQ] Suppressed {_tomb_removed} deleted buildings via tombstone list")
+    # Persist the ADDED_BUILDINGS cleanup
+    _save_added_buildings(ADDED_BUILDINGS)
+
 # ── Initialize database and load persisted data ─────────────────────────────
 _db_available = boardiq_db.init_db()
 _load_persisted_vendor_data()
@@ -618,7 +662,7 @@ DEMO_USERS = {
     "board@gramercyplaza.com": {"password": "demo1234", "buildings": ["bbl_1009270001"], "name": "Gramercy Plaza Board", "role": "board"},
     "admin@boardiq.com":     {"password": "admin", "buildings": list(BUILDINGS_DB.keys()), "name": "BoardIQ Admin", "is_admin": True, "role": "admin"},
     "century@boardiq.com":   {"password": "century", "buildings": list(CENTURY_BUILDINGS.keys()), "name": "Century Management", "role": "admin"},
-    "mrc@boardiq.com":       {"password": "madison", "buildings": list(MRC_BUILDINGS.keys()) + list(ADDED_BUILDINGS.keys()), "name": "Madison Realty Capital", "role": "admin"},
+    "mrc@boardiq.com":       {"password": "madison", "buildings": [b for b in (list(MRC_BUILDINGS.keys()) + list(ADDED_BUILDINGS.keys())) if b not in DELETED_BUILDINGS], "name": "Madison Realty Capital", "role": "admin"},
     "vendor@schindler.com":  {"password": "demo1234", "name": "Schindler Elevator Corp", "role": "vendor", "vendor_id": "v001", "buildings": []},
     "vendor@cleanstar.com":  {"password": "demo1234", "name": "Clean Star Services", "role": "vendor", "vendor_id": "v002", "buildings": []},
     "vendor@apexext.com":    {"password": "demo1234", "name": "Apex Exterminating", "role": "vendor", "vendor_id": "v003", "buildings": []},
@@ -2258,7 +2302,9 @@ def admin_add_building():
 @app.route("/api/admin/delete-building", methods=["POST"])
 @login_required
 def admin_delete_building():
-    """Remove a user-added building. Does not allow deleting seeded MRC buildings."""
+    """Remove a building from the MRC portfolio. Works for both user-added
+    and seeded MRC buildings. Seed deletions are persisted via a tombstone
+    list (deleted_buildings.json) so they survive process restarts."""
     user, err = _require_mrc_admin()
     if err:
         return err
@@ -2267,15 +2313,21 @@ def admin_delete_building():
     if not bbl:
         return jsonify({"error": "BBL is required"}), 400
 
-    # Only allow deleting buildings that were added by the user (not seeded MRC)
-    if bbl not in ADDED_BUILDINGS:
-        return jsonify({"error": "This building cannot be deleted (it is part of the seeded portfolio)"}), 403
+    # Pull address before we wipe the record
+    removed_address = ""
+    if bbl in ADDED_BUILDINGS:
+        removed_address = ADDED_BUILDINGS[bbl].get("address", "")
+    elif bbl in BUILDINGS_DB:
+        removed_address = BUILDINGS_DB[bbl].get("address", "")
 
-    removed_address = ADDED_BUILDINGS[bbl].get("address", "")
-    # Remove from everywhere
+    # Remove from in-memory stores
     ADDED_BUILDINGS.pop(bbl, None)
     BUILDINGS_DB.pop(bbl, None)
     _save_added_buildings(ADDED_BUILDINGS)
+
+    # Tombstone so seed buildings don't reappear on next boot
+    DELETED_BUILDINGS.add(bbl)
+    _save_deleted_buildings(DELETED_BUILDINGS)
 
     # Clear from Madison admin's building list
     mrc_user = DEMO_USERS.get("mrc@boardiq.com")
@@ -4901,6 +4953,9 @@ body.theme-mrc .bid-badge { background:#0066cc }
     <div class="nav-item" data-section="bidRequestsSection" onclick="scrollToSection('bidRequestsSection',this)">⊞ &nbsp;BidBoard
       {% if bid_requests|selectattr('status','eq','open')|list|length > 0 %}<span class="nav-badge">{{ bid_requests|selectattr('status','eq','open')|list|length }}</span>{% endif %}
     </div>
+    {% if is_mrc_admin %}
+    <a href="/portfolio-benchmark" class="nav-item" style="text-decoration:none;color:rgba(255,255,255,.5)">⚖ &nbsp;Portfolio Benchmark</a>
+    {% endif %}
     <div class="nav-label">Compliance</div>
     <div class="nav-item" data-section="complianceSection" onclick="scrollToSection('complianceSection',this)">⚑ &nbsp;Compliance Calendar
       <span class="nav-badge">{{ building.compliance_deadlines|selectattr('urgency','eq','HIGH')|list|length }}</span>
@@ -4935,7 +4990,7 @@ body.theme-mrc .bid-badge { background:#0066cc }
          class="switch-link {% if b.id == active_bbl %}active-link{% endif %}">
         {% if b.id == active_bbl %}▶ {% endif %}{{ b.address[:32] }}
       </a>
-      {% if is_mrc_admin and b.id in added_building_ids %}
+      {% if is_mrc_admin %}
       <button class="del-bldg-btn" onclick="deleteBuilding({{ b.id|tojson }}, {{ b.address|tojson }})" title="Delete this building">×</button>
       {% endif %}
     </div>
@@ -7902,6 +7957,331 @@ document.querySelectorAll('.nav-item[href^="#"]').forEach(a => {
   });
 });
 </script>
+</body>
+</html>"""
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  PORTFOLIO BENCHMARK (Madison Realty Capital — intra-portfolio comparison)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.route("/portfolio-benchmark")
+@login_required
+def portfolio_benchmark():
+    """Side-by-side comparison of vendor spend across the MRC portfolio.
+    Complements (does NOT replace) the citywide per-building benchmark."""
+    user_email = session.get("user_email") or ""
+    user = DEMO_USERS.get(user_email)
+    if not user or user_email != "mrc@boardiq.com":
+        return redirect(url_for("dashboard"))
+
+    building_ids = user.get("buildings", [])
+
+    # Collect buildings that actually have expense data
+    portfolio_buildings = []
+    all_portfolio_buildings = []
+    for bbl in building_ids:
+        b = BUILDINGS_DB.get(bbl)
+        if not b:
+            continue
+        b = ensure_building_data(b)
+        all_portfolio_buildings.append(b)
+        if b.get("vendor_data"):
+            portfolio_buildings.append(b)
+
+    # Sort by address for consistent column order
+    portfolio_buildings.sort(key=lambda b: _sort_address_key(b.get("address", "")))
+
+    # Build the benchmark matrix: {category: {bbl: {vendor, annual, per_unit}}}
+    matrix = {}
+    for b in portfolio_buildings:
+        for v in b.get("vendor_data", []):
+            cat = v.get("category")
+            if not cat:
+                continue
+            per_unit = v.get("per_unit")
+            if per_unit is None and b.get("units"):
+                try:
+                    per_unit = (v.get("annual") or 0) / (b.get("units") or 1)
+                except Exception:
+                    per_unit = None
+            matrix.setdefault(cat, {})[b["id"]] = {
+                "vendor": v.get("vendor") or "—",
+                "annual": v.get("annual") or 0,
+                "per_unit": per_unit or 0,
+                "last_bid_year": v.get("last_bid_year"),
+            }
+
+    # Flatten into rows, compute min/max/avg across the portfolio per category
+    rows = []
+    for cat, by_bldg in matrix.items():
+        values = [d["per_unit"] for d in by_bldg.values() if d.get("per_unit")]
+        if not values:
+            continue
+        low = min(values)
+        high = max(values)
+        avg = sum(values) / len(values)
+        spread_pct = ((high - low) / low * 100) if low else 0
+        total_annual = sum((d.get("annual") or 0) for d in by_bldg.values())
+        rows.append({
+            "category": cat,
+            "label": CATEGORY_LABELS.get(cat, cat),
+            "cells": by_bldg,
+            "low": low,
+            "high": high,
+            "avg": avg,
+            "spread_pct": spread_pct,
+            "count": len(values),
+            "total_annual": total_annual,
+        })
+    # Sort: highest spread first (most actionable), then by label
+    rows.sort(key=lambda r: (-r["spread_pct"], r["label"]))
+
+    # Top-line stats
+    total_portfolio_units = sum((b.get("units") or 0) for b in portfolio_buildings)
+    total_portfolio_annual = sum(r["total_annual"] for r in rows)
+    buildings_without_data = len(all_portfolio_buildings) - len(portfolio_buildings)
+
+    return render_template_string(
+        PORTFOLIO_BENCHMARK_HTML,
+        user_name=user.get("name", ""),
+        buildings=portfolio_buildings,
+        all_building_count=len(all_portfolio_buildings),
+        buildings_without_data=buildings_without_data,
+        rows=rows,
+        total_portfolio_units=total_portfolio_units,
+        total_portfolio_annual=total_portfolio_annual,
+        CATEGORY_LABELS=CATEGORY_LABELS,
+    )
+
+
+PORTFOLIO_BENCHMARK_HTML = """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Madison Realty Capital — Portfolio Benchmark</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=IBM+Plex+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@300;400;500;600&family=Inter:wght@300;400;500;600;700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f7f8fa;--surface:#fff;--surface2:#f0f2f5;--border:#e0e3e8;--border2:#ccd0d6;
+  --text:#05070a;--muted:#6b7280;--dim:#4b5563;
+  --green:#059669;--green-light:#ecfdf5;--green-border:#a7f3d0;
+  --yellow:#d97706;--yellow-light:#fffbeb;--yellow-border:#fcd34d;
+  --red:#dc2626;--red-light:#fef2f2;--red-border:#fca5a5;
+  --gold:#0066cc;--gold-light:#eff6ff;--ink:#05070a;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Inter','DM Sans','Helvetica Neue',sans-serif;min-height:100vh}
+
+.topbar{position:fixed;top:0;left:0;right:0;height:44px;background:var(--ink);display:flex;align-items:center;justify-content:space-between;padding:0 24px;z-index:150}
+.topbar-logo{font-family:'DM Sans','Inter',sans-serif;font-size:15px;color:#fff;font-weight:700;letter-spacing:-0.3px}
+.topbar-logo span{color:#0066cc}
+.topbar-right{display:flex;align-items:center;gap:16px}
+.topbar-user{font-size:12px;color:rgba(255,255,255,.5)}
+.topbar-link{font-size:12px;color:rgba(255,255,255,.55);text-decoration:none;padding:4px 10px;border-radius:4px}
+.topbar-link:hover{color:rgba(255,255,255,.9);background:rgba(255,255,255,.08)}
+.topbar-signout{font-size:12px;color:rgba(255,255,255,.35);text-decoration:none}
+.topbar-signout:hover{color:rgba(255,255,255,.7)}
+
+.main{max-width:1400px;margin:0 auto;padding:76px 28px 60px}
+.page-header{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin-bottom:24px;padding-bottom:18px;border-bottom:1px solid var(--border)}
+.page-title{font-size:28px;font-weight:700;letter-spacing:-.6px;color:var(--ink)}
+.page-sub{font-size:13px;color:var(--muted);margin-top:6px;max-width:700px;line-height:1.5}
+.back-link{font-size:12px;color:var(--gold);text-decoration:none;display:inline-flex;align-items:center;gap:6px;margin-bottom:10px}
+.back-link:hover{text-decoration:underline}
+.header-badge{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--muted);background:var(--surface);border:1px solid var(--border);padding:6px 12px;border-radius:4px;white-space:nowrap}
+
+.strip{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:24px}
+.strip-item{background:var(--surface);padding:16px 20px;position:relative}
+.strip-item::after{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--gold)}
+.strip-label{font-size:9.5px;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted);margin-bottom:7px;font-weight:600}
+.strip-value{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:500;letter-spacing:-.5px;line-height:1;color:var(--ink)}
+.strip-sub{font-size:11.5px;color:var(--muted);margin-top:4px}
+
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:24px}
+.panel-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.panel-title{font-size:15px;font-weight:600;color:var(--ink)}
+.panel-sub{font-size:11.5px;color:var(--muted);margin-top:3px}
+
+.bench-table{width:100%;border-collapse:collapse;font-size:13px}
+.bench-table th{text-align:left;padding:12px 14px;font-size:10.5px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);font-weight:600;background:var(--surface2);border-bottom:1px solid var(--border);white-space:nowrap}
+.bench-table td{padding:10px 14px;border-bottom:1px solid var(--border);vertical-align:top}
+.bench-table tr:last-child td{border-bottom:none}
+.bench-table th.num,.bench-table td.num{text-align:right;font-family:'IBM Plex Mono',monospace;white-space:nowrap}
+.bench-table th.bldg{min-width:140px}
+
+.cat-label{font-weight:600;color:var(--ink);font-size:13px}
+.cat-sub{font-size:10.5px;color:var(--muted);margin-top:2px}
+
+.cell{display:flex;flex-direction:column;gap:2px;min-width:110px}
+.cell-money{font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:500;color:var(--ink)}
+.cell-vendor{font-size:10.5px;color:var(--muted);line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px}
+.cell-annual{font-size:10px;color:var(--dim);font-family:'IBM Plex Mono',monospace}
+.cell.low{background:var(--green-light);border-left:3px solid var(--green);padding:6px 8px;border-radius:3px}
+.cell.high{background:var(--red-light);border-left:3px solid var(--red);padding:6px 8px;border-radius:3px}
+.cell.low .cell-money{color:var(--green)}
+.cell.high .cell-money{color:var(--red)}
+.cell.empty{color:var(--muted);font-size:11px;font-style:italic}
+
+.spread-pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-family:'IBM Plex Mono',monospace;font-weight:500}
+.spread-pill.high{background:var(--red-light);color:var(--red);border:1px solid var(--red-border)}
+.spread-pill.med{background:var(--yellow-light);color:var(--yellow);border:1px solid var(--yellow-border)}
+.spread-pill.low{background:var(--green-light);color:var(--green);border:1px solid var(--green-border)}
+
+.empty-state{background:var(--surface);border:1px dashed var(--border2);border-radius:8px;padding:40px 24px;text-align:center}
+.empty-state-icon{font-size:32px;margin-bottom:12px;opacity:.4}
+.empty-state-title{font-size:16px;font-weight:600;color:var(--ink);margin-bottom:6px}
+.empty-state-msg{font-size:13px;color:var(--muted);max-width:440px;margin:0 auto;line-height:1.5}
+.empty-state a{color:var(--gold);text-decoration:none;font-weight:500}
+
+.legend{display:flex;gap:14px;padding:10px 20px;border-bottom:1px solid var(--border);background:var(--surface2);font-size:11px;color:var(--muted);align-items:center}
+.legend-item{display:flex;align-items:center;gap:6px}
+.swatch{width:10px;height:10px;border-radius:2px}
+.swatch.low{background:var(--green)}
+.swatch.high{background:var(--red)}
+.swatch.neu{background:var(--border2)}
+
+.note{font-size:12px;color:var(--muted);padding:14px 20px;border-top:1px solid var(--border);background:var(--surface2);line-height:1.5}
+
+@media (max-width: 900px){
+  .strip{grid-template-columns:repeat(2,1fr)}
+  .page-header{flex-direction:column;align-items:flex-start}
+  .bench-table{font-size:12px}
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-logo">Madison Realty<span> Capital</span></div>
+  <div class="topbar-right">
+    <a href="/dashboard" class="topbar-link">← Back to Dashboard</a>
+    <span class="topbar-user">{{ user_name }}</span>
+    <a href="/logout" class="topbar-signout">Sign Out</a>
+  </div>
+</header>
+
+<main class="main">
+  <div class="page-header">
+    <div>
+      <a href="/dashboard" class="back-link">← Dashboard</a>
+      <div class="page-title">Portfolio Benchmark</div>
+      <div class="page-sub">
+        Compare vendor spending across your Madison Realty Capital portfolio.
+        Each row shows per-unit spend by building so you can see where the same
+        category costs more or less across the properties you manage.
+        {% if buildings_without_data %}
+        &nbsp;<span style="color:var(--yellow)">({{ buildings_without_data }} building{% if buildings_without_data != 1 %}s{% endif %} in the portfolio don&rsquo;t have expense data yet.)</span>
+        {% endif %}
+      </div>
+    </div>
+    <div class="header-badge">{{ buildings|length }} buildings compared · Refreshed today</div>
+  </div>
+
+  {% if buildings|length < 2 %}
+  <div class="empty-state">
+    <div class="empty-state-icon">⚖</div>
+    <div class="empty-state-title">Need at least 2 buildings with expense data</div>
+    <div class="empty-state-msg">
+      You currently have {{ buildings|length }} building{% if buildings|length != 1 %}s{% endif %} with uploaded vendor data out of {{ all_building_count }} in your portfolio.
+      Upload an expense distribution for another building to see a side-by-side comparison.
+      <br><br>
+      <a href="/upload">↑ Upload Invoices</a>
+    </div>
+  </div>
+  {% else %}
+
+  <div class="strip">
+    <div class="strip-item">
+      <div class="strip-label">Buildings Compared</div>
+      <div class="strip-value">{{ buildings|length }}</div>
+      <div class="strip-sub">of {{ all_building_count }} in portfolio</div>
+    </div>
+    <div class="strip-item">
+      <div class="strip-label">Total Units</div>
+      <div class="strip-value">{{ "{:,}".format(total_portfolio_units) }}</div>
+      <div class="strip-sub">across these buildings</div>
+    </div>
+    <div class="strip-item">
+      <div class="strip-label">Annual Spend</div>
+      <div class="strip-value">${{ "{:,.0f}".format(total_portfolio_annual) }}</div>
+      <div class="strip-sub">sum of categories below</div>
+    </div>
+    <div class="strip-item">
+      <div class="strip-label">Categories Compared</div>
+      <div class="strip-value">{{ rows|length }}</div>
+      <div class="strip-sub">with data in ≥ 1 building</div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <div>
+        <div class="panel-title">Category-by-Category Comparison</div>
+        <div class="panel-sub">Green = lowest per-unit spend. Red = highest. Ranked by spread.</div>
+      </div>
+    </div>
+    <div class="legend">
+      <div class="legend-item"><span class="swatch low"></span> Portfolio low</div>
+      <div class="legend-item"><span class="swatch high"></span> Portfolio high</div>
+      <div class="legend-item"><span class="swatch neu"></span> In between</div>
+      <div class="legend-item" style="margin-left:auto">Each cell shows: <b style="color:var(--ink);margin-left:6px">$/unit</b>&nbsp;·&nbsp;vendor&nbsp;·&nbsp;annual</div>
+    </div>
+    <table class="bench-table">
+      <thead>
+        <tr>
+          <th style="min-width:220px">Category</th>
+          {% for b in buildings %}
+          <th class="bldg">{{ b.address[:22] }}<div style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--dim);font-size:10px;margin-top:3px">{{ b.units or '—' }} units</div></th>
+          {% endfor %}
+          <th class="num">Portfolio Avg</th>
+          <th class="num">Spread</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td>
+            <div class="cat-label">{{ r.label }}</div>
+            <div class="cat-sub">{{ r.count }} of {{ buildings|length }} buildings · ${{ "{:,.0f}".format(r.total_annual) }} total</div>
+          </td>
+          {% for b in buildings %}
+            {% set c = r.cells.get(b.id) %}
+            {% if c %}
+              {% set cls = 'low' if c.per_unit == r.low and r.count > 1 else ('high' if c.per_unit == r.high and r.count > 1 else '') %}
+              <td>
+                <div class="cell {{ cls }}">
+                  <div class="cell-money">${{ "{:,.0f}".format(c.per_unit) }}/unit</div>
+                  <div class="cell-vendor" title="{{ c.vendor }}">{{ c.vendor }}</div>
+                  <div class="cell-annual">${{ "{:,.0f}".format(c.annual) }}/yr{% if c.last_bid_year %} · {{ c.last_bid_year }}{% endif %}</div>
+                </div>
+              </td>
+            {% else %}
+              <td><span class="cell empty">—</span></td>
+            {% endif %}
+          {% endfor %}
+          <td class="num">${{ "{:,.0f}".format(r.avg) }}</td>
+          <td class="num">
+            {% if r.count > 1 %}
+              {% set klass = 'high' if r.spread_pct >= 40 else ('med' if r.spread_pct >= 15 else 'low') %}
+              <span class="spread-pill {{ klass }}">{{ "{:+.0f}%".format(r.spread_pct) }}</span>
+            {% else %}
+              <span style="color:var(--muted);font-size:11px">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <div class="note">
+      This compares your own buildings to each other. It does <b>not</b> replace the citywide peer benchmark shown on each building&rsquo;s dashboard &mdash; that benchmark compares against the full network of NYC buildings. Use both together: citywide tells you whether you&rsquo;re paying the market rate; this portfolio view tells you whether you&rsquo;re getting consistent pricing across buildings you already manage.
+    </div>
+  </div>
+
+  {% endif %}
+</main>
+
 </body>
 </html>"""
 
