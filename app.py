@@ -2076,29 +2076,20 @@ def import_yardi():
         result = results[0]
 
     units = building.get("units", 1)
+
+    # Yardi import is authoritative — replace any existing vendor_data
+    # (including seed/dummy data) with the parsed expense distribution.
+    building["vendor_data"] = []
     imported = []
-    updated = []
 
     for v in result["vendors"]:
         v["per_unit"] = round(v["annual"] / max(units, 1))
+        building["vendor_data"].append(v)
+        imported.append(v["vendor"])
 
-        # Check if vendor+category already exists
-        existing = None
-        for ev in building.get("vendor_data", []):
-            if ev.get("category") == v["category"]:
-                existing = ev
-                break
-
-        if existing:
-            existing["vendor"] = v["vendor"]
-            existing["annual"] = v["annual"]
-            existing["per_unit"] = v["per_unit"]
-            updated.append(v["vendor"])
-        else:
-            if "vendor_data" not in building:
-                building["vendor_data"] = []
-            building["vendor_data"].append(v)
-            imported.append(v["vendor"])
+    # Record which Yardi property this building is associated with
+    if result.get("property_code"):
+        building["yardi_property_code"] = result["property_code"]
 
     _save_vendor_data()
 
@@ -2107,7 +2098,7 @@ def import_yardi():
         "property_code": result["property_code"],
         "period": result["period"],
         "imported": len(imported),
-        "updated": len(updated),
+        "updated": 0,
         "total_vendors": len(result["vendors"]),
         "vendors": [{"vendor": v["vendor"], "category": CATEGORY_LABELS.get(v["category"], v["category"]),
                       "annual": v["annual"]} for v in result["vendors"]],
