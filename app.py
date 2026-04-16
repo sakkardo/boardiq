@@ -5013,7 +5013,7 @@ body.theme-mrc .bid-badge { background:#0066cc }
         {% if _ukey == active_bbl %}▶ {% endif %}{{ b.address[:32] }}
       </a>
       {% if is_mrc_admin %}
-      <button class="del-bldg-btn" onclick="deleteBuilding({{ _ukey|tojson }}, {{ b.address|tojson }})" title="Delete this building">×</button>
+      <button class="del-bldg-btn" onclick="deleteBuilding({{ _ukey|tojson|forceescape }}, {{ b.address|tojson|forceescape }})" title="Delete this building">×</button>
       {% endif %}
     </div>
     {% endfor %}
